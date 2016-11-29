@@ -45,6 +45,13 @@ class FileShelf(shelve.DbfilenameShelf):
         result.update({'_id': k})
         return result
 
+    def filter(self, fn):
+        try:
+            for result in filter(fn, self):
+                yield result
+        except:
+            pass
+
     def delete(self, *args, **kw):
         self.clear()
         self.close()

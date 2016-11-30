@@ -2,23 +2,24 @@ import asyncio, shelve, os, collections
 from uuid import uuid4
 
 class DB:
-    def __init__(self, *args, **kw):
+    def __init__(self, db_dir=None, *args, **kw):
+        if db_dir is None:
+            db_dir = os.path.join(os.getcwd(), 'db')
+        self.db_dir = db_dir
+        if not os.path.exists(self.db_dir):
+            os.makedirs(self.db_dir)
+        self.shelf = Shelf(self.db_dir)
         super().__init__(*args, **kw)
-        self._db_dir = os.path.join(os.getcwd(), 'data')
-        if not os.path.exists(self._db_dir):
-            os.makedirs(self._db_dir)
-        self.shelf = Shelf(self._db_dir)
 
 class Shelf(dict):
     def __init__(self, db_dir, *args, **kw):
-        self._db_dir = db_dir
+        self._dir = db_dir
 
     def __getitem__(self, k):
         if (not k in self or
                 isinstance(super().__getitem__(k).dict, shelve._ClosedDict)):
             super().__setitem__(
-                k, FileShelf(os.path.join(self._db_dir, k)))
-
+                k, FileShelf(os.path.join(self._dir, k)))
         return super().__getitem__(k)
 
     def get(self, k, *args, **kw):
@@ -65,5 +66,3 @@ class FileShelf(shelve.DbfilenameShelf):
             del self[k]
         self.close()
         os.remove(self._filename)
-
-db = DB()

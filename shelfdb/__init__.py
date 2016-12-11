@@ -1,5 +1,5 @@
 import asyncio, shelve, os, collections
-from uuid import uuid4
+from uuid import uuid1
 
 class DB:
     def __init__(self, db_dir=None, *args, **kw):
@@ -31,34 +31,34 @@ class FileShelf(shelve.DbfilenameShelf):
         self._filename = filename
         return super().__init__(filename, *args, **kw)
 
-    def __setitem__(self, id_, obj, *args, **kw):
-        if not isinstance(obj, dict):
+    def __setitem__(self, id_, entry, *args, **kw):
+        if not isinstance(entry, dict):
             raise ValueError('Value must be `dict` instance')
-        super().__setitem__(id_, obj, *args, *kw)
+        super().__setitem__(id_, entry, *args, *kw)
 
     def all(self):
         for key in self:
-            obj = self.get(key)
-            yield obj
+            entry = self.get(key)
+            yield entry
 
-    def insert(self, obj=None, id_=None):
+    def insert(self, entry=None, id_=None):
         # Since id_=str(uuid4()) in def args will return the same value
         if id_ is None:
-            id_ = str(uuid4())
-        self[id_] = obj
+            id_ = str(uuid1())
+        self[id_] = entry
 
     def get(self, id_):
-        obj = self[id_]
-        obj.update({'_id': id_})
-        return obj
+        entry = self[id_]
+        entry.update({'_id': id_})
+        return entry
 
     def update(self, id_, data):
-        obj = self[id_]
-        obj.update(data)
-        self[id_] = obj
+        entry = self[id_]
+        entry.update(data)
+        self[id_] = entry
 
-    def replace(self, id_, data):
-        self[id_] = data
+    def replace(self, id_, entry):
+        self[id_] = entry
 
     def filter(self, fn):
         result = filter(fn, self.all())

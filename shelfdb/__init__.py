@@ -1,19 +1,14 @@
 import asyncio, shelve, os, collections
 from uuid import uuid1
 
-class DB:
+class Shelf(dict):
     def __init__(self, db_dir=None, *args, **kw):
         if db_dir is None:
             db_dir = os.path.join(os.getcwd(), 'db')
         self.dir = db_dir
         if not os.path.exists(self.dir):
             os.makedirs(self.dir)
-        self.shelf = Shelf(self.dir)
-        super().__init__(*args, **kw)
-
-class Shelf(dict):
-    def __init__(self, db_dir, *args, **kw):
-        self.dir = db_dir
+        return super().__init__(*args, **kw)
 
     def __getitem__(self, k):
         if (not k in self or
@@ -27,49 +22,41 @@ class Shelf(dict):
 
 
 class FileShelf(shelve.DbfilenameShelf):
-    def __init__(self, filename, *args, **kw):
-        self._filename = filename
-        return super().__init__(filename, *args, **kw)
+    def __init__(self, file, *args, **kw):
+        self._file = file
+        return super().__init__(file, *args, **kw)
 
     def __setitem__(self, id_, entry, *args, **kw):
         if not isinstance(entry, dict):
             raise ValueError('Value must be `dict` instance')
         super().__setitem__(id_, entry, *args, *kw)
 
-    def all(self):
-        for key in self:
-            entry = self.get(key)
-            yield entry
+    def __getitem__(self, id_):
+        return Entry(self, id_, super().__getitem__(id_))
 
-    def insert(self, entry=None, id_=None):
-        # Since id_=str(uuid4()) in def args will return the same value
-        if id_ is None:
-            id_ = str(uuid1())
+    def insert(self, entry=None):
+        # Since id_=str(uuid1()) in def args will return the same value
+        id_ = str(uuid1())
         self[id_] = entry
-
-    def get(self, id_):
-        entry = self[id_]
-        entry.update({'_id': id_})
-        return entry
-
-    def update(self, id_, data):
-        entry = self[id_]
-        entry.update(data)
-        self[id_] = entry
-
-    def replace(self, id_, entry):
-        self[id_] = entry
-
-    def filter(self, fn):
-        result = filter(fn, self.all())
-        while True:
-            try:
-                yield next(result)
-            except KeyError:
-                pass
 
     def delete(self):
         for k in self.keys():
             del self[k]
         self.close()
         os.remove(self._filename)
+
+class Entry(dict):
+    def __init__(self, shelf, id_, data):
+        self['_id'] = id_
+        self._shelf = shelf
+        return super().__init__(data)
+
+    def update(self, data):
+        super().update(data)
+        entry = self.copy()
+        id_ = entry.pop('_id')
+        self._shelf[id_] = entry
+
+    def clear(self):
+        del self._shelf[self['_id']]
+        self.clear()

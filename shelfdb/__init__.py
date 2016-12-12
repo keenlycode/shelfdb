@@ -46,16 +46,27 @@ class FileShelf(shelve.DbfilenameShelf):
         os.remove(self._filename)
 
 class Entry(dict):
-    def __init__(self, shelf, id_, data):
+    def __init__(self, shelf, id_, entry):
         self['_id'] = id_
         self._shelf = shelf
-        return super().__init__(data)
+        return super().__init__(entry)
 
-    def update(self, data):
-        super().update(data)
+    def __setitem__(self, key, value):
+        super().__setitem__(key, value)
+        self._write_entry()
+
+    def __delitem__(self, key):
+        super().__delitem__(key)
+        self._write_entry
+
+    def _write_entry(self):
         entry = self.copy()
         id_ = entry.pop('_id')
         self._shelf[id_] = entry
+
+    def update(self, data):
+        super().update(data)
+        self._write_entry()
 
     def clear(self):
         del self._shelf[self['_id']]

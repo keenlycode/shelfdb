@@ -26,10 +26,10 @@ class FileShelf(shelve.DbfilenameShelf):
         self._file = file
         return super().__init__(file, *args, **kw)
 
-    def __setitem__(self, id_, entry, *args, **kw):
+    def __setitem__(self, id_, entry):
         if not isinstance(entry, dict):
             raise ValueError('Value must be `dict` instance')
-        super().__setitem__(id_, entry, *args, *kw)
+        super().__setitem__(id_, entry)
 
     def __getitem__(self, id_):
         return Entry(self, id_, super().__getitem__(id_))
@@ -47,9 +47,9 @@ class FileShelf(shelve.DbfilenameShelf):
 
 class Entry(dict):
     def __init__(self, shelf, id_, entry):
-        self['_id'] = id_
+        super().__init__(entry)
+        super().__setitem__('_id', id_)
         self._shelf = shelf
-        return super().__init__(entry)
 
     def __setitem__(self, key, value):
         super().__setitem__(key, value)
@@ -57,7 +57,7 @@ class Entry(dict):
 
     def __delitem__(self, key):
         super().__delitem__(key)
-        self._write_entry
+        self._write_entry()
 
     def _write_entry(self):
         entry = self.copy()
@@ -70,4 +70,4 @@ class Entry(dict):
 
     def clear(self):
         del self._shelf[self['_id']]
-        self.clear()
+        super().clear()

@@ -1,5 +1,6 @@
 import asyncio, shelve, os, collections
-from uuid import uuid1
+import uuid
+from datetime import datetime
 
 class Shelf(dict):
     def __init__(self, db_dir=None, *args, **kw):
@@ -34,10 +35,15 @@ class FileShelf(shelve.DbfilenameShelf):
     def __getitem__(self, id_):
         return Entry(self, id_, super().__getitem__(id_))
 
+    def all(self):
+        for id_ in self:
+            yield self[id_]
+
     def insert(self, entry=None):
-        # Since id_=str(uuid1()) in def args will return the same value
-        id_ = str(uuid1())
+        # Since id_=str(uuid.uuid1()) in def args will return the same value
+        id_ = str(uuid.uuid1())
         self[id_] = entry
+        return id_
 
     def delete(self):
         for k in self.keys():
@@ -58,6 +64,15 @@ class Entry(dict):
     def __delitem__(self, key):
         super().__delitem__(key)
         self._write_entry()
+
+    @property
+    def timestamp(self):
+        try:
+            return self._timestamp
+        except AttributeError:
+            self._timestamp = datetime.fromtimestamp(
+                (uuid.UUID(self['_id']).time - 0x01b21dd213814000)*100/1e9)
+            return self._timestamp
 
     def _write_entry(self):
         entry = self.copy()

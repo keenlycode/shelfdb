@@ -21,6 +21,10 @@ class Shelf(dict):
     def get(self, k, *args, **kw):
         return self.__getitem__(k, *args, **kw)
 
+    def close(self):
+        for k in self:
+            self[k].close()
+
 
 class FileShelf(shelve.DbfilenameShelf):
     def __init__(self, file, *args, **kw):

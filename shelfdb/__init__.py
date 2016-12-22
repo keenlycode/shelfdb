@@ -1,5 +1,5 @@
-import asyncio, shelve, os, collections
-import uuid
+import asyncio, shelve, os, uuid
+from copy import copy
 from datetime import datetime
 
 class Shelf(dict):
@@ -13,9 +13,10 @@ class Shelf(dict):
 
     def __getitem__(self, k):
         if (not k in self or
-                isinstance(super().__getitem__(k).dict, shelve._ClosedDict)):
+                isinstance(super().__getitem__(k).shelf.dict, shelve._ClosedDict)):
+            shelf = shelve.open(os.path.join(self.dir, k))
             super().__setitem__(
-                k, FileShelf(os.path.join(self.dir, k)))
+                k, ShelfQuery(shelf))
         return super().__getitem__(k)
 
     def get(self, k, *args, **kw):
@@ -26,67 +27,46 @@ class Shelf(dict):
             self[k].close()
 
 
-class FileShelf(shelve.DbfilenameShelf):
-    def __init__(self, file, *args, **kw):
-        self._file = file
-        return super().__init__(file, *args, **kw)
+class ShelfQuery():
+    def __init__(self, shelf):
+        self._shelf = shelf
 
-    def __setitem__(self, id_, entry):
-        if not isinstance(entry, dict):
-            raise ValueError('Value must be `dict` instance')
-        super().__setitem__(id_, entry)
+    def __iter__(self):
+        for k, v in self._shelf.items():
+            v.update({"_id": k})
+            yield v
 
-    def __getitem__(self, id_):
-        return Entry(self, id_, super().__getitem__(id_))
+    def __getitem__(self, k):
+        entry = self._shelf[k]
+        entry.update({'_id': k})
+        return ChainQuery([entryy])
 
-    def all(self):
-        for id_ in self:
-            yield self[id_]
+    def filter(self, fn):
+        return ChainQuery(filter(fn, self))
+
+    def update(self, patch):
+        for entry in self:
+            id_ = entry.pop('_id')
+            entry.update(patch)
+            self._shelf[id_] = entry
 
     def insert(self, entry=None):
         # Since id_=str(uuid.uuid1()) in def args will return the same value
         id_ = str(uuid.uuid1())
-        self[id_] = entry
+        self._shelf[id_] = entry
         return id_
 
     def delete(self):
-        for k in self.keys():
-            del self[k]
-        self.close()
-        os.remove(self._filename)
+        for entry in self:
+            del self._shelf[entry['_id']]
 
-class Entry(dict):
-    def __init__(self, shelf, id_, entry):
-        super().__init__(entry)
-        super().__setitem__('_id', id_)
-        self._shelf = shelf
+class ChainQuery(ShelfQuery):
+    def __init__(self, results):
+        self._results = results
 
-    def __setitem__(self, key, value):
-        super().__setitem__(key, value)
-        self._write_entry()
+    def __iter__(self):
+        for entry in self._results:
+            yield entry
 
-    def __delitem__(self, key):
-        super().__delitem__(key)
-        self._write_entry()
-
-    @property
-    def timestamp(self):
-        try:
-            return self._timestamp
-        except AttributeError:
-            self._timestamp = datetime.fromtimestamp(
-                (uuid.UUID(self['_id']).time - 0x01b21dd213814000)*100/1e9)
-            return self._timestamp
-
-    def _write_entry(self):
-        entry = self.copy()
-        id_ = entry.pop('_id')
-        self._shelf[id_] = entry
-
-    def update(self, data):
-        super().update(data)
-        self._write_entry()
-
-    def clear(self):
-        del self._shelf[self['_id']]
-        super().clear()
+    def filter(self, fn):
+        return ChainQuery(filter(fn, self))

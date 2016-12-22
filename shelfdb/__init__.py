@@ -41,7 +41,12 @@ class ShelfQuery():
     def __getitem__(self, k):
         entry = self._shelf[k]
         entry.update({'_id': k})
-        return Entry(entry)
+        return entry
+
+    def first(self, fn):
+        for entry in self:
+            if fn(entry) == True:
+                return entry
 
     def filter(self, fn):
         return ChainQuery(filter(fn, self))
@@ -80,7 +85,3 @@ class ChainQuery(ShelfQuery):
     def __iter__(self):
         for entry in self._results:
             yield entry
-
-class Entry(dict):
-    def __init__(self, entry):
-        return super().__init__(entry)

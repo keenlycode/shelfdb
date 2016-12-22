@@ -2,6 +2,11 @@ import asyncio, shelve, os, uuid
 from copy import copy
 from datetime import datetime
 
+def entry_uuid1_time_sort(entry):
+    uuid1 = uuid.UUID(entry['_id'])
+    ts = datetime.fromtimestamp((uuid1.time - 0x01b21dd213814000)*100/1e9)
+    return ts
+
 class Shelf(dict):
     def __init__(self, db_dir=None, *args, **kw):
         if db_dir is None:
@@ -13,14 +18,14 @@ class Shelf(dict):
 
     def __getitem__(self, k):
         if (not k in self or
-                isinstance(super().__getitem__(k).shelf.dict, shelve._ClosedDict)):
+                isinstance(super().__getitem__(k)._shelf.dict, shelve._ClosedDict)):
             shelf = shelve.open(os.path.join(self.dir, k))
             super().__setitem__(
                 k, ShelfQuery(shelf))
         return super().__getitem__(k)
 
-    def get(self, k, *args, **kw):
-        return self.__getitem__(k, *args, **kw)
+    def get(self, k):
+        return self.__getitem__(k)
 
     def close(self):
         for k in self:
@@ -43,6 +48,13 @@ class ShelfQuery():
 
     def filter(self, fn):
         return ChainQuery(filter(fn, self))
+
+    def sort(self,
+            key=lambda entry:
+                datetime.fromtimestamp(
+                    (uuid.UUID(entry['_id']).time - 0x01b21dd213814000)*100/1e9),
+            reverse=False):
+        return ChainQuery(sorted(self, key=key, reverse=reverse))
 
     def update(self, patch):
         for entry in self:
@@ -67,6 +79,3 @@ class ChainQuery(ShelfQuery):
     def __iter__(self):
         for entry in self._results:
             yield entry
-
-    def filter(self, fn):
-        return ChainQuery(filter(fn, self))

@@ -50,23 +50,24 @@ class ShelfQuery():
         return ChainQuery(filter(fn, self))
 
     def sort(self,
-            key=lambda entry:
-                datetime.fromtimestamp(
-                    (uuid.UUID(entry['_id']).time - 0x01b21dd213814000)*100/1e9),
-            reverse=False):
+            key=lambda entry: entry['_id'], reverse=False):
         return ChainQuery(sorted(self, key=key, reverse=reverse))
 
     def update(self, patch):
         for entry in self:
+            patch = patch
             id_ = entry.pop('_id')
             entry.update(patch)
             self._shelf[id_] = entry
 
-    def insert(self, entry=None):
+    def insert(self, entry):
         # Since id_=str(uuid.uuid1()) in def args will return the same value
         id_ = str(uuid.uuid1())
         self._shelf[id_] = entry
         return id_
+
+    def put(self, id_, entry):
+        self._shelf[id_] = entry
 
     def delete(self):
         for entry in self:

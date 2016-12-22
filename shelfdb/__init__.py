@@ -1,11 +1,8 @@
 import asyncio, shelve, os, uuid
 from copy import copy
 from datetime import datetime
+from itertools import islice
 
-def entry_uuid1_time_sort(entry):
-    uuid1 = uuid.UUID(entry['_id'])
-    ts = datetime.fromtimestamp((uuid1.time - 0x01b21dd213814000)*100/1e9)
-    return ts
 
 class Shelf(dict):
     def __init__(self, db_dir=None, *args, **kw):
@@ -44,10 +41,13 @@ class ShelfQuery():
     def __getitem__(self, k):
         entry = self._shelf[k]
         entry.update({'_id': k})
-        return ChainQuery([entryy])
+        return Entry(entry)
 
     def filter(self, fn):
         return ChainQuery(filter(fn, self))
+
+    def slice(self, start, stop, step=None):
+        return ChainQuery(islice(self, start, stop))
 
     def sort(self,
             key=lambda entry: entry['_id'], reverse=False):
@@ -80,3 +80,7 @@ class ChainQuery(ShelfQuery):
     def __iter__(self):
         for entry in self._results:
             yield entry
+
+class Entry(dict):
+    def __init__(self, entry):
+        return super().__init__(entry)

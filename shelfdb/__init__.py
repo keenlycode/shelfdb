@@ -34,9 +34,10 @@ class ShelfQuery():
         self._shelf = shelf
 
     def __iter__(self):
-        for k, v in self._shelf.items():
-            v.update({"_id": k})
-            yield v
+        def _add_id(item):
+            item[1].update({"_id": item[0]})
+            return item[1]
+        return map(_add_id, self._shelf.items())
 
     def __getitem__(self, k):
         entry = self._shelf[k]

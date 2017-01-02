@@ -44,27 +44,27 @@ class ShelfQuery():
         entry.update({'_id': k})
         return entry
 
-    def first(self, fn):
-        for entry in self:
-            if fn(entry) == True:
-                return entry
+    def first(self, filter_):
+        try:
+            return next(filter(filter_, self))
+        except StopIteration:
+            return []
 
-    def filter(self, fn):
-        return ChainQuery(filter(fn, self))
+    def filter(self, filter_):
+        return ChainQuery(filter(filter_, self))
 
     def slice(self, start, stop, step=None):
         return ChainQuery(islice(self, start, stop))
 
-    def sort(self,
-            key=lambda entry: entry['_id'], reverse=False):
+    def sort(self, key=lambda entry: entry['_id'], reverse=False):
         return ChainQuery(sorted(self, key=key, reverse=reverse))
 
     def update(self, patch):
-        for entry in self:
-            patch = patch
+        def _update(entry, patch):
             id_ = entry.pop('_id')
             entry.update(patch)
             self._shelf[id_] = entry
+        [_update(entry, patch) for entry in self]
 
     def insert(self, entry):
         # Since id_=str(uuid.uuid1()) in def args will return the same value
@@ -84,5 +84,4 @@ class ChainQuery(ShelfQuery):
         self._results = results
 
     def __iter__(self):
-        for entry in self._results:
-            yield entry
+        return self._results

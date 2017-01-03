@@ -48,7 +48,7 @@ class ShelfQuery():
         try:
             return next(filter(filter_, self))
         except StopIteration:
-            return []
+            return None
 
     def filter(self, filter_):
         return ChainQuery(filter(filter_, self))
@@ -57,7 +57,11 @@ class ShelfQuery():
         return ChainQuery(islice(self, start, stop))
 
     def sort(self, key=lambda entry: entry['_id'], reverse=False):
-        return ChainQuery(sorted(self, key=key, reverse=reverse))
+        def _sort(entries, key, reverse):
+            entries = sorted(self, key=key, reverse=reverse)
+            for entry in entries:
+                yield entry
+        return ChainQuery(_sort(self, key=key, reverse=reverse))
 
     def update(self, patch):
         def _update(entry, patch):

@@ -69,10 +69,17 @@ class ShelfQuery():
     def insert(self, entry):
         # Since id_=str(uuid.uuid1()) in def args will return the same value
         id_ = str(uuid.uuid1())
-        self._shelf[id_] = entry
+        if isinstance(entry, dict):
+            self._shelf[id_] = entry
+        else:
+            raise Exception('Entry is not a dict object')
         return id_
 
-    def put(self, id_, entry):
+    def replace(self, id_, entry):
+        try:
+            self._shelf[id_]
+        except KeyError:
+            raise Exception("No entry ID: '" + id_ + "'")
         self._shelf[id_] = entry
 
     def delete(self):

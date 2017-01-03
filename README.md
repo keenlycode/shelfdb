@@ -1,5 +1,5 @@
 # ShelfDB
-### JSON Python DB store as files for simplicity, based on Python built-in `shelve`, inspired by RethinkDB API
+### JSON Python DB store as files for simplicity, based on Python built-in `shelve`
 
 ## Features :
 - Very simple JSON Database.

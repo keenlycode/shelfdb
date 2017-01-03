@@ -57,11 +57,7 @@ class ShelfQuery():
         return ChainQuery(islice(self, start, stop))
 
     def sort(self, key=lambda entry: entry['_id'], reverse=False):
-        def _sort(entries, key, reverse):
-            entries = sorted(self, key=key, reverse=reverse)
-            for entry in entries:
-                yield entry
-        return ChainQuery(_sort(self, key=key, reverse=reverse))
+        return ChainQuery(iter(sorted(self, key=key, reverse=reverse)))
 
     def update(self, patch):
         def _update(entry, patch):

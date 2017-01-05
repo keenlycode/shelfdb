@@ -5,11 +5,11 @@ from itertools import islice
 
 class Shelf(dict):
     def __init__(self,
-            db_dir=os.path.join(os.getcwd(), 'db'),
+            dir_=os.path.join(os.getcwd(), 'db'),
             *args,
             **kw):
-            
-        self.dir = db_dir
+
+        self.dir = dir_
         if not os.path.exists(self.dir):
             os.makedirs(self.dir)
         return super().__init__(*args, **kw)
@@ -43,6 +43,9 @@ class ShelfQuery():
 
     def _get_entry(self, item):
         return Entry(self._shelf, item[0], item[1])
+
+    def get(self, id_):
+        return self.__getitem__(id_)
 
     def first(self, filter_):
         try:

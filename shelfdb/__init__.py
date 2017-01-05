@@ -4,9 +4,11 @@ from itertools import islice
 
 
 class Shelf(dict):
-    def __init__(self, db_dir=None, *args, **kw):
-        if db_dir is None:
-            db_dir = os.path.join(os.getcwd(), 'db')
+    def __init__(self,
+            db_dir=os.path.join(os.getcwd(), 'db'),
+            *args,
+            **kw):
+            
         self.dir = db_dir
         if not os.path.exists(self.dir):
             os.makedirs(self.dir)

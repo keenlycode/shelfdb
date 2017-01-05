@@ -1,5 +1,4 @@
 import asyncio, shelve, os, uuid
-from copy import copy
 from datetime import datetime
 from itertools import islice
 
@@ -34,15 +33,14 @@ class ShelfQuery():
         self._shelf = shelf
 
     def __iter__(self):
-        def _add_id(item):
-            item[1].update({"_id": item[0]})
-            return item[1]
-        return map(_add_id, self._shelf.items())
+        return map(self._get_entry, self._shelf.items())
 
-    def __getitem__(self, k):
-        entry = self._shelf[k]
-        entry.update({'_id': k})
-        return entry
+    def __getitem__(self, id_):
+        entry = self._shelf[id_]
+        return Entry(self._shelf, id_, entry)
+
+    def _get_entry(self, item):
+        return Entry(self._shelf, item[0], item[1])
 
     def first(self, filter_):
         try:
@@ -60,27 +58,27 @@ class ShelfQuery():
         return ChainQuery(iter(sorted(self, key=key, reverse=reverse)))
 
     def update(self, patch):
-        def _update(entry, patch):
-            id_ = entry.pop('_id')
-            entry.update(patch)
-            self._shelf[id_] = entry
-        [_update(entry, patch) for entry in self]
+        [entry.update(patch) for entry in self]
 
     def insert(self, entry):
         # Since id_=str(uuid.uuid1()) in def args will return the same value
         id_ = str(uuid.uuid1())
         if isinstance(entry, dict):
             self._shelf[id_] = entry
+            return id_
         else:
             raise Exception('Entry is not a dict object')
-        return id_
 
-    def replace(self, id_, entry):
-        try:
-            self._shelf[id_]
-        except KeyError:
-            raise Exception("No entry ID: '" + id_ + "'")
-        self._shelf[id_] = entry
+    def put(self, id_, entry):
+        if isinstance(entry, dict):
+            self._shelf[id_] = entry
+            return id_
+        else:
+            raise Exception('Entry is not a dict object')
+
+    def replace(self, data):
+        for entry in self:
+            entry.replace(data)
 
     def delete(self):
         for entry in self:
@@ -92,3 +90,32 @@ class ChainQuery(ShelfQuery):
 
     def __iter__(self):
         return self._results
+
+class Entry(dict):
+    def __init__(self, shelf, id_, entry):
+        self._shelf = shelf
+        self._id = id_
+        super().__init__(entry)
+        super().__setitem__('_id', id_)
+
+    def update(self, patch):
+        super().update(patch)
+        entry = dict(self)
+        del entry['_id']
+        self._shelf[self._id] = entry
+
+    def pop(self, k):
+        super().pop(k)
+        entry = dict(self)
+        del entry['_id']
+        self._shelf[self._id] = entry
+
+    def replace(self, entry):
+        self.clear()
+        self.__init__(self._shelf, self._id, entry)
+        entry = dict(self)
+        del entry['_id']
+        self._shelf[self._id] = entry
+
+    def delete(self):
+        del self._shelf[self._id]

@@ -1,4 +1,4 @@
-import asyncio, shelve, os, uuid
+import shelve, os, uuid
 from datetime import datetime
 from itertools import islice
 

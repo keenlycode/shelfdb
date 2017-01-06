@@ -2,17 +2,14 @@ import shelve, os, uuid
 from datetime import datetime
 from itertools import islice
 
+def open(dir_):
+    return Shelf(dir_)
 
 class Shelf(dict):
-    def __init__(self,
-            dir_=os.path.join(os.getcwd(), 'db'),
-            *args,
-            **kw):
-
+    def __init__(self, dir_=os.path.join(os.getcwd(), 'db')):
         self.dir = dir_
         if not os.path.exists(self.dir):
             os.makedirs(self.dir)
-        return super().__init__(*args, **kw)
 
     def __getitem__(self, k):
         if (not k in self or

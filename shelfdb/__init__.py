@@ -62,8 +62,14 @@ class ShelfQuery():
     def sort(self, key=lambda entry: entry['_id'], reverse=False):
         return ChainQuery(iter(sorted(self, key=key, reverse=reverse)))
 
+    def map(self, fn):
+        return ChainQuery(map(fn, self))
+
     def update(self, patch):
-        [entry.update(patch) for entry in self]
+        def _entry_update(id_, entry, patch):
+            entry.update(patch)
+            self._shelf[id_] = entry
+        [_entry_update(id_, entry, patch) for id_, entry in self._shelf.items()]
 
     def insert(self, entry):
         # Since id_=str(uuid.uuid1()) in def args will return the same value
@@ -77,13 +83,12 @@ class ShelfQuery():
     def put(self, id_, entry):
         if isinstance(entry, dict):
             self._shelf[id_] = entry
-            return id_
         else:
             raise Exception('Entry is not a dict object')
 
-    def replace(self, data):
-        for entry in self:
-            entry.replace(data)
+    def replace(self, entry):
+        for id_ in self._shelf:
+            self._shelf[id_] = entry
 
     def delete(self):
         for entry in self:
@@ -103,21 +108,11 @@ class Entry(dict):
         super().__init__(entry)
         super().__setitem__('_id', id_)
 
-    def update(self, patch):
-        super().update(patch)
-        entry = dict(self)
-        del entry['_id']
-        self._shelf[self._id] = entry
-
-    def pop(self, k):
-        super().pop(k)
-        entry = dict(self)
-        del entry['_id']
-        self._shelf[self._id] = entry
-
     def replace(self, entry):
         self.clear()
         self.__init__(self._shelf, self._id, entry)
+
+    def save(self):
         entry = dict(self)
         del entry['_id']
         self._shelf[self._id] = entry

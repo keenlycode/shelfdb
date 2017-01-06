@@ -56,14 +56,14 @@ class ShelfQuery():
     def filter(self, filter_):
         return ChainQuery(filter(filter_, self))
 
+    def map(self, fn):
+        return ChainQuery(map(fn, self))
+
     def slice(self, start, stop, step=None):
         return ChainQuery(islice(self, start, stop))
 
     def sort(self, key=lambda entry: entry['_id'], reverse=False):
         return ChainQuery(iter(sorted(self, key=key, reverse=reverse)))
-
-    def map(self, fn):
-        return ChainQuery(map(fn, self))
 
     def update(self, patch):
         def _entry_update(id_, entry, patch):

@@ -3,9 +3,9 @@ from setuptools import setup, find_packages
 
 setup(
     name='shelfdb',
-    version='0.1.1',
-    description='JSON Python DB store as files for simplicity,' +
-        'based on Python built-in `shelve`, inspired by RethinkDB API',
+    version='0.1.2',
+    description='JSON Python DB store as files for simplicity, ' +
+        'based on Python built-in `shelve`',
     url='https://github.com/nitipit/shelfdb',
     author='Nitipit Nontasuwan',
     author_email='nitipit@gmail.com',

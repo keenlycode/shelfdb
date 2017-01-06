@@ -16,7 +16,7 @@ class Shelf(dict):
                 isinstance(super().__getitem__(k)._shelf.dict, shelve._ClosedDict)):
             shelf = shelve.open(os.path.join(self.dir, k))
             super().__setitem__(
-                k, ShelfQuery(shelf))
+                k, Query(shelf))
         return super().__getitem__(k)
 
     def get(self, k):
@@ -27,7 +27,7 @@ class Shelf(dict):
             self[k].close()
 
 
-class ShelfQuery():
+class Query():
     def __init__(self, shelf):
         self._shelf = shelf
 
@@ -91,7 +91,7 @@ class ShelfQuery():
         for entry in self:
             del self._shelf[entry['_id']]
 
-class ChainQuery(ShelfQuery):
+class ChainQuery(Query):
     def __init__(self, results):
         self._results = results
 
@@ -105,9 +105,14 @@ class Entry(dict):
         super().__init__(entry)
         super().__setitem__('_id', id_)
 
+    def update(self, patch):
+        super().update(patch)
+        return self
+
     def replace(self, entry):
         self.clear()
         self.__init__(self._shelf, self._id, entry)
+        return self
 
     def save(self):
         entry = dict(self)

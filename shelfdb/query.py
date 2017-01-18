@@ -6,7 +6,7 @@ class Query():
         self._queries = []
 
     def get(self, id_):
-        return Chain({'get': id_})
+        self._queries.append({'get': id_})
 
     def first(self, filter_):
         self._queries.append({'first': filter_})

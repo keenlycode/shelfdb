@@ -21,7 +21,7 @@ async def connection(reader, writer):
     if isinstance(chain_query, shelfdb.shelf.ShelfQuery):
         entries = []
         [entries.append(entry) for entry in chain_query]
-        result['entries'] = entries
+        result['result'] = entries
     else:
         result['result'] = chain_query
 

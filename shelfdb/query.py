@@ -1,44 +1,80 @@
-import requests, dill
+import requests, dill, copy, asyncio, json
+from urllib.parse import urljoin
 
-class Query():
-    def __init__(self, server='http://127.0.0.1:17000/user/'):
-        self._server = server
-        self._queries = []
+
+def connect(addr='127.0.0.1', port=17000):
+    return DB(addr, port)
+
+class DB():
+    def __init__(self, addr, port):
+        self.addr = addr
+        self.port = port
+
+    def shelf(self, shelf_name):
+        return ShelfQuery(copy.copy(self), shelf_name)
+
+
+class ShelfQuery():
+    def __init__(self, db, shelf):
+        self.db = db
+        self.shelf = shelf
+        self.queries = []
 
     def get(self, id_):
-        self._queries.append({'get': id_})
+        return ChainQuery(self, {'get': id_})
 
     def first(self, filter_):
-        self._queries.append({'first': filter_})
+        return ChainQuery(self, {'first': filter_})
 
     def filter(self, filter_):
-        self._queries.append({'filter': filter_})
+        return ChainQuery(self, {'filter': filter_})
 
     def map(self, map_):
-        self._queries.append({'map', map_})
+        return ChainQuery(self, {'map': map_})
 
     def slice(self, start, stop, step=None):
-        self._queries.append({'slice': (start,stop,step)})
+        return ChainQuery(self, {'slice': [start, stop, step]})
 
     def sort(self, key=lambda entry: entry['_id'], reverse=False):
-        self._queries.append({'sort': (key, reverse)})
+        return ChainQuery(self, {'sort': [key, reverse]})
 
     def update(self, patch):
-        self._queries.append({'update': patch})
+        return ChainQuery(self, {'update': patch})
 
     def insert(self, entry):
-        self._queries.append({'insert': entry})
+        return ChainQuery(self, {'insert': entry})
 
     def put(self, id_, entry):
-        self._queries.append({'put': (id_, entry)})
+        return ChainQuery(self, {'put': (id_, entry)})
 
     def replace(self, entry):
-        self._queries.append({'replace': entry})
+        return ChainQuery(self, {'replace': entry})
 
     def delete(self):
-        self._queries.append({'delete': True})
+        return ChainQuery(self, 'delete')
 
     def run(self):
-        query = dill.dumps(self._queries)
-        r = requests.post(self._server, data=query)
-        return r.json()
+        return asyncio.get_event_loop().run_until_complete(
+            asyncio.ensure_future(self.run_async())
+        )
+
+    async def run_async(self):
+        queries = self.queries.copy()
+        queries.insert(0, self.shelf)
+        queries = dill.dumps(queries)
+        reader, writer = await asyncio.open_connection(
+            self.db.addr,
+            self.db.port,)
+        writer.write(queries)
+        writer.write_eof()
+        result = await reader.read(-1)
+        result = json.loads(result.decode())
+        writer.close()
+        return result
+
+class ChainQuery(ShelfQuery):
+    def __init__(self, chain_query, query):
+        self.db = chain_query.db
+        self.shelf = chain_query.shelf
+        self.queries = chain_query.queries.copy()
+        self.queries.append(query)

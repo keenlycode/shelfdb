@@ -1,28 +1,50 @@
-from tornado.ioloop import IOLoop
-from tornado.web import RequestHandler, Application
-import shelfdb, os, dill
+import asyncio, shelfdb, dill, json, re
 
-db_dir = os.path.join(os.getcwd(), 'db')
-shelf = shelfdb.open(db_dir)
+db = shelfdb.open('db')
 
-class Query(RequestHandler):
-    def post(self, shelf_):
-        queries = dill.loads(self.request.body)
-        chain_query = shelf[shelf_]
-        for query in queries:
-            query = query.popitem()
-            chain_query = chain_query.__getattribute__(query[0])(query[1])
-        if chain_query is not None:
-            entries = []
-            for entry in chain_query:
-                entries.append(entry)
-            return self.write({'entries': entries})
+async def connection(reader, writer):
+    queries = await reader.read(-1)
+    addr = writer.get_extra_info('peername')
+    print("Received %r from %r" % ('queries', addr))
+    queries = dill.loads(queries)
+    shelf = queries.pop(0)
+    chain_query = db.shelf(shelf)
 
+    for query in queries:
+        if isinstance(query, dict):
+            q = query.popitem()
+            chain_query = chain_query.__getattribute__(q[0])(q[1])
+        else:
+            chain_query = chain_query.__getattribute__(query)()
 
-app = Application([
-    (r'/([a-zA-Z0-9-_]*)/', Query)
-], debug=True)
+    result = {}
+    if isinstance(chain_query, shelfdb.shelf.ShelfQuery):
+        entries = []
+        [entries.append(entry) for entry in chain_query]
+        result['entries'] = entries
+    else:
+        result['result'] = chain_query
 
-if __name__ == '__main__':
-    app.listen(17000)
-    IOLoop.current().start()
+    print("Send: %r" % result)
+    result = json.dumps(result).encode()
+    writer.write(result)
+    await writer.drain()
+
+    print("Close the client socket")
+    writer.close()
+
+loop = asyncio.get_event_loop()
+coro = asyncio.start_server(connection, '127.0.0.1', 17000, loop=loop)
+server = loop.run_until_complete(coro)
+
+# Serve requests until Ctrl+C is pressed
+print('Serving on {}'.format(server.sockets[0].getsockname()))
+try:
+    loop.run_forever()
+except KeyboardInterrupt:
+    pass
+
+# Close the server
+server.close()
+loop.run_until_complete(server.wait_closed())
+loop.close()

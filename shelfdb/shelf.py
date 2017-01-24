@@ -3,32 +3,29 @@ from datetime import datetime
 from itertools import islice
 
 def open(dir_):
-    return Shelf(dir_)
+    return DB(dir_)
 
 
-class Shelf(dict):
+class DB():
     def __init__(self, dir_=os.path.join(os.getcwd(), 'db')):
         self.dir = dir_
         if not os.path.exists(self.dir):
             os.makedirs(self.dir)
+        self._shelf = {}
 
-    def __getitem__(self, k):
-        if (not k in self or
-                isinstance(super().__getitem__(k)._shelf.dict, shelve._ClosedDict)):
-            shelf = shelve.open(os.path.join(self.dir, k))
-            super().__setitem__(
-                k, Query(shelf))
-        return super().__getitem__(k)
-
-    def get(self, k):
-        return self.__getitem__(k)
+    def shelf(self, shelf_name):
+        if (not shelf_name in self._shelf or
+                isinstance(self._shelf[shelf_name]._shelf.dict, shelve._ClosedDict)):
+            shelf = shelve.open(os.path.join(self.dir, shelf_name))
+            self._shelf[shelf_name] = ShelfQuery(shelf)
+        return self._shelf[shelf_name]
 
     def close(self):
-        for k in self:
-            self[k].close()
+        for k in self._shelf:
+            self[k]._shelf.close()
 
 
-class Query():
+class ShelfQuery():
     def __init__(self, shelf):
         self._shelf = shelf
 
@@ -58,7 +55,7 @@ class Query():
         return ChainQuery(map(fn, self))
 
     def slice(self, start, stop, step=None):
-        return ChainQuery(islice(self, start, stop))
+        return ChainQuery(islice(self, start, stop, step))
 
     def sort(self, key=lambda entry: entry['_id'], reverse=False):
         return ChainQuery(iter(sorted(self, key=key, reverse=reverse)))
@@ -87,9 +84,9 @@ class Query():
 
     def delete(self):
         for entry in self:
-            del self._shelf[entry['_id']]
+            entry.delete()
 
-class ChainQuery(Query):
+class ChainQuery(ShelfQuery):
     def __init__(self, results):
         self._results = results
 

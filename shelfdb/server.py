@@ -1,11 +1,9 @@
-import asyncio, shelfdb, dill, json, re
+import asyncio, shelfdb, dill, json, re, js2py
 
 db = shelfdb.open('db')
 
 async def connection(reader, writer):
     queries = await reader.read(-1)
-    addr = writer.get_extra_info('peername')
-    print("Received %r from %r" % ('queries', addr))
     queries = dill.loads(queries)
     shelf = queries.pop(0)
     chain_query = db.shelf(shelf)
@@ -25,12 +23,9 @@ async def connection(reader, writer):
     else:
         result['result'] = chain_query
 
-    print("Send: %r" % result)
     result = json.dumps(result).encode()
     writer.write(result)
     await writer.drain()
-
-    print("Close the client socket")
     writer.close()
 
 loop = asyncio.get_event_loop()

@@ -2,6 +2,7 @@ import shelve, os, uuid, json, re
 from datetime import datetime
 from itertools import islice
 
+
 def open(dir_):
     return DB(dir_)
 
@@ -57,7 +58,7 @@ class ShelfQuery():
     def slice(self, start, stop, step=None):
         return ChainQuery(islice(self, start, stop, step))
 
-    def sort(self, key=lambda entry: entry['_id'], reverse=False):
+    def sort(self, key=lambda entry: entry.ts, reverse=False):
         return ChainQuery(iter(sorted(self, key=key, reverse=reverse)))
 
     def update(self, patch):
@@ -86,6 +87,7 @@ class ShelfQuery():
         for entry in self:
             entry.delete()
 
+
 class ChainQuery(ShelfQuery):
     def __init__(self, results):
         self._results = results
@@ -100,6 +102,17 @@ class Entry(dict):
         self._id = id_
         super().__init__(entry)
         super().__setitem__('_id', id_)
+
+    @property
+    def ts(self):
+        """Entry timestamp from uuid1"""
+        try:
+            return self._ts
+        except AttributeError:
+            self._ts = datetime.fromtimestamp(
+                (uuid.UUID(self._id).time - 0x01b21dd213814000)*100/1e9
+            )
+            return self._ts
 
     def update(self, patch):
         super().update(patch)

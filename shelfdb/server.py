@@ -93,5 +93,6 @@ except KeyboardInterrupt:
 
 # Close the server
 server.close()
+db.close()
 loop.run_until_complete(server.wait_closed())
 loop.close()

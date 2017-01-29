@@ -191,7 +191,7 @@ db.user('shelf').filter(lambda user: user['name'] == 'Admin').delete()
 ### map(_function_)
 Apply `function` on entries. Return iterator.
 #### example:
-Remove user's id
+Add **staff** to `user['type']`
 ```
 >>> def modify_user(user): user['type'] = 'staff'; return user;
 >>> for user in db.shelf('user').map(modify_user):

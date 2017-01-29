@@ -2,6 +2,7 @@
 ![Shelfdb](https://raw.githubusercontent.com/nitipit/shelfdb/master/doc/shelfdb.png)
 
 ### Python dict/json DB **Done right** for **Efficiency** and **Simplicity**.
+
 ## Features :  
 - Very simple Pyton dict/json Database.
 - Chainable Query.
@@ -26,9 +27,13 @@ db.shelf('user') # get table/shelf 'user' from database 'db_name'
 
 ### insert(_entry_)
 Insert an entry to shelf, automatic generate uuid1 for the entry's ID.
+
 #### args:
 _entry_ = Python dict object to be stored.
+
 #### example:
+
+
 ```
 >>> db.shelf('user').insert({'name': 'Admin'})
 'd4cc9a64-e4ba-11e6-afb7-34f39a03f034'

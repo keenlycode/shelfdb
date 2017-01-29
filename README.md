@@ -1,6 +1,6 @@
 # ShelfDB
+![Shelfdb](https://raw.githubusercontent.com/nitipit/shelfdb/master/doc/shelfdb.png)
 ### Python dict/json DB **Done right** for **Efficiency** and **Simplicity**.
-
 ## Features :
 - Very simple Pyton dict/json Database.
 - Chainable Query.

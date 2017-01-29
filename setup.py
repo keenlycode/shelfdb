@@ -3,9 +3,8 @@ from setuptools import setup, find_packages
 
 setup(
     name='shelfdb',
-    version='0.1.1',
-    description='JSON Python DB store as files for simplicity, ' +
-        'based on Python built-in `shelve`',
+    version='0.1.2',
+    description='Python dict/json DB, Done right for Efficiency and Simplicity',
     url='https://github.com/nitipit/shelfdb',
     author='Nitipit Nontasuwan',
     author_email='nitipit@gmail.com',
@@ -13,6 +12,6 @@ setup(
     classifiers=[
         'Programming Language :: Python :: 3.5',
     ],
-    keywords='JSON Database',
+    keywords='dict json database',
     packages=find_packages(),
 )

@@ -2,16 +2,16 @@
 ![Shelfdb](https://raw.githubusercontent.com/nitipit/shelfdb/master/doc/shelfdb.png)
 
 ### Python dict/json DB **Done right** for **Efficiency** and **Simplicity**.
-## Features :
+## Features :  
 - Very simple Pyton dict/json Database.
 - Chainable Query.
 - Follow Python built-in `list` and `dict` concept to query data.
 
-## Install:
+## Install:  
 pip install shelfdb
 
-## ShelfDB API:
-to get shelfdb object.
+## ShelfDB API:  
+to get shelfdb object.  
 ```
 import shelfdb
 db = shelfdb.open('db_name') # Get database

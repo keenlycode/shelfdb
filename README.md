@@ -4,13 +4,13 @@
 ## Features :
 - Very simple Pyton dict/json Database.
 - Chainable Query.
-- Follow Python built-in `list` and `dict` concept to query data
+- Follow Python built-in `list` and `dict` concept to query data.
 
 ## Install:
 pip install shelfdb
 
 ## ShelfDB API:
-to get shelfdb object
+to get shelfdb object.
 ```
 import shelfdb
 db = shelfdb.open('db_name') # Get database
@@ -22,7 +22,7 @@ db.shelf('user') # get table/shelf 'user' from database 'db_name'
 `ShelfQuery` is much like python `list` and use same concept to query entries from database such as `insert`, `slice`, `sort`, `filter`, `map` with addition features.
 
 ### insert(_entry_)
-Insert an entry to shelf, automatic generate uuid1 for the entry's ID
+Insert an entry to shelf, automatic generate uuid1 for the entry's ID.
 #### args:
 _entry_ = Python dict object to be stored.
 #### example:
@@ -55,7 +55,7 @@ _id_ = object's ID (uuid1)
 >>> db.shelf('user').get('d4cc9a64-e4ba-11e6-afb7-34f39a03f034')
 {'_id': 'd4cc9a64-e4ba-11e6-afb7-34f39a03f034', 'name': 'Admin'}
 ```
-If you need json string (to send over network)
+If you need json string (to send over network).
 ```
 >>> import json
 >>> user = db.shelf('user').get('d4cc9a64-e4ba-11e6-afb7-34f39a03f034')
@@ -66,7 +66,7 @@ If you need json string (to send over network)
 ### first(_filter_)
 Get first object match by `filter` and then exit query loop.
 #### args:
-_filter_ = function or lambda to match entry
+_filter_ = function or lambda to match entry.
 ### example:
 ```
 >>> db.shelf('user').first(lambda user: user['name'] == 'Linda')
@@ -80,9 +80,9 @@ Can also use regular expression
 ```
 
 ### filter(_filter_)
-Filter objects by function or lambda and return `iterator object` to be used with _loop_
+Filter objects by function or lambda.
 #### args:
-_filter_ = function or lambda to match entries
+_filter_ = function or lambda to match entries.
 #### example:
 Get users which user['name'] contains 'in' in any position.
 

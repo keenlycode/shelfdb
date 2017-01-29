@@ -1,6 +1,7 @@
 import shelve, os, uuid, json, re
 from datetime import datetime
 from itertools import islice
+from collections import deque
 
 
 def open(dir_):
@@ -55,6 +56,10 @@ class ShelfQuery():
     def map(self, fn):
         return ChainQuery(map(fn, self))
 
+    def apply(self, fn):
+        deque(map(fn, self), 0)
+        return
+
     def slice(self, start, stop, step=None):
         return ChainQuery(islice(self, start, stop, step))
 
@@ -73,19 +78,11 @@ class ShelfQuery():
     def update(self, patch):
         [entry.update(patch) for entry in self]
 
-    def put(self, id_, entry):
-        if isinstance(entry, dict):
-            self._shelf[id_] = entry
-        else:
-            raise Exception('Entry is not a dict object')
-
     def replace(self, data):
-        for entry in self:
-            entry.replace(data)
+        [entry.replace(data) for entry in self]
 
     def delete(self):
-        for entry in self:
-            entry.delete()
+        [entry.delete() for entry in self]
 
 
 class ChainQuery(ShelfQuery):
@@ -119,7 +116,7 @@ class Entry(dict):
         self._save()
 
     def replace(self, entry):
-        entry = entry.copy()
+        entry = entry.copy() # Make sure not to replace itself.
         entry['_id'] = self._id
         self.clear()
         self.update(entry)

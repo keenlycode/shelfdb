@@ -143,7 +143,7 @@ Sort by user's name
 ```
 
 ## Operate functions
-Every select functions can follow by operate funcitons as chains
+Every select functions can follow by operate function as chains
 which means, you can do like...
 ```
 db.shelf('user').filter(lambda user: re.match('in', user)).update(_patch_)

@@ -11,7 +11,8 @@
 pip install shelfdb
 
 ## ShelfDB API:  
-to get shelfdb object.  
+to get shelfdb object.
+
 ```
 import shelfdb
 db = shelfdb.open('db_name') # Get database

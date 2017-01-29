@@ -14,7 +14,6 @@ pip install shelfdb
 ## ShelfDB API:  
 to get shelfdb object.
 
-
 ```
 import shelfdb
 db = shelfdb.open('db_name') # Get database
@@ -32,7 +31,6 @@ Insert an entry to shelf, automatic generate uuid1 for the entry's ID.
 _entry_ = Python dict object to be stored.
 
 #### example:
-
 
 ```
 >>> db.shelf('user').insert({'name': 'Admin'})
@@ -56,9 +54,12 @@ _entry_ = Python dict object to be stored.
 
 ### get(_id_)
 Get entry by `id`
+
 #### args:
 _id_ = object's ID (uuid1)
+
 #### example:
+
 ```
 >>> db.shelf('user').get('d4cc9a64-e4ba-11e6-afb7-34f39a03f034')
 {'_id': 'd4cc9a64-e4ba-11e6-afb7-34f39a03f034', 'name': 'Admin'}
@@ -73,14 +74,18 @@ If you need json string (to send over network).
 
 ### first(_filter_)
 Get first object match by `filter` and then exit query loop.
+
 #### args:
 _filter_ = function or lambda to match entry.
+
 ### example:
+
 ```
 >>> db.shelf('user').first(lambda user: user['name'] == 'Linda')
 {'_id': 'ea0ab352-e4ba-11e6-afb7-34f39a03f034', 'name': 'Linda'}
 ```
 Can also use regular expression
+
 ```
 >>> import re
 ... db.shelf('user').first(lambda user: re.search('Lin', user))
@@ -89,8 +94,10 @@ Can also use regular expression
 
 ### filter(_filter_)
 Filter objects by function or lambda.
+
 #### args:
 _filter_ = function or lambda to match entries.
+
 #### example:
 Get users which user['name'] contains 'in' in any position.
 
@@ -107,11 +114,14 @@ Get users which user['name'] contains 'in' in any position.
 
 ### sort(_key_, _reverse_)
 Sort entries by `key`. If not provide, sort by insert timestamp.
+
 #### args:
 _key_: a value to be used to sort, should be in `lambda` function. will, See example.  
 _reverse_: reverse the order, default is `False`
+
 #### example:
 Sort by insert timestamp (uuid1 timestamp)
+
 ```
 >>> for user in db.shelf('user').sort():
 ...     print(user)
@@ -121,6 +131,7 @@ Sort by insert timestamp (uuid1 timestamp)
 {'name': 'Noctis', '_id': '0a4909c4-e4bc-11e6-afb7-34f39a03f034'}
 ```
 Reverse sort
+
 ```
 >>> for user in db.shelf('user').sort(reverse=True):
 ...     print(user)
@@ -130,6 +141,7 @@ Reverse sort
 {'name': 'Admin', '_id': 'd4cc9a64-e4ba-11e6-afb7-34f39a03f034'}
 ```
 Sort by user's name
+
 ```
 >>> for user in db.shelf('user').sort(lambda user: user['name']):
 ...     print(user)
@@ -140,7 +152,9 @@ Sort by user's name
 ```
 
 ### slice(_start_, _stop_, _step_)
+
 #### example:
+
 ```
 >>> for user in db.shelf('user').slice(0,2):
 ...     print(user)
@@ -153,14 +167,17 @@ Sort by user's name
 ## Operate functions
 Every select functions can follow by operate function as chains
 which means, you can do like...
+
 ```
 db.shelf('user').filter(lambda user: re.match('in', user)).update(_patch_)
 ```
 
 ### update(_patch_)
 Update queried entries.
+
 #### example:
 Update sex to all users
+
 ```
 >>> db.shelf('user').update({'sex': 'male'})
 >>> for user in db.shelf('user'):
@@ -173,8 +190,10 @@ Update sex to all users
 
 ### replace(_entry_)
 Replace entry.
+
 #### example:
 Remove sex from every users
+
 ```
 >>> def remove_sex(user):
 ...     del user['sex']
@@ -191,14 +210,18 @@ Remove sex from every users
 
 ### delete()
 Delete entries.
+
 #### example:
+
 ```
 db.user('shelf').filter(lambda user: user['name'] == 'Admin').delete()
 ```
 
 ### map(_function_)
 Apply `function` on entries. Return iterator.
+
 #### example:
+
 Add **staff** to `user['type']`
 ```
 >>> def modify_user(user): user['type'] = 'staff'; return user;

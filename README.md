@@ -116,7 +116,7 @@ Get users which user['name'] contains 'in' in any position.
 Sort entries by `key`. If not provide, sort by insert timestamp.
 
 #### args:
-_key_: a value to be used to sort, should be in `lambda` function. will, See example.  
+_key_: a value to be used to sort, should be in `lambda` function. See example.  
 _reverse_: reverse the order, default is `False`
 
 #### example:

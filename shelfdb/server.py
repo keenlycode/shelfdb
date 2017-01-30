@@ -1,4 +1,4 @@
-import asyncio, shelfdb, dill, json, re, js2py
+import asyncio, shelfdb, dill, json, re
 from shelfdb.shelf import ChainQuery
 
 class QueryHandler():

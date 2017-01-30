@@ -14,4 +14,5 @@ setup(
     ],
     keywords='dict json database',
     packages=find_packages(),
+    install_requires=['dill',],
 )

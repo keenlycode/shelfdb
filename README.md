@@ -241,7 +241,7 @@ Change `user['type']` to **member**
 
 ```
 >>> def modify_user(user): user['type'] = 'member'; return user;
->>> user in db.shelf('user').apply(modify_user):
+>>> db.shelf('user').apply(modify_user):
 >>> for user in db.shelf('user'):
 ...     print(user)
 ...

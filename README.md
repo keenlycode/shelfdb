@@ -65,6 +65,7 @@ _id_ = object's ID (uuid1)
 {'_id': 'd4cc9a64-e4ba-11e6-afb7-34f39a03f034', 'name': 'Admin'}
 ```
 If you need json string (to send over network).
+
 ```
 >>> import json
 >>> user = db.shelf('user').get('d4cc9a64-e4ba-11e6-afb7-34f39a03f034')
@@ -73,7 +74,7 @@ If you need json string (to send over network).
 ```
 
 ### first(_filter_)
-Get first object match by `filter` and then exit query loop.
+Get first object match by `filter`.
 
 #### args:
 _filter_ = function or lambda to match entry.
@@ -88,7 +89,7 @@ Can also use regular expression
 
 ```
 >>> import re
-... db.shelf('user').first(lambda user: re.search('Lin', user))
+>>> db.shelf('user').first(lambda user: re.search('Lin', user))
 {'_id': 'ea0ab352-e4ba-11e6-afb7-34f39a03f034', 'name': 'Linda'}
 ```
 
@@ -108,8 +109,7 @@ Get users which user['name'] contains 'in' in any position.
 ...     print(user)
 ...
 {'name': 'Linda', '_id': 'ea0ab352-e4ba-11e6-afb7-34f39a03f034'}
-{'name': 'Linda', '_id': 'ea0ab352-e4ba-11e6-afb7-34f39a03f034'}
-{'name': 'Noctis', '_id': '0a4909c4-e4bc-11e6-afb7-34f39a03f034'}
+{'name': 'Admin', '_id': 'd4cc9a64-e4ba-11e6-afb7-34f39a03f034'}
 ```
 
 ### sort(_key_, _reverse_)
@@ -146,9 +146,9 @@ Sort by user's name
 >>> for user in db.shelf('user').sort(lambda user: user['name']):
 ...     print(user)
 ...
+{'name': 'Admin', '_id': 'd4cc9a64-e4ba-11e6-afb7-34f39a03f034'}
 {'name': 'Linda', '_id': 'ea0ab352-e4ba-11e6-afb7-34f39a03f034'}
 {'name': 'Noctis', '_id': '0a4909c4-e4bc-11e6-afb7-34f39a03f034'}
-{'name': 'Admin', '_id': 'd4cc9a64-e4ba-11e6-afb7-34f39a03f034'}
 ```
 
 ### slice(_start_, _stop_, _step_)
@@ -156,12 +156,11 @@ Sort by user's name
 #### example:
 
 ```
->>> for user in db.shelf('user').slice(0,2):
+>>> for user in db.shelf('user').sort().slice(0,2):
 ...     print(user)
 ...
-{'_id': 'ea0ab352-e4ba-11e6-afb7-34f39a03f034', 'name': 'Linda'}
-{'_id': 'd4cc9a64-e4ba-11e6-afb7-34f39a03f034', 'name': 'Admin'}
-{'_id': '0a4909c4-e4bc-11e6-afb7-34f39a03f034', 'name': 'Noctis'}
+{'name': 'Admin', '_id': 'd4cc9a64-e4ba-11e6-afb7-34f39a03f034'}
+{'name': 'Linda', '_id': 'ea0ab352-e4ba-11e6-afb7-34f39a03f034'}
 ```
 
 ## Operate functions
@@ -189,17 +188,17 @@ Update sex to all users
 ```
 
 ### replace(_entry_)
-Replace entry.
+Replace queried entries.
 
 #### example:
 Remove sex from every users
 
 ```
 >>> def remove_sex(user):
-...     del user['sex']
-...     user.replace(user)
+...     del user['sex'] # Data remove but not yet store in database.
+...     user.replace(user) # Store in database
 ...
->>> db.shelf('user').map(remove_sex)
+>>> db.shelf('user').apply(remove_sex)
 >>> for user in db.shelf('user'):
 ...     print(user)
 ...
@@ -218,7 +217,8 @@ db.user('shelf').filter(lambda user: user['name'] == 'Admin').delete()
 ```
 
 ### map(_function_)
-Apply `function` on entries. Return iterator.
+Apply `function` on entries. Return iterator (it means `map()` won't do anything
+until you loop throught the query)
 
 #### example:
 
@@ -231,4 +231,21 @@ Add **staff** to `user['type']`
 {'name': 'Linda', '_id': 'ea0ab352-e4ba-11e6-afb7-34f39a03f034', 'type': 'staff'}
 {'name': 'Admin', '_id': 'd4cc9a64-e4ba-11e6-afb7-34f39a03f034', 'type': 'staff'}
 {'name': 'Noctis', '_id': '0a4909c4-e4bc-11e6-afb7-34f39a03f034', 'type': 'staff'}
+```
+
+### apply(_function_)
+Immediatly apply `function` on entries.
+
+#### example:
+
+Add **staff** to `user['type']`
+```
+>>> def modify_user(user): user['type'] = 'member'; return user;
+>>> user in db.shelf('user').apply(modify_user):
+>>> for user in db.shelf('user'):
+...     print(user)
+...
+{'name': 'Linda', '_id': 'ea0ab352-e4ba-11e6-afb7-34f39a03f034', 'type': 'member'}
+{'name': 'Admin', '_id': 'd4cc9a64-e4ba-11e6-afb7-34f39a03f034', 'type': 'member'}
+{'name': 'Noctis', '_id': '0a4909c4-e4bc-11e6-afb7-34f39a03f034', 'type': 'member'}
 ```

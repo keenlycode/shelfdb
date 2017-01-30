@@ -221,8 +221,8 @@ Apply `function` on entries. Return iterator (it means `map()` won't do anything
 until you loop throught the query)
 
 #### example:
-
 Add **staff** to `user['type']`
+
 ```
 >>> def modify_user(user): user['type'] = 'staff'; return user;
 >>> for user in db.shelf('user').map(modify_user):
@@ -237,8 +237,8 @@ Add **staff** to `user['type']`
 Immediatly apply `function` on entries.
 
 #### example:
-
 Add **staff** to `user['type']`
+
 ```
 >>> def modify_user(user): user['type'] = 'member'; return user;
 >>> user in db.shelf('user').apply(modify_user):

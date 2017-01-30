@@ -237,7 +237,7 @@ Add **staff** to `user['type']`
 Immediatly apply `function` on entries.
 
 #### example:
-Add **staff** to `user['type']`
+Change `user['type']` to **member**
 
 ```
 >>> def modify_user(user): user['type'] = 'member'; return user;

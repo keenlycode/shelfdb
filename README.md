@@ -47,7 +47,7 @@ _entry_ = Python dict object to be stored.
 {'name': 'Noctis', '_id': '0a4909c4-e4bc-11e6-afb7-34f39a03f034'}
 ```
 
-## Query Conecept  
+## Query Concept  
 - Every query start with `selection` then `operate` on the selected entries.
 
 ## Select functions

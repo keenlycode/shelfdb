@@ -1,4 +1,4 @@
-import shelve, os, uuid, json, re
+import shelve, os, uuid
 from datetime import datetime
 from itertools import islice
 from collections import deque

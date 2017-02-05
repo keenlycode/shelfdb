@@ -77,7 +77,7 @@ class ShelfQuery():
         return ChainQuery(reduce(fn, self, initializer))
 
     def run(self):
-        """Immediatly apply map function on queried entries."""
+        """Iterate through ChainQuery"""
         return [obj for obj in self]
 
     def slice(self, start, stop, step=None):

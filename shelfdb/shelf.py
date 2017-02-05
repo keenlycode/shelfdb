@@ -78,7 +78,7 @@ class ShelfQuery():
 
     def run(self):
         """Iterate through ChainQuery"""
-        return [obj for obj in self]
+        return [obj for obj in self if obj is not None]
 
     def slice(self, start, stop, step=None):
         """Slice queried entries."""

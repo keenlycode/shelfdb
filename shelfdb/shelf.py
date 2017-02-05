@@ -76,10 +76,9 @@ class ShelfQuery():
         """Apply reduce function on queried entries, return iterator."""
         return ChainQuery(reduce(fn, self, initializer))
 
-    def apply(self, fn):
+    def run(self):
         """Immediatly apply map function on queried entries."""
-        deque(map(fn, self), 0)
-        return
+        return [obj for obj in self]
 
     def slice(self, start, stop, step=None):
         """Slice queried entries."""

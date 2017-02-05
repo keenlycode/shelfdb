@@ -77,7 +77,7 @@ class ShelfQuery():
         return ChainQuery(reduce(fn, self, initializer))
 
     def run(self):
-        """Iterate through ChainQuery"""
+        """Iterate through ChainQuery and keep results in a list"""
         return [obj for obj in self if obj is not None]
 
     def slice(self, start, stop, step=None):

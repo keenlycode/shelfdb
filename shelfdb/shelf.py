@@ -73,8 +73,8 @@ class ShelfQuery():
         return ChainQuery(map(fn, self))
 
     def reduce(self, fn, initializer=None):
-        """Apply reduce function on queried entries, return iterator."""
-        return ChainQuery(reduce(fn, self, initializer))
+        """Apply reduce function on queried entries"""
+        return reduce(fn, self, initializer)
 
     def run(self):
         """Iterate through ChainQuery and keep results in a list"""

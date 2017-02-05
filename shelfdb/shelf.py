@@ -2,6 +2,7 @@ import shelve, os, uuid
 from datetime import datetime
 from itertools import islice
 from collections import deque
+from functools import reduce
 
 
 def open(dir_):
@@ -70,6 +71,10 @@ class ShelfQuery():
     def map(self, fn):
         """Apply map function on queried entries, return iterator."""
         return ChainQuery(map(fn, self))
+
+    def reduce(self, fn, initializer=None):
+        """Apply reduce function on queried entries, return iterator."""
+        return ChainQuery(reduce(fn, self, initializer))
 
     def apply(self, fn):
         """Immediatly apply map function on queried entries."""

@@ -32,7 +32,7 @@ class DB():
     def close(self):
         """Close all shelf files"""
         for k in self._shelf:
-            self[k]._shelf.close()
+            self._shelf[k]._shelf.close()
 
 
 class ShelfQuery():
@@ -127,8 +127,7 @@ class ChainQuery(ShelfQuery):
 
 
 class Entry(dict):
-    """Class for Entry object which contains API to deal with shelf.
-    """
+    """Class for Entry object which contains API to deal with shelf."""
 
     # To have `entry` as an argument is by design to be more efficient
     # when call by `ShelfQuery._get_entry()`. Since entry data will be pull out
@@ -142,7 +141,9 @@ class Entry(dict):
 
     @property
     def ts(self):
-        """Entry's timestamp from uuid1. Got the formular from stack overflow"""
+        """Entry's timestamp from uuid1. Got the formular from stack overflow.
+        http://stackoverflow.com/questions/3795554/extract-the-time-from-a-uuid-v1-in-python
+        """
         try:
             return self._ts
         except AttributeError:

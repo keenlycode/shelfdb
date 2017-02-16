@@ -125,6 +125,9 @@ class ChainQuery(ShelfQuery):
     def __iter__(self):
         return self._results
 
+    def __next__(self):
+        return next(self._results)
+
 
 class Entry(dict):
     """Class for Entry object which contains API to deal with shelf."""

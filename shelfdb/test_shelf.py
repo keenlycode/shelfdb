@@ -1,5 +1,5 @@
 import unittest, shelfdb, shutil, dbm, shelve, uuid
-from shelfdb.shelf import Entry
+from shelfdb import shelf
 
 class DB(unittest.TestCase):
     def setUp(self):
@@ -39,13 +39,13 @@ class ShelfQuery(unittest.TestCase):
     def test_get(self):
         user = self.user_list[0]
         self.assertIsInstance(
-            self.db.shelf('user').get(user['_id']), Entry)
+            self.db.shelf('user').get(user['_id']), shelf.Entry)
 
     def test_first(self):
         user = self.user_list[0]
         self.assertIsInstance(
             self.db.shelf('user').first(lambda u: u['name'] == user['name']),
-            Entry
+            shelf.Entry
         )
 
     def tearDown(self):

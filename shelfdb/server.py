@@ -1,4 +1,4 @@
-import asyncio, shelfdb, dill, json, re
+import asyncio, shelfdb, dill, re, sys
 from shelfdb.shelf import ChainQuery
 
 class QueryHandler():
@@ -22,13 +22,18 @@ class QueryHandler():
         self.chain_query = self.chain_query.map(fn, self.chain_query)
         return self
 
+    def reduce(self, fn):
+        self.chain_query = self.chain_query.reduce(fn, self.chain_query)
+        return self
+
     def slice(self, args):
         """`args` should be [start, stop, step]"""
-
         self.chain_query = self.chain_query.slice(*args)
         return self
 
     def sort(self, kw):
+        if kw['key'] is None:
+            del kw['key']
         self.chain_query = self.chain_query.sort(**kw)
         return self
 
@@ -59,15 +64,13 @@ class QueryHandler():
                 self = self.__getattribute__(q[0])(q[1])
             else:
                 self = self.__getattribute__(query)()
-        result = {}
         if isinstance(self.chain_query, shelfdb.shelf.ShelfQuery):
             entries = []
+            # Keep only dict value from entry.copy() into entries
             [entries.append(entry.copy()) for entry in self.chain_query]
-            result['result'] = entries
+            return entries
         else:
-            result['result'] = self.chain_query
-
-        return result
+            return self.chain_query.copy() # Extract only dict value
 
 async def handler(reader, writer):
     queries = await reader.read(-1)

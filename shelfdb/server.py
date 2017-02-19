@@ -61,7 +61,6 @@ class QueryHandler():
         for query in self.queries:
             if isinstance(query, dict):
                 q = query.popitem()
-                print(q)
                 self = self.__getattribute__(q[0])(q[1])
             else:
                 self = self.__getattribute__(query)()

@@ -38,7 +38,7 @@ class QueryHandler():
         return self
 
     def update(self, patch):
-        [entry.update(patch) for entry in self.chain_query]
+        self.chain_query = self.chain_query.update(patch)
         return self
 
     def insert(self, entry):
@@ -61,6 +61,7 @@ class QueryHandler():
         for query in self.queries:
             if isinstance(query, dict):
                 q = query.popitem()
+                print(q)
                 self = self.__getattribute__(q[0])(q[1])
             else:
                 self = self.__getattribute__(query)()
@@ -69,6 +70,10 @@ class QueryHandler():
             # Keep only dict value from entry.copy() into entries
             [entries.append(entry.copy()) for entry in self.chain_query]
             return entries
+        elif isinstance(self.chain_query, str):
+            return self.chain_query
+        elif self.chain_query is None:
+            return None
         else:
             return self.chain_query.copy() # Extract only dict value
 

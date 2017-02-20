@@ -6,16 +6,17 @@ class QueryHandler():
     It will extract python pickle dict queries (by dill), run process on
     server side, then return result back to client.
 
-    Format of incoming chain queries:
+    Format of incoming chain queries (python dill object)
         [
             '<shelf name>',
-            {'<method>': arg},
-            {'<method>': arg},
+            {'<method>': <arg>},
             '<method_with_no_arg>',
             ...
         ]
-    See `run()` to learn how it extract chain query to method call.
+    methods `<arg>` can be anything which can be pickle by dill.
+    See `run()` to learn how it extracts chain query into method call.
     """
+
     def __init__(self, db, shelf, queries):
         self.chain_query = db.shelf(shelf)
         self.queries = queries

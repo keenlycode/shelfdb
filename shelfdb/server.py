@@ -2,6 +2,20 @@ import asyncio, shelfdb, dill, re, sys
 from shelfdb.shelf import ChainQuery
 
 class QueryHandler():
+    """Handler for incoming query requests from shelfquery.
+    It will extract python pickle dict queries (by dill), run process on
+    server side, then return result back to client.
+
+    Format of incoming chain queries:
+        [
+            '<shelf name>',
+            {'<method>': arg},
+            {'<method>': arg},
+            '<method_with_no_arg>',
+            ...
+        ]
+    See `run()` to learn how it extract chain query to method call.
+    """
     def __init__(self, db, shelf, queries):
         self.chain_query = db.shelf(shelf)
         self.queries = queries
@@ -36,6 +50,7 @@ class QueryHandler():
         return self
 
     def sort(self, kw):
+        # Remove sort key from `kw` if it hasn't been sent from client
         if kw['key'] is None:
             del kw['key']
         self.chain_query = self.chain_query.sort(**kw)

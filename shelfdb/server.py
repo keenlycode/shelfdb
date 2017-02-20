@@ -14,6 +14,10 @@ class QueryHandler():
         self.chain_query = self.chain_query.first(filter_)
         return self
 
+    def entry(self, fn):
+        self.chain_query = fn(self.chain_query)
+        return self
+
     def filter(self, filter_):
         self.chain_query = self.chain_query.filter(filter_)
         return self

@@ -64,10 +64,6 @@ class QueryHandler():
         self.chain_query = self.chain_query.insert(entry)
         return self
 
-    def put(self, id_, entry):
-        self.chain_query = self.chain_query.put(id_, entry)
-        return self
-
     def replace(self, data):
         self.chain_query = self.chain_query.replace(data)
         return self

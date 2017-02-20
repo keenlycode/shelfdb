@@ -20,7 +20,7 @@ class DB():
         self._shelf = {}
 
     def shelf(self, shelf_name):
-        """Get ShelfQuery object. create shelf file to store data
+        """Get ShelfQuery object. create shelf file to store entries
         if does not exist.
         """
         if (not shelf_name in self._shelf or
@@ -115,7 +115,7 @@ class ShelfQuery():
 
 class ChainQuery(ShelfQuery):
     """Subclass of ShelfQuery to store query result.
-    The reason to have this class object is to keep ShelfQuery object state
+    The propose of ChainQuery object is to keep ShelfQuery object state
     unmodified for future use.
     """
 

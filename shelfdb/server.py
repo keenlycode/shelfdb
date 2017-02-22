@@ -6,7 +6,7 @@ class QueryHandler():
     It will extract python pickle dict queries (by dill), run process on
     server side, then return result back to client.
 
-    Format of incoming chain queries (python dill object)
+    Format of incoming chain queries (in python object)
         [
             '<shelf name>',
             {'<method>': <arg>},
@@ -87,17 +87,25 @@ class QueryHandler():
             return entries
         elif isinstance(self.chain_query, str):
             return self.chain_query
-        elif self.chain_query is None:
-            return None
+        elif isinstance(self.chain_query, shelfdb.shelf.Entry):
+            return self.chain_query.copy()
         else:
-            return self.chain_query.copy() # Extract only dict value
+            return self.chain_query
 
 async def handler(reader, writer):
     queries = await reader.read(-1)
-    queries = dill.loads(queries)
-    shelf = queries.pop(0)
-    result = QueryHandler(db, shelf, queries).run()
-    result = dill.dumps(result)
+    try:
+        queries = dill.loads(queries)
+        shelf = queries.pop(0)
+        result = QueryHandler(db, shelf, queries).run()
+        result = dill.dumps(result)
+    except:
+        print("Unexpected error:", sys.exc_info()[1])
+        result = dill.dumps(sys.exc_info()[1])
+        writer.write(result)
+        await writer.drain()
+        writer.close()
+        raise
     writer.write(result)
     await writer.drain()
     writer.close()

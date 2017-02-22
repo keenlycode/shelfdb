@@ -15,4 +15,9 @@ setup(
     keywords='dict json database',
     packages=find_packages(),
     install_requires=['dill',],
+    entry_points={
+        'console_scripts': [
+            'shelfdb=shelfdb.server',
+        ],
+    },
 )

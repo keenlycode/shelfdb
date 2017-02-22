@@ -85,8 +85,6 @@ class QueryHandler():
             # Keep only dict value from entry.copy() into entries
             [entries.append(entry.copy()) for entry in self.chain_query]
             return entries
-        elif isinstance(self.chain_query, str):
-            return self.chain_query
         elif isinstance(self.chain_query, shelfdb.shelf.Entry):
             return self.chain_query.copy()
         else:

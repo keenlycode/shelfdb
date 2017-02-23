@@ -3,7 +3,7 @@ from shelfdb import shelf
 
 class DB(unittest.TestCase):
     def setUp(self):
-        self.db = shelfdb.open('test_data/db')
+        self.db = shelfdb.db('test_data/db')
         self.assertIsInstance(self.db, shelfdb.shelf.DB)
 
     def test_shelf(self):
@@ -24,7 +24,7 @@ class DB(unittest.TestCase):
 
 class ShelfQuery(unittest.TestCase):
     def setUp(self):
-        self.db = shelfdb.open('test_data/db')
+        self.db = shelfdb.db('test_data/db')
         self.user_list = [
             {'name': 'Jan'},
             {'name': 'Feb'},

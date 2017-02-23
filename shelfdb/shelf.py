@@ -1,3 +1,6 @@
+"""Module to handle file api for shelfdb.
+"""
+
 import shelve, os, uuid
 from datetime import datetime
 from itertools import islice
@@ -5,27 +8,33 @@ from collections import deque
 from functools import reduce
 
 
-def open(dir_):
-    """Open database, return DB object."""
-    return DB(dir_)
+def db(path):
+    """Open database, return DB object.
+
+    Args:
+        path (string): path for database.
+    Return:
+        ``DB`` object.
+    """
+    return DB(path)
 
 
 class DB():
-    """ Database that handle shelves in it's directory."""
+    """Class to handle shelves in database"""
 
-    def __init__(self, dir_=os.path.join(os.getcwd(), 'db')):
-        self.dir = dir_
-        if not os.path.exists(self.dir):
-            os.makedirs(self.dir)
+    def __init__(self, path):
+        self.path = path
+        if not os.path.exists(self.path):
+            os.makedirs(self.path)
         self._shelf = {}
 
     def shelf(self, shelf_name):
-        """Get ShelfQuery object. create shelf file to store entries
-        if does not exist.
+        """Get ``ShelfQuery`` object. create shelf file named ``shelf_name``
+        to store entries if needed.
         """
         if (not shelf_name in self._shelf or
                 isinstance(self._shelf[shelf_name]._shelf.dict, shelve._ClosedDict)):
-            shelf = shelve.open(os.path.join(self.dir, shelf_name))
+            shelf = shelve.open(os.path.join(self.path, shelf_name))
             self._shelf[shelf_name] = ShelfQuery(shelf)
         return self._shelf[shelf_name]
 
@@ -58,14 +67,14 @@ class ShelfQuery():
         return self.__getitem__(id_)
 
     def first(self, filter_):
-        """Get the first entry matched by `filter_` and exit iteration."""
+        """Get the first entry matched by ``filter_`` and exit iteration."""
         try:
             return next(filter(filter_, self))
         except StopIteration:
             return None
 
     def filter(self, filter_):
-        """Get entries matched by `filter_`."""
+        """Get entries matched by ``filter_``."""
         return ChainQuery(filter(filter_, self))
 
     def map(self, fn):
@@ -89,7 +98,7 @@ class ShelfQuery():
         return ChainQuery(iter(sorted(self, key=key, reverse=reverse)))
 
     def insert(self, entry):
-        """Insert an entry. Automatic generate uuid1 as entry's ID."""
+        """Insert an entry. Automatic generate **uuid1** as entry's ID."""
 
         # Must generate uuid1 here, since id_=str(uuid.uuid1()) in def args
         # will return the same value all the times after first call.
@@ -101,11 +110,11 @@ class ShelfQuery():
             raise Exception('Entry is not a dict object')
 
     def update(self, patch):
-        """Update queried entries with `patch`"""
+        """Update queried entries with ``patch``"""
         [entry.update(patch) for entry in self]
 
     def replace(self, data):
-        """Replace queried entries with `data`"""
+        """Replace queried entries with ``data``"""
         [entry.replace(data) for entry in self]
 
     def delete(self):

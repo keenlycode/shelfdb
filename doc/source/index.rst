@@ -1,5 +1,5 @@
 .. ShelfDB documentation master file, created by
-   sphinx-quickstart on Thu Feb 23 02:14:47 2017.
+   sphinx-quickstart on Thu Feb 23 21:25:00 2017.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
@@ -10,6 +10,7 @@ Welcome to ShelfDB's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   docstring
 
 
 Indices and tables

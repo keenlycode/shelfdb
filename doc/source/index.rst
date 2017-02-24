@@ -10,7 +10,7 @@ Welcome to ShelfDB's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   docstring
+   doc
 
 
 Indices and tables

@@ -8,7 +8,7 @@ from functools import reduce
 
 
 class DB():
-    """Class to handle shelves in database"""
+    """Database class to manage shelves"""
 
     def __init__(self, path):
         self.path = path

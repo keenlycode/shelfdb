@@ -109,7 +109,6 @@ async def handler(reader, writer):
     writer.close()
 
 def main():
-    db = shelfdb.open('db')
     loop = asyncio.get_event_loop()
     server = asyncio.start_server(handler, '127.0.0.1', 17000, loop=loop)
     server = loop.run_until_complete(server)
@@ -126,6 +125,8 @@ def main():
     db.close()
     loop.run_until_complete(server.wait_closed())
     loop.close()
+
+db = shelfdb.open('db')
 
 if __name__ == '__main__':
     main()

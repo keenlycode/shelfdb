@@ -108,20 +108,24 @@ async def handler(reader, writer):
     await writer.drain()
     writer.close()
 
-db = shelfdb.open('db')
-loop = asyncio.get_event_loop()
-server = asyncio.start_server(handler, '127.0.0.1', 17000, loop=loop)
-server = loop.run_until_complete(server)
+def main():
+    db = shelfdb.open('db')
+    loop = asyncio.get_event_loop()
+    server = asyncio.start_server(handler, '127.0.0.1', 17000, loop=loop)
+    server = loop.run_until_complete(server)
 
-# Serve requests until Ctrl+C is pressed
-print('Serving on {}'.format(server.sockets[0].getsockname()))
-try:
-    loop.run_forever()
-except KeyboardInterrupt:
-    pass
+    # Serve requests until Ctrl+C is pressed
+    print('Serving on {}'.format(server.sockets[0].getsockname()))
+    try:
+        loop.run_forever()
+    except KeyboardInterrupt:
+        pass
 
-# Close the server
-server.close()
-db.close()
-loop.run_until_complete(server.wait_closed())
-loop.close()
+    # Close the server
+    server.close()
+    db.close()
+    loop.run_until_complete(server.wait_closed())
+    loop.close()
+
+if __name__ == '__main__':
+    main()

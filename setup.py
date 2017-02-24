@@ -17,7 +17,7 @@ setup(
     install_requires=['dill',],
     entry_points={
         'console_scripts': [
-            'shelfdb=shelfdb.server',
+            'shelfdb=shelfdb.server:main',
         ],
     },
 )

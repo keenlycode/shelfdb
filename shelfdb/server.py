@@ -1,4 +1,4 @@
-import asyncio, shelfdb, dill, re, sys
+import asyncio, shelfdb, dill, re, sys, json
 from shelfdb.shelf import ChainQuery
 
 class QueryHandler():
@@ -38,11 +38,11 @@ class QueryHandler():
         return self
 
     def map(self, fn):
-        self.chain_query = self.chain_query.map(fn, self.chain_query)
+        self.chain_query = self.chain_query.map(fn)
         return self
 
     def reduce(self, fn):
-        self.chain_query = self.chain_query.reduce(fn, self.chain_query)
+        self.chain_query = self.chain_query.reduce(fn)
         return self
 
     def slice(self, args):

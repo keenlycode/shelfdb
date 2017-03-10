@@ -33,8 +33,7 @@ class DB():
 
 
 class ShelfQuery():
-    """Database query API. Return either ChainQuery or Entry object.
-    """
+    """Database query API. Return either ChainQuery or Entry object."""
     def __init__(self, db, shelf):
         self._db = db
         self._shelf = shelf
@@ -44,9 +43,7 @@ class ShelfQuery():
         return map(self._get_entry, self._shelf.items())
 
     def _get_entry(self, items):
-        """Just to be used in `def __iter__(self)`
-        to map with `items()` iterator.
-        """
+        """To be used in `def __iter__(self)`"""
         return Entry(self._shelf, items[0], items[1])
 
     def __getitem__(self, id_):
@@ -235,6 +232,7 @@ class Entry(dict):
         """
         if type(entry) is not dict:
             raise Exception('entry to replace must be a dict object')
+        entry = entry.copy()
         entry['_id'] = self._id
         self.clear()
         self.update(entry)

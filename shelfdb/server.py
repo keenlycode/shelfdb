@@ -1,8 +1,8 @@
-import asyncio, shelfdb, dill, re, sys, json
+import asyncio, shelfdb, dill, re, sys, json, argparse
 from shelfdb.shelf import ChainQuery
 
 class QueryHandler():
-    """Handler for incoming query requests from shelfquery.
+    """Handler for incoming query requests from shelfquery client.
     It will extract python pickle dict queries (by dill), run process on
     server side, then return result back to client.
 
@@ -74,12 +74,14 @@ class QueryHandler():
         return self
 
     def run(self):
+        # Extract function call from request into chain query.
         for query in self.queries:
             if isinstance(query, dict):
                 q = query.popitem()
                 self = self.__getattribute__(q[0])(q[1])
             else:
                 self = self.__getattribute__(query)()
+
         if isinstance(self.chain_query, shelfdb.shelf.ShelfQuery):
             entries = []
             # Keep only dict value from entry.copy() into entries
@@ -109,12 +111,24 @@ async def handler(reader, writer):
     writer.close()
 
 def main():
+    args = argparse.ArgumentParser(description='ShelfDB Asyncio Server')
+    args.add_argument('--host', nargs='?', type=str, default='0.0.0.0',
+        help='server host')
+    args.add_argument('--port', nargs='?', type=int, default=17000,
+        help='server port')
+    args.add_argument('--db', nargs='?', default='db',
+        help='server database')
+
+    args = args.parse_args()
+    db = shelfdb.open(args.db)
+
     loop = asyncio.get_event_loop()
-    server = asyncio.start_server(handler, '127.0.0.1', 17000, loop=loop)
+    server = asyncio.start_server(handler, args.host, args.port, loop=loop)
     server = loop.run_until_complete(server)
 
     # Serve requests until Ctrl+C is pressed
     print('Serving on {}'.format(server.sockets[0].getsockname()))
+    print('Database : ' + args.db)
     try:
         loop.run_forever()
     except KeyboardInterrupt:
@@ -125,8 +139,6 @@ def main():
     db.close()
     loop.run_until_complete(server.wait_closed())
     loop.close()
-
-db = shelfdb.open('db')
 
 if __name__ == '__main__':
     main()

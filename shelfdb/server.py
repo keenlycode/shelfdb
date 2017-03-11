@@ -111,7 +111,20 @@ async def handler(reader, writer):
     await writer.drain()
     writer.close()
 
-def main(args, db):
+def main():
+    global args
+    global db
+    args = argparse.ArgumentParser(description='ShelfDB Asyncio Server')
+    args.add_argument('--host', nargs='?', type=str, default='0.0.0.0',
+        help='server host')
+    args.add_argument('--port', nargs='?', type=int, default=17000,
+        help='server port')
+    args.add_argument('--db', nargs='?', default='db',
+        help='server database')
+
+    args = args.parse_args()
+    db = shelfdb.open(args.db)
+
     loop = asyncio.get_event_loop()
     server = asyncio.start_server(handler, args.host, args.port, loop=loop)
     server = loop.run_until_complete(server)
@@ -131,14 +144,4 @@ def main(args, db):
     loop.close()
 
 if __name__ == '__main__':
-    args = argparse.ArgumentParser(description='ShelfDB Asyncio Server')
-    args.add_argument('--host', nargs='?', type=str, default='0.0.0.0',
-        help='server host')
-    args.add_argument('--port', nargs='?', type=int, default=17000,
-        help='server port')
-    args.add_argument('--db', nargs='?', default='db',
-        help='server database')
-
-    args = args.parse_args()
-    db = shelfdb.open(args.db)
-    main(args, db)
+    main()

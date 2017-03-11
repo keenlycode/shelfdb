@@ -68,7 +68,7 @@ ShelfQuery Client
 
 Learn More
 ==========
-    See :doc:`doc`
+    See https://pythonhosted.org/shelfdb
 
 GitHub
 ======

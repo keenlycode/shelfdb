@@ -68,7 +68,7 @@ ShelfQuery Client
 
 Learn More
 ==========
-See https://pythonhosted.org/shelfdb
+See documentation at https://pythonhosted.org/shelfdb
 
 GitHub
 ======

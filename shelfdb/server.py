@@ -121,18 +121,18 @@ def main():
         help='server database')
 
     arg = arg.parse_args()
-    start_server(arg)
+    start_server(arg.host, arg.port, arg.db)
 
-def start_server(arg):
+def start_server(host='127.0.0.1', port=17000, db_name='db'):
     global db
-    db = shelfdb.open(arg.db)
+    db = shelfdb.open(db_name)
     loop = asyncio.get_event_loop()
-    server = asyncio.start_server(handler, arg.host, arg.port, loop=loop)
+    server = asyncio.start_server(handler, host, port, loop=loop)
     server = loop.run_until_complete(server)
 
     # Serve requests until Ctrl+C is pressed
     print('Serving on {}'.format(server.sockets[0].getsockname()))
-    print('Database :', arg.db)
+    print('Database :', db_name)
     print('pid :', os.getpid())
     try:
         loop.run_forever()

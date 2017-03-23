@@ -1,4 +1,4 @@
-import asyncio, shelfdb, dill, re, sys, json, argparse
+import asyncio, shelfdb, dill, re, sys, json, argparse, os
 from shelfdb.shelf import ChainQuery
 
 
@@ -132,7 +132,8 @@ def start_server(arg):
 
     # Serve requests until Ctrl+C is pressed
     print('Serving on {}'.format(server.sockets[0].getsockname()))
-    print('Database : ' + arg.db)
+    print('Database :', arg.db)
+    print('pid :', os.getpid())
     try:
         loop.run_forever()
     except KeyboardInterrupt:

@@ -108,7 +108,6 @@ class ShelfQuery(unittest.TestCase):
             .first(lambda u: u['name'] == user['name'])
         self.assertIsNone(user)
 
-
     def tearDown(self):
         self.db.close()
         shutil.rmtree('test_data')

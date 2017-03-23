@@ -112,8 +112,6 @@ async def handler(reader, writer):
     writer.close()
 
 def main():
-    global args
-    global db
     args = argparse.ArgumentParser(description='ShelfDB Asyncio Server')
     args.add_argument('--host', nargs='?', type=str, default='0.0.0.0',
         help='server host')
@@ -123,8 +121,11 @@ def main():
         help='server database')
 
     args = args.parse_args()
-    db = shelfdb.open(args.db)
+    start_server(args)
 
+def start_server(args):
+    global db
+    db = shelfdb.open(args.db)
     loop = asyncio.get_event_loop()
     server = asyncio.start_server(handler, args.host, args.port, loop=loop)
     server = loop.run_until_complete(server)
@@ -142,6 +143,7 @@ def main():
     db.close()
     loop.run_until_complete(server.wait_closed())
     loop.close()
+
 
 if __name__ == '__main__':
     main()

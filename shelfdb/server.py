@@ -112,27 +112,27 @@ async def handler(reader, writer):
     writer.close()
 
 def main():
-    args = argparse.ArgumentParser(description='ShelfDB Asyncio Server')
-    args.add_argument('--host', nargs='?', type=str, default='0.0.0.0',
+    arg = argparse.ArgumentParser(description='ShelfDB Asyncio Server')
+    arg.add_argument('--host', nargs='?', type=str, default='0.0.0.0',
         help='server host')
-    args.add_argument('--port', nargs='?', type=int, default=17000,
+    arg.add_argument('--port', nargs='?', type=int, default=17000,
         help='server port')
-    args.add_argument('--db', nargs='?', default='db',
+    arg.add_argument('--db', nargs='?', default='db',
         help='server database')
 
-    args = args.parse_args()
-    start_server(args)
+    arg = arg.parse_args()
+    start_server(arg)
 
-def start_server(args):
+def start_server(arg):
     global db
-    db = shelfdb.open(args.db)
+    db = shelfdb.open(arg.db)
     loop = asyncio.get_event_loop()
-    server = asyncio.start_server(handler, args.host, args.port, loop=loop)
+    server = asyncio.start_server(handler, arg.host, arg.port, loop=loop)
     server = loop.run_until_complete(server)
 
     # Serve requests until Ctrl+C is pressed
     print('Serving on {}'.format(server.sockets[0].getsockname()))
-    print('Database : ' + args.db)
+    print('Database : ' + arg.db)
     try:
         loop.run_forever()
     except KeyboardInterrupt:

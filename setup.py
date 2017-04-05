@@ -5,7 +5,7 @@ setup(
     name='shelfdb',
     version='0.2.2-dev',
     description='Python dict/json DB, Done right for Efficiency and Simplicity',
-    long_description='Python dict/json DB, Done right for Efficiency and Simplicity',
+    long_description='Python dict/json DB `done right` to make your job done',
     url='https://github.com/nitipit/shelfdb',
     author='Nitipit Nontasuwan',
     author_email='nitipit@gmail.com',

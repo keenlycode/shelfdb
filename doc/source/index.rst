@@ -10,7 +10,7 @@ ShelfDB
 
 .. image:: https://raw.githubusercontent.com/nitipit/shelfdb/master/shelfdb.png
 
-Python dict/json DB **Done Right** for **Efficiency** and **Simplicity**.
+Simple Python dict/json DB **done right** to make your job done.
 
 Features
 ========

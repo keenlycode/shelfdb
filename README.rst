@@ -8,7 +8,7 @@ Simple Python dict/json DB **done right** to make your job done.
 
 Features
 ========
-- Very simple Pyton dict/json Database.
+- Very simple Python dict/json Database.
 - Chainable Query.
 - Can remote process on Database Server.
 - Asyncio Server.

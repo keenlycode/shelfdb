@@ -3,6 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+
 *******
 ShelfDB
 *******
@@ -22,58 +23,58 @@ Install
 =======
 ::
 
-    $ pip install shelfdb
+   $ pip install shelfdb
 
 Quick Start
 ===========
 ::
 
-    import shelfdb
-    db = shelfdb.open('db') # Get database
-    db.shelf('user') # get table/shelf 'user' from database 'db'
+   import shelfdb
+   db = shelfdb.open('db') # Get database
+   db.shelf('user') # get table/shelf 'user' from database 'db'
 
-    # Insert a user
-    db.shelf('user').insert({'name': 'Edgar', 'sex': 'm'})
+   # Insert a user
+   db.shelf('user').insert({'name': 'Luna', 'gender': 'f'})
 
-    # Get the first user whose name is 'admin'
-    db.shelf('user').first(lambda user: user['name'] == 'admin')
+   # Get the first user whose name is 'admin'
+   db.shelf('user').first(lambda user: user['name'] == 'admin')
 
-    # Get all user whose sex are 'f'
-    users = db.shelf('user').filter(lambda user: user['sex'] == 'f')
+   # Get all user whose gender are 'f'
+   users = db.shelf('user').filter(lambda user: user['gender'] == 'f')
 
-    # print() all users whose sex are 'f'
-    for user in users:
-        print(user)
+   # print() all users whose gender are 'f'
+   for user in users:
+       print(user)
 
 Asyncio Server
 ==============
 .. code-block:: bash
 
-    $ shelfdb
-    Serving on ('127.0.0.1', 17000)
+   $ shelfdb
+   Serving on ('127.0.0.1', 17000)
 
 ShelfQuery Client
 -----------------
 ::
 
-    $ pip install shelfquery
+   $ pip install shelfquery
 
 ::
 
-    import shelfquery
+   import shelfquery
 
-    # Connect to DB, default host = '127.0.0.1', port = 17000, db = 'db'
-    db = shelfquery.connect()
+   # Connect to DB, default host = '127.0.0.1', port = 17000, db = 'db'
+   db = shelfquery.connect()
 
-    # Make a query
-    query = db.shelf('user').first(lambda user: user['name'] == 'admin')
+   # Make a query
+   query = db.shelf('user').first(lambda user: user['name'] == 'admin')
 
-    # Send query to Database Server and keep result in `user`
-    user = query.run()
+   # Send query to Database Server and keep result in `user`
+   user = query.run()
 
 Learn More
 ==========
-    See :doc:`doc`
+See documentation at https://pythonhosted.org/shelfdb
 
 GitHub
 ======

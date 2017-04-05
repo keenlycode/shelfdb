@@ -28,15 +28,15 @@ Quick Start
     db.shelf('user') # get table/shelf 'user' from database 'db'
 
     # Insert a user
-    db.shelf('user').insert({'name': 'Edgar', 'sex': 'm'})
+    db.shelf('user').insert({'name': 'Luna', 'gender': 'f'})
 
     # Get the first user whose name is 'admin'
     db.shelf('user').first(lambda user: user['name'] == 'admin')
 
-    # Get all user whose sex are 'f'
-    users = db.shelf('user').filter(lambda user: user['sex'] == 'f')
+    # Get all user whose gender are 'f'
+    users = db.shelf('user').filter(lambda user: user['gender'] == 'f')
 
-    # print() all users whose sex are 'f'
+    # print() all users whose gender are 'f'
     for user in users:
         print(user)
 

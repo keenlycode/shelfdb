@@ -52,6 +52,7 @@ Asyncio Server
 
    $ shelfdb
    Serving on ('127.0.0.1', 17000)
+   pid : 4831
 
 ShelfQuery Client
 -----------------

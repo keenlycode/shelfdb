@@ -1,4 +1,4 @@
-import asyncio, shelfdb, dill, re, sys, json, argparse, os
+import asyncio, uvloop, shelfdb, dill, re, sys, json, argparse, os
 from shelfdb.shelf import ChainQuery
 
 
@@ -126,6 +126,7 @@ def main():
 def start_server(host='127.0.0.1', port=17000, db_name='db'):
     global db
     db = shelfdb.open(db_name)
+    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
     loop = asyncio.get_event_loop()
     server = asyncio.start_server(handler, host, port, loop=loop)
     server = loop.run_until_complete(server)

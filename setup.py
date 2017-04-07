@@ -15,7 +15,7 @@ setup(
     ],
     keywords='dict json database',
     packages=find_packages(),
-    install_requires=['dill',],
+    install_requires=['uvloop', 'dill',],
     entry_points={
         'console_scripts': [
             'shelfdb=shelfdb.server:main',

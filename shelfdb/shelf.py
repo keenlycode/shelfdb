@@ -3,7 +3,6 @@
 import shelve, os, uuid
 from datetime import datetime
 from itertools import islice
-from collections import deque
 from functools import reduce
 
 
@@ -20,8 +19,10 @@ class DB():
         """Get ``ShelfQuery`` object. create shelf file named ``shelf_name``
         to store entries if needed.
         """
-        if (not shelf_name in self._shelf or
-                isinstance(self._shelf[shelf_name]._shelf.dict, shelve._ClosedDict)):
+        if (shelf_name not in self._shelf or
+                isinstance(
+                    self._shelf[shelf_name]._shelf.dict,
+                    shelve._ClosedDict)):
             shelf = shelve.open(os.path.join(self.path, shelf_name))
             self._shelf[shelf_name] = ShelfQuery(self, shelf)
         return self._shelf[shelf_name]
@@ -238,7 +239,7 @@ class Entry(dict):
         self.update(entry)
 
     def _save(self):
-        entry = self.copy() # store only dict data.
+        entry = self.copy()  # store only dict data.
         self._shelf[self._id] = entry
 
     def delete(self):

@@ -1,5 +1,4 @@
 import asyncio, uvloop, shelfdb, dill, re, sys, json, argparse, os
-from shelfdb.shelf import ChainQuery
 
 
 class QueryHandler():
@@ -85,13 +84,16 @@ class QueryHandler():
 
         if isinstance(self.chain_query, shelfdb.shelf.ShelfQuery):
             entries = []
-            # Keep only dict value from entry.copy() into entries
-            [entries.append(entry.copy()) for entry in self.chain_query]
+            for entry in self.chain_query:
+                if isinstance(entry, dict):
+                    # Keep only dict value from entry.copy() into entries
+                    entries.append(entry.copy())
             return entries
         elif isinstance(self.chain_query, shelfdb.shelf.Entry):
             return self.chain_query.copy()
         else:
             return self.chain_query
+
 
 async def handler(reader, writer):
     queries = await reader.read(-1)
@@ -111,17 +113,18 @@ async def handler(reader, writer):
     await writer.drain()
     writer.close()
 
+
 def main():
     arg = argparse.ArgumentParser(description='ShelfDB Asyncio Server')
-    arg.add_argument('--host', nargs='?', type=str, default='0.0.0.0',
-        help='server host')
-    arg.add_argument('--port', nargs='?', type=int, default=17000,
-        help='server port')
-    arg.add_argument('--db', nargs='?', default='db',
-        help='server database')
-
+    arg.add_argument(
+        '--host', nargs='?', type=str, default='0.0.0.0', help='server host')
+    arg.add_argument(
+        '--port', nargs='?', type=int, default=17000, help='server port')
+    arg.add_argument(
+        '--db', nargs='?', default='db', help='server database')
     arg = arg.parse_args()
     start_server(arg.host, arg.port, arg.db)
+
 
 def start_server(host='127.0.0.1', port=17000, db_name='db'):
     global db

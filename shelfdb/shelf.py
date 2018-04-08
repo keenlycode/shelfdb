@@ -99,8 +99,9 @@ class ShelfQuery():
         """Apply map function on ``ChainQuery``.
 
         Args:
-            ``fn`` (function): Function to apply by map, receive Entry object as an
-            argument. Can return anything which will be kept in ChainQuery result.
+            ``fn`` (function): Function to apply by map, receive Entry object
+            as an argument. Can return anything which will be kept in
+            ChainQuery result.
 
         Return:
             ``ChainQuery`` of result from map function.
@@ -160,6 +161,16 @@ class ShelfQuery():
         else:
             raise Exception('Entry is not a dict object')
 
+    def put(self, entry, uuid1):
+        uuid1 = uuid.UUID(uuid1)
+        if uuid1.version != 1:
+            raise Exception('ID is not UUID1')
+            return
+        if isinstance(entry, dict):
+            self._shelf[str(uuid1)] = entry
+        else:
+            raise Exception('Entry is not a dict object')
+
     def update(self, patch):
         """Update queried entries with ``patch``"""
         [entry.update(patch) for entry in self]
@@ -206,7 +217,7 @@ class Entry(dict):
     def ts(self):
         """Entry's timestamp from uuid1. Use formular from stack overflow.
 
-        See: http://stackoverflow.com/questions/3795554/extract-the-time-from-a-uuid-v1-in-python
+        See in stackoverflow.com : https://bit.ly/2EtH05b
         """
         try:
             return self._ts

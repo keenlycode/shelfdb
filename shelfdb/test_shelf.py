@@ -1,6 +1,6 @@
 import unittest, shelfdb, shutil, dbm, shelve, uuid
-from functools import reduce
 from shelfdb import shelf
+
 
 class DB(unittest.TestCase):
     def setUp(self):
@@ -17,11 +17,13 @@ class DB(unittest.TestCase):
         except dbm.gnu.error as e:
             self.assertEqual(e.errno, 11)
         self.db.close()
-        self.assertIsInstance(self.db._shelf['user']._shelf.dict,
+        self.assertIsInstance(
+            self.db._shelf['user']._shelf.dict,
             shelve._ClosedDict)
 
     def tearDown(self):
         shutil.rmtree('test_data')
+
 
 class ShelfQuery(unittest.TestCase):
     def setUp(self):
@@ -71,16 +73,23 @@ class ShelfQuery(unittest.TestCase):
         self.assertEqual(len(self.user_list), count_by_reduce)
 
     def test_slice(self):
-        users = self.db.shelf('user').slice(0,2)
+        users = self.db.shelf('user').slice(0, 2)
         count_by_reduce = users.reduce(lambda x, y: x + 1, 0)
         self.assertEqual(len(self.user_list[0:2]), count_by_reduce)
 
     def test_sort(self):
-        users_sort_by_name = self.db.shelf('user').sort(lambda user: user['name'])
+        users_sort_by_name = self.db.shelf('user')\
+            .sort(lambda user: user['name'])
         prev_user = next(users_sort_by_name)
         for user in users_sort_by_name:
             self.assertTrue(prev_user['name'] < user['name'])
             prev_user = user
+
+    def test_put(self):
+        uuid1 = str(uuid.uuid1())
+        self.db.shelf('user').put({'name': 'Um'}, uuid1)
+        user = self.db.shelf('user').get(uuid1)
+        self.assertEqual({'name': 'Um', '_id': uuid1}, user)
 
     def test_update(self):
         users = self.db.shelf('user')

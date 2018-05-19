@@ -57,8 +57,8 @@ ShelfQuery Client
 
    import shelfquery
 
-   # Connect to DB, default host = '127.0.0.1', port = 17000, db = 'db'
-   db = shelfquery.connect()
+   # Use DB by default connection, host = '127.0.0.1', port = 17000
+   db = shelfquery.db()
 
    # Make a query
    query = db.shelf('user').first(lambda user: user['name'] == 'admin')

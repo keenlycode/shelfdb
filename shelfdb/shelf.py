@@ -33,7 +33,7 @@ class DB():
             self._shelf[k]._shelf.close()
 
 
-class ShelfQuery():
+class ShelfQuery:
     """Database query API. Return either ChainQuery or Entry object."""
     def __init__(self, db, shelf):
         self._db = db
@@ -95,7 +95,7 @@ class ShelfQuery():
         """
         return ChainQuery(filter(filter_, self))
 
-    def map(self, fn):
+    def map(self, func):
         """Apply map function on ``ChainQuery``.
 
         Args:
@@ -106,17 +106,16 @@ class ShelfQuery():
         Return:
             ``ChainQuery`` of result from map function.
         """
-        return ChainQuery(map(fn, self))
+        return ChainQuery(map(func, self))
 
-    def reduce(self, fn, initializer=None):
+    def reduce(self, func, initializer=None):
         """Apply reduce function on ``ChainQuery``.
 
         See: https://docs.python.org/3/library/functools.html#functools.reduce
         """
         if initializer is None:
-            return reduce(fn, self)
-        else:
-            return reduce(fn, self, initializer)
+            return reduce(func, self)
+        return reduce(func, self, initializer)
 
     def run(self):
         """Iterate through ``ChainQuery`` and return results in a ``list``"""
@@ -155,33 +154,35 @@ class ShelfQuery():
         # Must generate uuid1 here, since id_=str(uuid.uuid1()) in def args
         # will return the same value all the times after first call.
         id_ = str(uuid.uuid1())
-        if isinstance(entry, dict):
-            self._shelf[id_] = entry
-            return id_
-        else:
+        if not isinstance(entry, dict):
             raise Exception('Entry is not a dict object')
+        self._shelf[id_] = entry
+        return id_
 
     def put(self, entry, uuid1):
+        """Put entry with specified ID"""
         uuid1 = uuid.UUID(uuid1)
         if uuid1.version != 1:
             raise Exception('ID is not UUID1')
-            return
-        if isinstance(entry, dict):
-            self._shelf[str(uuid1)] = entry
-        else:
+        if not isinstance(entry, dict):
             raise Exception('Entry is not a dict object')
+        self._shelf[str(uuid1)] = entry
 
     def update(self, patch):
         """Update queried entries with ``patch``"""
-        [entry.update(patch) for entry in self]
+        if not isinstance(patch, dict):
+            raise Exception('Entry is not a dict object')
+        return [entry.update(patch) for entry in self]
 
     def replace(self, data):
         """Replace queried entries with ``data``"""
-        [entry.replace(data) for entry in self]
+        if not isinstance(data, dict):
+            raise Exception('Entry is not a dict object')
+        return [entry.replace(data) for entry in self]
 
     def delete(self):
         """Delete queried entries"""
-        [entry.delete() for entry in self]
+        return [entry.delete() for entry in self]
 
 
 class ChainQuery(ShelfQuery):
@@ -242,7 +243,7 @@ class Entry(dict):
         Args:
             ``entry`` (dict): Entry data to replace.
         """
-        if type(entry) is not dict:
+        if not isinstance(entry, dict):
             raise Exception('entry to replace must be a dict object')
         entry = entry.copy()
         entry['_id'] = self._id

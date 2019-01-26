@@ -24,7 +24,7 @@ class DB():
                     self._shelf[shelf_name]._shelf.dict,
                     shelve._ClosedDict)):
             shelf = shelve.open(os.path.join(self.path, shelf_name))
-            self._shelf[shelf_name] = ShelfQuery(self, shelf)
+            self._shelf[shelf_name] = ShelfQuery(shelf)
         return self._shelf[shelf_name]
 
     def close(self):
@@ -35,8 +35,7 @@ class DB():
 
 class ShelfQuery:
     """Database query API. Return either ChainQuery or Entry object."""
-    def __init__(self, db, shelf):
-        self._db = db
+    def __init__(self, shelf):
         self._shelf = shelf
 
     def __iter__(self):

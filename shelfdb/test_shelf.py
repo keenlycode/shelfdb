@@ -87,7 +87,7 @@ class ShelfQuery(unittest.TestCase):
 
     def test_put(self):
         uuid1 = str(uuid.uuid1())
-        self.db.shelf('user').put({'name': 'Um'}, uuid1)
+        self.db.shelf('user').put(uuid1, {'name': 'Um'})
         user = self.db.shelf('user').get(uuid1)
         self.assertEqual({'name': 'Um', '_id': uuid1}, user)
 

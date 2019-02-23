@@ -41,6 +41,10 @@ class QueryHandler():
         self.chain_query = self.chain_query.map(fn)
         return self
 
+    def put(self, args):
+        self.chain_query = self.chain_query.put(*args)
+        return self
+
     def reduce(self, fn):
         self.chain_query = self.chain_query.reduce(fn)
         return self

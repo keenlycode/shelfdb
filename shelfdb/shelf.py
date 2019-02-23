@@ -158,7 +158,7 @@ class ShelfQuery:
         self._shelf[id_] = entry
         return id_
 
-    def put(self, entry, uuid1):
+    def put(self, uuid1, entry):
         """Put entry with specified ID"""
         uuid1 = uuid.UUID(uuid1)
         if uuid1.version != 1:

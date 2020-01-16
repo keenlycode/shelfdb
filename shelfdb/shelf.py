@@ -171,17 +171,17 @@ class ShelfQuery:
         """Update queried entries with ``patch``"""
         if not isinstance(patch, dict):
             raise Exception('Entry is not a dict object')
-        return [entry.update(patch) for entry in self]
+        [entry.update(patch) for entry in self]
 
     def replace(self, data):
         """Replace queried entries with ``data``"""
         if not isinstance(data, dict):
             raise Exception('Entry is not a dict object')
-        return [entry.replace(data) for entry in self]
+        [entry.replace(data) for entry in self]
 
     def delete(self):
         """Delete queried entries"""
-        return [entry.delete() for entry in self]
+        [entry.delete() for entry in self]
 
 
 class ChainQuery(ShelfQuery):

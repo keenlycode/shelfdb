@@ -250,8 +250,7 @@ class Entry(dict):
         self.update(entry)
 
     def _save(self):
-        entry = self.copy()  # store only dict data.
-        self._shelf[self._id] = entry
+        self._shelf[self._id] = self.copy() # store only dict data.
 
     def delete(self):
         """Delete this entry"""

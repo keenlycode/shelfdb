@@ -99,23 +99,51 @@ class QueryHandler():
             return self.chain_query
 
 
-async def handler(reader, writer):
-    queries = await reader.read(-1)
-    try:
-        queries = dill.loads(queries)
-        shelf = queries.pop(0)
-        result = QueryHandler(db, shelf, queries).run()
-        result = dill.dumps(result)
-    except:
-        print("Unexpected error:", sys.exc_info()[1])
-        result = dill.dumps(sys.exc_info()[1])
+class ShelfServer:
+    def __init__(self, host='127.0.0.1', port=17000, db='db'):
+        self.host = host
+        self.port = port
+        self.db = db
+        self.shelfdb = shelfdb.open(db)
+
+    async def handler(self, reader, writer):
+        queries = await reader.read(-1)
+        try:
+            queries = dill.loads(queries)
+            shelf = queries.pop(0)
+            result = QueryHandler(self.shelfdb, shelf, queries).run()
+            result = dill.dumps(result)
+        except:
+            print("Unexpected error:", sys.exc_info()[1])
+            result = dill.dumps(sys.exc_info()[1])
+            writer.write(result)
+            await writer.drain()
+            writer.close()
+            raise
         writer.write(result)
         await writer.drain()
         writer.close()
-        raise
-    writer.write(result)
-    await writer.drain()
-    writer.close()
+
+    def run(self):
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+        loop = asyncio.get_event_loop()
+        server = asyncio.start_server(self.handler, self.host, self.port, loop=loop)
+        server = loop.run_until_complete(server)
+
+        # Serve requests until Ctrl+C is pressed
+        print('Serving on {}'.format(server.sockets[0].getsockname()))
+        print('Database :', self.db)
+        print('pid :', os.getpid())
+        try:
+            loop.run_forever()
+        except KeyboardInterrupt:
+            pass
+
+        # Close the server
+        server.close()
+        self.db.close()
+        loop.run_until_complete(server.wait_closed())
+        loop.close()
 
 
 def main():
@@ -127,31 +155,8 @@ def main():
     arg.add_argument(
         '--db', nargs='?', default='db', help='server database')
     arg = arg.parse_args()
-    start_server(arg.host, arg.port, arg.db)
-
-
-def start_server(host='127.0.0.1', port=17000, db_name='db'):
-    global db
-    db = shelfdb.open(db_name)
-    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    loop = asyncio.get_event_loop()
-    server = asyncio.start_server(handler, host, port, loop=loop)
-    server = loop.run_until_complete(server)
-
-    # Serve requests until Ctrl+C is pressed
-    print('Serving on {}'.format(server.sockets[0].getsockname()))
-    print('Database :', db_name)
-    print('pid :', os.getpid())
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        pass
-
-    # Close the server
-    server.close()
-    db.close()
-    loop.run_until_complete(server.wait_closed())
-    loop.close()
+    shelf_server = ShelfServer(arg.host, arg.port, arg.db)
+    shelf_server.run()
 
 
 if __name__ == '__main__':

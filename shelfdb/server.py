@@ -100,11 +100,11 @@ class QueryHandler():
 
 
 class ShelfServer:
-    def __init__(self, host='127.0.0.1', port=17000, db='db'):
+    def __init__(self, host='127.0.0.1', port=17000, db_name='db'):
         self.host = host
         self.port = port
-        self.db = db
-        self.shelfdb = shelfdb.open(db)
+        self.db_name = db_name
+        self.shelfdb = shelfdb.open(db_name)
 
     async def handler(self, reader, writer):
         queries = await reader.read(-1)
@@ -124,26 +124,15 @@ class ShelfServer:
         await writer.drain()
         writer.close()
 
-    def run(self):
-        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-        loop = asyncio.get_event_loop()
-        server = asyncio.start_server(self.handler, self.host, self.port, loop=loop)
-        server = loop.run_until_complete(server)
-
-        # Serve requests until Ctrl+C is pressed
+    async def run(self):
+        # tcp-echo-server-using-streams
+        # https: // docs.python.org/3.8/library/asyncio-stream.html
+        server = await asyncio.start_server(self.handler, self.host, self.port)
         print('Serving on {}'.format(server.sockets[0].getsockname()))
-        print('Database :', self.db)
+        print('Database :', self.db_name)
         print('pid :', os.getpid())
-        try:
-            loop.run_forever()
-        except KeyboardInterrupt:
-            pass
-
-        # Close the server
-        server.close()
-        self.db.close()
-        loop.run_until_complete(server.wait_closed())
-        loop.close()
+        async with server:
+            await server.serve_forever()
 
 
 def main():
@@ -156,8 +145,14 @@ def main():
         '--db', nargs='?', default='db', help='server database')
     arg = arg.parse_args()
     shelf_server = ShelfServer(arg.host, arg.port, arg.db)
-    shelf_server.run()
 
+    # Run server until Ctrl+C is pressed
+    try:
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+        asyncio.run(shelf_server.run())
+    except KeyboardInterrupt:
+        shelf_server.shelfdb.close()
 
+    
 if __name__ == '__main__':
     main()

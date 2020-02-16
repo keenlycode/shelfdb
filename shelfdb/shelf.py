@@ -61,7 +61,7 @@ class ShelfQuery:
         """
         return self.__getitem__(id_)
 
-    def first(self, filter_):
+    def first(self, filter_=None):
         """Get the first entry matched by ``filter_`` then stop iteration.
 
         Args:

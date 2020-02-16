@@ -169,14 +169,10 @@ class ShelfQuery:
 
     def update(self, patch):
         """Update queried entries with ``patch``"""
-        if not isinstance(patch, dict):
-            raise Exception('Entry is not a dict object')
         [entry.update(patch) for entry in self]
 
     def replace(self, data):
         """Replace queried entries with ``data``"""
-        if not isinstance(data, dict):
-            raise Exception('Entry is not a dict object')
         [entry.replace(data) for entry in self]
 
     def delete(self):
@@ -233,21 +229,32 @@ class Entry(dict):
         Args:
             ``patch`` (dict): Data to update.
         """
+        if callable(patch):
+            patch = patch(self.copy())
+        elif isinstance(patch, dict):
+            pass
+        else:
+            raise Exception('`patch` is not a dict or function')
+
         super().update(patch)
         self._save()
 
-    def replace(self, entry):
-        """Replace this entry with ``entry``
+    def replace(self, obj):
+        """Replace this entry with ``obj``
 
         Args:
-            ``entry`` (dict): Entry data to replace.
+            ``obj`` (dict, function): Object to replace.
         """
-        if not isinstance(entry, dict):
-            raise Exception('entry to replace must be a dict object')
-        entry = entry.copy()
-        entry['_id'] = self._id
-        self.clear()
-        self.update(entry)
+        if callable(obj):
+            obj = obj(self.copy())
+        elif isinstance(obj, dict):
+            pass
+        else:
+            raise Exception('`obj` is not a dict or function')
+
+        super().clear()
+        super().update(obj)
+        self._save()
 
     def _save(self):
         self._shelf[self._id] = self.copy() # store only dict data.

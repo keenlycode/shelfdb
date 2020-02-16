@@ -97,6 +97,10 @@ class ShelfQuery(unittest.TestCase):
         for user in users:
             self.assertEqual(user['update_test'], 'test')
 
+        users.update(lambda user: {'update_test': user['update_test'] + '1'})
+        for user in users:
+            self.assertEqual(user['update_test'], 'test1')
+
     def test_replace(self):
         user = self.user_list[0]
         user = self.db.shelf('user')\
@@ -104,6 +108,12 @@ class ShelfQuery(unittest.TestCase):
         id_ = user['_id']
         new_user = {'name': 'Aug'}
         self.db.shelf('user').get(id_).replace(new_user)
+        user = self.db.shelf('user').get(id_)
+        del user['_id']
+        self.assertEqual(user.copy(), new_user)
+
+        new_user['name'] = new_user['name'] + '1'
+        self.db.shelf('user').get(id_).replace(lambda user: {'name': user['name'] + '1'})
         user = self.db.shelf('user').get(id_)
         del user['_id']
         self.assertEqual(user.copy(), new_user)

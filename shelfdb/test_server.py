@@ -105,8 +105,8 @@ class TestModifyData(unittest.TestCase):
             cls.test_notes.append(note)
 
     def test_entry(self):
-        self.db.shelf('note').first().entry(lambda entry: entry.update({'title': 'entry'})).run()
-        self.assertEqual(self.db.shelf('note').first().run()['title'], 'entry')
+        self.db.shelf('note').first().update({'title': 'test_entry'}).run()
+        self.assertEqual(self.db.shelf('note').first().run()['title'], 'test_entry')
 
     @classmethod
     def tearDownClass(cls):

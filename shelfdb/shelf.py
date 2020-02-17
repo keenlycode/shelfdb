@@ -4,6 +4,7 @@ import shelve, os, uuid
 from datetime import datetime
 from itertools import islice
 from functools import reduce
+from copy import deepcopy
 
 class DB():
     """Database class to manage shelves"""
@@ -154,6 +155,7 @@ class ShelfQuery:
         id_ = str(uuid.uuid1())
         if not isinstance(entry, dict):
             raise Exception('Entry is not a dict object')
+        entry.pop('_id', None)
         self._shelf[id_] = entry
         return id_
 
@@ -164,19 +166,28 @@ class ShelfQuery:
             raise Exception('ID is not UUID1')
         if not isinstance(entry, dict):
             raise Exception('Entry is not a dict object')
+        entry.pop('_id', None)
         self._shelf[str(uuid1)] = entry
 
     def update(self, patch):
         """Update queried entries with ``patch``"""
-        [entry.update(patch) for entry in self]
+        if isinstance(patch, dict):
+            patch = dict(patch)
+            patch.pop('_id', None)
+            [entry._update_dict(patch) for entry in self]
+            return
+        elif callable(patch):
+            [entry._update_fn(patch) for entry in self]
+            return
+
+        raise '`patch` is not an instance of `dict` or `function`'
+        
 
     def replace(self, obj):
         """Replace queried entries with ``data``"""
+        if isinstance(obj, dict):
+            obj = deepcopy(obj)
         [entry.replace(obj) for entry in self]
-
-    def replace_fn(self, fn):
-        """Replace queried entries with ``data``"""
-        [entry.replace(fn) for entry in self]
 
     def delete(self):
         """Delete queried entries"""
@@ -226,17 +237,42 @@ class Entry(dict):
             )
             return self._ts
 
+    def _update_dict(self, patch):
+        super().update(patch)
+        self._save()
+
+    def _update_fn(self, patch):
+        patch = patch(self.copy())
+        assert isinstance(patch, dict)
+        patch.pop('_id', None)
+        super().update(patch)
+        self._save()
+
+    def _replace_dict(self, patch):
+        super().clear()
+        super().update(patch)
+        self._save()
+
+    def _replace_fn(self, patch):
+        patch = patch(self.copy())
+        assert isinstance(patch, dict)
+        super().clear()
+        super().update(patch)
+        self._save()
+
     def update(self, patch):
         """Update this entry with ``patch``.
 
         Args:
             ``patch`` (dict): Data to update.
         """
+        if isinstance(patch, dict):
+            patch = deepcopy(patch)
+            return self._update_dict(patch)
         if callable(patch):
             patch = patch(self.copy())
-        assert isinstance(patch, dict)
-        super().update(patch)
-        self._save()
+            return self._update_fn(patch)
+        raise '`patch` is not an instance of `dict` for `function`'
 
     def replace(self, obj):
         """Replace this entry with ``obj``
@@ -244,12 +280,12 @@ class Entry(dict):
         Args:
             ``obj`` (dict, function): Object to replace.
         """
+        if isinstance(obj, dict):
+            obj = deepcopy(obj)
+            return self._update_dict(obj)
         if callable(obj):
-            obj = obj(self.copy())
-        assert isinstance(obj, dict)
-        super().clear()
-        super().update(obj)
-        self._save()
+            return self._update_fn(obj)
+        raise '`obj` is not an instance of `dict` for `function`'
 
     def _save(self):
         self._shelf[self._id] = self.copy() # store only dict data.

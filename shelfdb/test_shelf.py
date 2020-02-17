@@ -3,9 +3,10 @@ from shelfdb import shelf
 
 
 class DB(unittest.TestCase):
-    def setUp(self):
-        self.db = shelfdb.open('test_data/db')
-        self.assertIsInstance(self.db, shelfdb.shelf.DB)
+    @classmethod
+    def setUpClass(cls):
+        cls.db = shelfdb.open('test_data/db')
+        cls.assertIsInstance(cls, cls.db, shelfdb.shelf.DB)
 
     def test_shelf(self):
         self.assertIsInstance(self.db.shelf('user'), shelfdb.shelf.ShelfQuery)
@@ -21,13 +22,18 @@ class DB(unittest.TestCase):
             self.db._shelf['user']._shelf.dict,
             shelve._ClosedDict)
 
-    def tearDown(self):
+    @classmethod
+    def tearDownClass(cls):
         shutil.rmtree('test_data')
 
 
 class ShelfQuery(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.db = shelfdb.open('test_data/db')
+
     def setUp(self):
-        self.db = shelfdb.open('test_data/db')
         self.user_list = [
             {'name': 'Jan'},
             {'name': 'Feb'},
@@ -128,5 +134,9 @@ class ShelfQuery(unittest.TestCase):
         self.assertIsNone(user)
 
     def tearDown(self):
+        self.db.shelf('user').delete()
         self.db.close()
+
+    @classmethod
+    def tearDownClass(cls):
         shutil.rmtree('test_data')

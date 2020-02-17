@@ -29,10 +29,6 @@ class QueryHandler():
         self.chain_query = self.chain_query.first(filter_)
         return self
 
-    def entry(self, fn):
-        self.chain_query = fn(self.chain_query)
-        return self
-
     def filter(self, filter_):
         self.chain_query = self.chain_query.filter(filter_)
         return self
@@ -69,8 +65,8 @@ class QueryHandler():
         self.chain_query = self.chain_query.insert(entry)
         return self
 
-    def replace(self, data):
-        self.chain_query = self.chain_query.replace(data)
+    def replace(self, obj):
+        self.chain_query = self.chain_query.replace(obj)
         return self
 
     def delete(self):

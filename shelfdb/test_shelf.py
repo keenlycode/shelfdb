@@ -139,18 +139,21 @@ class ShelfQuery(unittest.TestCase):
         note = self.notes[0]
         note = self.db.shelf('note')\
             .first(lambda n: n['title'] == note['title'])
-        id_ = note['_id']
         new_note = dict(Note({
-            '_id': id_,
+            '_id': note['_id'],
             'title': 'test_replace'}))
-        self.db.shelf('note').get(id_).replace(new_note)
-        note = self.db.shelf('note').get(id_)
+        self.db.shelf('note').get(note['_id']).replace(new_note)
+        note = self.db.shelf('note').get(note['_id'])
         self.assertDictEqual(note, new_note)
 
-        new_note['title'] = new_note['title'] + '1'
-        self.db.shelf('note').get(id_).replace(lambda note: {'title': note['title'] + '1'})
-        note = self.db.shelf('note').get(id_)
-        self.assertEqual(note, new_note)
+        note = self.db.shelf('note').get(note['_id'])
+        compare = {
+            '_id': note['_id'],
+            'title': note['title'] + '1'
+        }
+        self.db.shelf('note').get(note['_id']).replace(lambda note: {'title': note['title'] + '1'})
+        note = self.db.shelf('note').get(note['_id'])
+        self.assertEqual(note, compare)
 
     def test_delete(self):
         note = self.notes[0]

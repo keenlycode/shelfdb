@@ -286,9 +286,9 @@ class Entry(dict):
         """
         if isinstance(obj, dict):
             obj = deepcopy(obj)
-            return self._update_dict(obj)
+            return self._replace_dict(obj)
         if callable(obj):
-            return self._update_fn(obj)
+            return self._replace_fn(obj)
         raise '`obj` is not an instance of `dict` for `function`'
 
     def _save(self):

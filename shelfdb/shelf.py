@@ -4,7 +4,7 @@ import shelve, os, uuid
 from datetime import datetime
 from itertools import islice
 from functools import reduce
-
+from copy import deepcopy
 
 class DB():
     """Database class to manage shelves"""
@@ -61,7 +61,7 @@ class ShelfQuery:
         """
         return self.__getitem__(id_)
 
-    def first(self, filter_):
+    def first(self, filter_=None):
         """Get the first entry matched by ``filter_`` then stop iteration.
 
         Args:
@@ -155,6 +155,7 @@ class ShelfQuery:
         id_ = str(uuid.uuid1())
         if not isinstance(entry, dict):
             raise Exception('Entry is not a dict object')
+        entry.pop('_id', None)
         self._shelf[id_] = entry
         return id_
 
@@ -165,19 +166,32 @@ class ShelfQuery:
             raise Exception('ID is not UUID1')
         if not isinstance(entry, dict):
             raise Exception('Entry is not a dict object')
+        entry.pop('_id', None)
         self._shelf[str(uuid1)] = entry
 
     def update(self, patch):
         """Update queried entries with ``patch``"""
-        if not isinstance(patch, dict):
-            raise Exception('Entry is not a dict object')
-        [entry.update(patch) for entry in self]
+        if isinstance(patch, dict):
+            patch = deepcopy(patch)
+            patch.pop('_id', None)
+            [entry._update_dict(patch) for entry in self]
+            return
+        if callable(patch):
+            [entry._update_fn(patch) for entry in self]
+            return
 
-    def replace(self, data):
+        raise '`patch` is not an instance of `dict` or `function`'
+        
+
+    def replace(self, obj):
         """Replace queried entries with ``data``"""
-        if not isinstance(data, dict):
-            raise Exception('Entry is not a dict object')
-        [entry.replace(data) for entry in self]
+        if isinstance(obj, dict):
+            obj = deepcopy(obj)
+            obj.pop('_id', None)
+            [entry._replace_dict(obj) for entry in self]
+            return
+        if callable(obj):
+            [entry._replace_fn(obj) for entry in self]
 
     def delete(self):
         """Delete queried entries"""
@@ -227,27 +241,55 @@ class Entry(dict):
             )
             return self._ts
 
+    def _update_dict(self, patch):
+        super().update(patch)
+        self._save()
+
+    def _update_fn(self, patch):
+        patch = patch(self.copy())
+        assert isinstance(patch, dict)
+        patch.pop('_id', None)
+        super().update(patch)
+        self._save()
+
+    def _replace_dict(self, patch):
+        super().clear()
+        super().update(patch)
+        self._save()
+
+    def _replace_fn(self, patch):
+        patch = patch(self.copy())
+        assert isinstance(patch, dict)
+        patch.pop('_id', None)
+        super().clear()
+        super().update(patch)
+        self._save()
+
     def update(self, patch):
         """Update this entry with ``patch``.
 
         Args:
             ``patch`` (dict): Data to update.
         """
-        super().update(patch)
-        self._save()
+        if isinstance(patch, dict):
+            patch = deepcopy(patch)
+            return self._update_dict(patch)
+        if callable(patch):
+            return self._update_fn(patch)
+        raise '`patch` is not an instance of `dict` for `function`'
 
-    def replace(self, entry):
-        """Replace this entry with ``entry``
+    def replace(self, obj):
+        """Replace this entry with ``obj``
 
         Args:
-            ``entry`` (dict): Entry data to replace.
+            ``obj`` (dict, function): Object to replace.
         """
-        if not isinstance(entry, dict):
-            raise Exception('entry to replace must be a dict object')
-        entry = entry.copy()
-        entry['_id'] = self._id
-        self.clear()
-        self.update(entry)
+        if isinstance(obj, dict):
+            obj = deepcopy(obj)
+            return self._replace_dict(obj)
+        if callable(obj):
+            return self._replace_fn(obj)
+        raise '`obj` is not an instance of `dict` for `function`'
 
     def _save(self):
         self._shelf[self._id] = self.copy() # store only dict data.

@@ -29,10 +29,6 @@ class QueryHandler():
         self.chain_query = self.chain_query.first(filter_)
         return self
 
-    def entry(self, fn):
-        self.chain_query = fn(self.chain_query)
-        return self
-
     def filter(self, filter_):
         self.chain_query = self.chain_query.filter(filter_)
         return self
@@ -69,8 +65,8 @@ class QueryHandler():
         self.chain_query = self.chain_query.insert(entry)
         return self
 
-    def replace(self, data):
-        self.chain_query = self.chain_query.replace(data)
+    def replace(self, obj):
+        self.chain_query = self.chain_query.replace(obj)
         return self
 
     def delete(self):
@@ -138,7 +134,7 @@ class ShelfServer:
 def main():
     arg = argparse.ArgumentParser(description='ShelfDB Asyncio Server')
     arg.add_argument(
-        '--host', nargs='?', type=str, default='0.0.0.0', help='server host')
+        '--host', nargs='?', type=str, default='127.0.0.1', help='server host')
     arg.add_argument(
         '--port', nargs='?', type=int, default=17000, help='server port')
     arg.add_argument(

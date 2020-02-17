@@ -1,122 +1,173 @@
-import unittest, shelfdb, shutil, dbm, shelve, uuid
-from shelfdb import shelf
+import unittest
+import shelfdb
+import shutil
+import dbm
+import shelve
+import uuid
+from datetime import datetime
+from dictify import Model, Field as BaseField, define
 
 
 class DB(unittest.TestCase):
-    def setUp(self):
-        self.db = shelfdb.open('test_data/db')
-        self.assertIsInstance(self.db, shelfdb.shelf.DB)
+    @classmethod
+    def setUpClass(cls):
+        cls.db = shelfdb.open('test_data/db')
+        cls.assertIsInstance(cls, cls.db, shelfdb.shelf.DB)
 
     def test_shelf(self):
-        self.assertIsInstance(self.db.shelf('user'), shelfdb.shelf.ShelfQuery)
+        self.assertIsInstance(self.db.shelf('note'), shelfdb.shelf.ShelfQuery)
 
     def test_shelf_open_close(self):
-        self.db.shelf('user')
+        self.db.shelf('note')
         try:
-            dbm.open('test_data/db/user')
+            dbm.open('test_data/db/note')
         except dbm.gnu.error as e:
             self.assertEqual(e.errno, 11)
         self.db.close()
         self.assertIsInstance(
-            self.db._shelf['user']._shelf.dict,
+            self.db._shelf['note']._shelf.dict,
             shelve._ClosedDict)
 
-    def tearDown(self):
+    @classmethod
+    def tearDownClass(cls):
         shutil.rmtree('test_data')
 
 
+class Field(BaseField):
+    @define.value
+    def uuid1(value):
+        uuid1 = uuid.UUID(value)
+        assert uuid1.version == 1
+
+
+class Note(Model):
+    _id = Field().uuid1()
+    title = Field().required().type(str)
+    content = Field().type(str)
+    datetime = Field().default(datetime.utcnow).required()
+
+
 class ShelfQuery(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.db = shelfdb.open('test_data/db')
+
     def setUp(self):
-        self.db = shelfdb.open('test_data/db')
-        self.user_list = [
-            {'name': 'Jan'},
-            {'name': 'Feb'},
-            {'name': 'Mar'},
+        self.notes = [
+            dict(Note({'title': 'note-1'})),
+            dict(Note({'title': 'note-2'})),
+            dict(Note({'title': 'note-3'})),
         ]
-        for user in self.user_list:
-            user['_id'] = self.db.shelf('user').insert(user)
+        for note in self.notes:
+            note['_id'] = self.db.shelf('note').insert(note)
             # Check if _id is a valid uuid1
-            id_ = uuid.UUID(user['_id'], version=1)
-            self.assertEqual(user['_id'].replace('-', ''), id_.hex)
+            assert uuid.UUID(note['_id'], version=1)
+
+        self.notes = self.db.shelf('note').run()
+        for note in self.notes:
+            Note(note)
 
     def test_get(self):
-        user = self.user_list[0]
-        user_from_db = self.db.shelf('user').get(user['_id'])
-        self.assertIsInstance(user_from_db, shelf.Entry)
-        self.assertEqual(user, user_from_db.copy())
+        note = self.notes[0]
+        note_from_db = self.db.shelf('note').get(note['_id'])
+        self.assertIsInstance(note_from_db, shelfdb.shelf.Entry)
+        self.assertEqual(note, note_from_db.copy())
 
     def test_first(self):
-        user = self.user_list[0]
-        user_from_db = self.db.shelf('user')\
-            .first(lambda u: u['name'] == user['name'])
-        self.assertIsInstance(user_from_db, shelf.Entry)
-        self.assertEqual(user, user_from_db.copy())
+        note_from_db = self.db.shelf('note').first()
+        self.assertIsInstance(note_from_db, shelfdb.shelf.Entry)
+
+        note = self.notes[0]
+        note_from_db = self.db.shelf('note')\
+            .first(lambda n: n['title'] == note['title'])
+        self.assertIsInstance(note_from_db, shelfdb.shelf.Entry)
+        self.assertEqual(note, note_from_db.copy())
 
     def test_filter(self):
-        user = self.user_list[0]
-        chain_query = self.db.shelf('user')\
-            .filter(lambda u: u['name'] == user['name'])
-        self.assertIsInstance(chain_query, shelf.ChainQuery)
-        user_from_db = next(chain_query)
-        self.assertEqual(user, user_from_db.copy())
+        note = self.notes[0]
+        query = self.db.shelf('note')\
+            .filter(lambda n: n['title'] == note['title'])
+        self.assertIsInstance(query, shelfdb.shelf.ChainQuery)
+        note_from_db = next(query)
+        self.assertEqual(note, note_from_db.copy())
 
     def test_map(self):
-        def map_test(user):
-            user['map_test'] = 'test'
-            return user
-        users = self.db.shelf('user').map(map_test)
-        for user in users:
-            self.assertEqual(user['map_test'], 'test')
+        def map_test(note):
+            note['map_test'] = 'test'
+            return note
+        notes = self.db.shelf('user').map(map_test)
+        for note in notes:
+            self.assertEqual(note['map_test'], 'test')
 
     def test_reduce(self):
-        count_by_reduce = self.db.shelf('user').reduce(lambda x, y: x + 1, 0)
-        self.assertEqual(len(self.user_list), count_by_reduce)
+        count_by_reduce = self.db.shelf('note').reduce(lambda x, y: x + 1, 0)
+        self.assertEqual(len(self.notes), count_by_reduce)
 
     def test_slice(self):
-        users = self.db.shelf('user').slice(0, 2)
-        count_by_reduce = users.reduce(lambda x, y: x + 1, 0)
-        self.assertEqual(len(self.user_list[0:2]), count_by_reduce)
+        notes = self.db.shelf('note').slice(0, 2)
+        count_by_reduce = notes.reduce(lambda x, y: x + 1, 0)
+        self.assertEqual(len(self.notes[0:2]), count_by_reduce)
 
     def test_sort(self):
-        users_sort_by_name = self.db.shelf('user')\
-            .sort(lambda user: user['name'])
-        prev_user = next(users_sort_by_name)
-        for user in users_sort_by_name:
-            self.assertTrue(prev_user['name'] < user['name'])
-            prev_user = user
+        notes_sort_by_title = self.db.shelf('note')\
+            .sort(lambda note: note['title'])
+        prev_note = next(notes_sort_by_title)
+        for note in notes_sort_by_title:
+            self.assertTrue(prev_note['title'] < note['title'])
+            prev_note = note
 
     def test_put(self):
         uuid1 = str(uuid.uuid1())
-        self.db.shelf('user').put(uuid1, {'name': 'Um'})
-        user = self.db.shelf('user').get(uuid1)
-        self.assertEqual({'name': 'Um', '_id': uuid1}, user)
+        note = dict(Note({'title': 'test_put'}))
+        self.db.shelf('note').put(uuid1, note)
+        note_from_db = self.db.shelf('note').get(uuid1)
+        note['_id'] = uuid1
+        self.assertEqual(note, note_from_db)
 
     def test_update(self):
-        users = self.db.shelf('user')
-        users.update({'update_test': 'test'})
-        for user in users:
-            self.assertEqual(user['update_test'], 'test')
+        notes = self.db.shelf('user')
+        notes.update({'content': 'test_update'})
+        for note in notes:
+            self.assertEqual(note['content'], 'test_update')
+
+        notes.update(lambda user: {'content': note['content'] + '_function'})
+        for note in notes:
+            self.assertEqual(note['content'], 'test_update_function')
 
     def test_replace(self):
-        user = self.user_list[0]
-        user = self.db.shelf('user')\
-            .first(lambda u: u['name'] == user['name'])
-        id_ = user['_id']
-        new_user = {'name': 'Aug'}
-        self.db.shelf('user').get(id_).replace(new_user)
-        user = self.db.shelf('user').get(id_)
-        del user['_id']
-        self.assertEqual(user.copy(), new_user)
+        note = self.notes[0]
+        note = self.db.shelf('note')\
+            .first(lambda n: n['title'] == note['title'])
+        new_note = dict(Note({
+            '_id': note['_id'],
+            'title': 'test_replace'}))
+        self.db.shelf('note').get(note['_id']).replace(new_note)
+        note = self.db.shelf('note').get(note['_id'])
+        self.assertDictEqual(note, new_note)
+
+        note = self.db.shelf('note').get(note['_id'])
+        compare = {
+            '_id': note['_id'],
+            'title': note['title'] + '1'
+        }
+        self.db.shelf('note').get(note['_id']).replace(lambda note: {'title': note['title'] + '1'})
+        note = self.db.shelf('note').get(note['_id'])
+        self.assertEqual(note, compare)
 
     def test_delete(self):
-        user = self.user_list[0]
-        user = self.db.shelf('user')\
-            .first(lambda u: u['name'] == user['name'])
-        user.delete()
-        user = self.db.shelf('user')\
-            .first(lambda u: u['name'] == user['name'])
-        self.assertIsNone(user)
+        note = self.notes[0]
+        self.db.shelf('note')\
+            .first(lambda n: n['title'] == note['title'])\
+            .delete()
+        note = self.db.shelf('note')\
+            .first(lambda n: n['title'] == note['title'])
+        self.assertIsNone(note)
 
     def tearDown(self):
+        self.db.shelf('note').delete()
         self.db.close()
+
+    @classmethod
+    def tearDownClass(cls):
         shutil.rmtree('test_data')

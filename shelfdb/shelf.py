@@ -172,11 +172,11 @@ class ShelfQuery:
     def update(self, patch):
         """Update queried entries with ``patch``"""
         if isinstance(patch, dict):
-            patch = dict(patch)
+            patch = deepcopy(patch)
             patch.pop('_id', None)
             [entry._update_dict(patch) for entry in self]
             return
-        elif callable(patch):
+        if callable(patch):
             [entry._update_fn(patch) for entry in self]
             return
 
@@ -187,7 +187,11 @@ class ShelfQuery:
         """Replace queried entries with ``data``"""
         if isinstance(obj, dict):
             obj = deepcopy(obj)
-        [entry.replace(obj) for entry in self]
+            obj.pop('_id', None)
+            [entry._replace_dict(obj) for entry in self]
+            return
+        if callable(obj):
+            [entry._replace_fn(obj) for entry in self]
 
     def delete(self):
         """Delete queried entries"""
@@ -256,6 +260,7 @@ class Entry(dict):
     def _replace_fn(self, patch):
         patch = patch(self.copy())
         assert isinstance(patch, dict)
+        patch.pop('_id', None)
         super().clear()
         super().update(patch)
         self._save()
@@ -270,7 +275,6 @@ class Entry(dict):
             patch = deepcopy(patch)
             return self._update_dict(patch)
         if callable(patch):
-            patch = patch(self.copy())
             return self._update_fn(patch)
         raise '`patch` is not an instance of `dict` for `function`'
 

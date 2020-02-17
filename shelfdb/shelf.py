@@ -5,7 +5,6 @@ from datetime import datetime
 from itertools import islice
 from functools import reduce
 
-
 class DB():
     """Database class to manage shelves"""
 
@@ -171,9 +170,13 @@ class ShelfQuery:
         """Update queried entries with ``patch``"""
         [entry.update(patch) for entry in self]
 
-    def replace(self, data):
+    def replace(self, obj):
         """Replace queried entries with ``data``"""
-        [entry.replace(data) for entry in self]
+        [entry.replace(obj) for entry in self]
+
+    def replace_fn(self, fn):
+        """Replace queried entries with ``data``"""
+        [entry.replace(fn) for entry in self]
 
     def delete(self):
         """Delete queried entries"""
@@ -231,11 +234,7 @@ class Entry(dict):
         """
         if callable(patch):
             patch = patch(self.copy())
-        elif isinstance(patch, dict):
-            pass
-        else:
-            raise Exception('`patch` is not a dict or function')
-
+        assert isinstance(patch, dict)
         super().update(patch)
         self._save()
 
@@ -247,11 +246,7 @@ class Entry(dict):
         """
         if callable(obj):
             obj = obj(self.copy())
-        elif isinstance(obj, dict):
-            pass
-        else:
-            raise Exception('`obj` is not a dict or function')
-
+        assert isinstance(obj, dict)
         super().clear()
         super().update(obj)
         self._save()

@@ -1,12 +1,8 @@
 from .shelf import DB
 
-def open(path):
-    """Open database, return DB object.
+def open(path: str) -> 'shelfdb.DB':
+    """Open database, return `shelfdb.DB` object.
 
-    Args:
-        path (string): directory path to database.
-
-    Return:
-        ``DB`` object.
+    :param `path (str)`: database's directory path.
     """
     return DB(path)

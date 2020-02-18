@@ -1,23 +1,27 @@
 """Module to handle file api for shelfdb."""
 
-import shelve, os, uuid
+import shelve
+import os
+import uuid
 from datetime import datetime
 from itertools import islice
 from functools import reduce
 from copy import deepcopy
 
-class DB():
-    """Database class to manage shelves"""
 
-    def __init__(self, path):
+class DB:
+    """Database class to manage `shelves.open()`"""
+
+    def __init__(self, path: str):
         self.path = path
         if not os.path.exists(self.path):
             os.makedirs(self.path)
         self._shelf = {}
 
-    def shelf(self, shelf_name):
-        """Get ``ShelfQuery`` object. create shelf file named ``shelf_name``
-        to store entries if needed.
+    def shelf(self, shelf_name: str) -> 'ShelfQuery':
+        """
+        :param `shelf_name (str)`: 
+        :io: create shelf file named `shelf_name` to store entries if needed.
         """
         if (shelf_name not in self._shelf or
                 isinstance(
@@ -35,37 +39,31 @@ class DB():
 
 class ShelfQuery:
     """Database query API. Return either ChainQuery or Entry object."""
-    def __init__(self, shelf):
+
+    def __init__(self, shelf: 'shelve.open()'):
         self._shelf = shelf
 
     def __iter__(self):
         """Iterator for entries"""
         return map(self._get_entry, self._shelf.items())
 
-    def _get_entry(self, items):
+    def _get_entry(self, items: 'self._shelf.items()') -> 'Entry':
         """To be used in `def __iter__(self)`"""
         return Entry(self._shelf, items[0], items[1])
 
-    def __getitem__(self, id_):
+    def __getitem__(self, id_: 'str(uuid.uuid1())'):
         entry = self._shelf[id_]
         return Entry(self._shelf, id_, entry)
 
-    def get(self, id_):
-        """Get an entry by ID.
-
-        Args:
-            ``id_`` (string): uuid1 string for the entry.
-
-        Return:
-            ``Entry`` object.
-        """
+    def get(self, id_: 'str(uuid.uuid1())') -> 'Entry':
+        """Get an entry by ID."""
         return self.__getitem__(id_)
 
-    def first(self, filter_=None):
-        """Get the first entry matched by ``filter_`` then stop iteration.
-
-        Args:
-            ``filter_`` (function): Filter function or lambda which get
+    def first(self, filter_: 'function' = None) -> 'Entry':
+        '''
+        Get the first entry matched by `filter_` then stop iteration.
+        params:
+            filter_ (function): Filter function or lambda which get
             Entry object as an argument. Must return **True** or **False**.
             If return **True**, return Entry object and stop Iteration.
 
@@ -75,7 +73,7 @@ class ShelfQuery:
         Example::
 
             shelfquery.first(lambda entry: entry['name'] == 'admin')
-        """
+        '''
         try:
             return next(filter(filter_, self))
         except StopIteration:
@@ -181,7 +179,6 @@ class ShelfQuery:
             return
 
         raise '`patch` is not an instance of `dict` or `function`'
-        
 
     def replace(self, obj):
         """Replace queried entries with ``data``"""

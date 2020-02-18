@@ -40,7 +40,7 @@ class TestRetrieveData(unittest.TestCase):
         while True:
             sleep(0.1)
             try:
-                cls.db.shelf('note').entry(lambda entry: entry).run()
+                cls.db.shelf('note').first().run()
                 break
             except ConnectionRefusedError:
                 if i >= 10:
@@ -93,7 +93,7 @@ class TestModifyData(unittest.TestCase):
         while True:
             sleep(0.1)
             try:
-                cls.db.shelf('note').entry(lambda entry: entry).run()
+                cls.db.shelf('note').first().run()
                 break
             except ConnectionRefusedError:
                 if i >= 10:

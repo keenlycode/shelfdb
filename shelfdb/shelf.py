@@ -44,15 +44,12 @@ class ShelfQuery:
 
     def __iter__(self):
         """Iterator for entries"""
-        return map(self._get_entry, self._shelf.items())
-
-    def _get_entry(self, items: 'self._shelf.items()') -> 'Entry':
-        """To be used in `def __iter__(self)`"""
-        return Entry(self._shelf, items[0], items[1])
+        return map(
+            lambda item: Entry(self._shelf, item[0], item[1]),
+            self._shelf.items())
 
     def __getitem__(self, id_: 'str(uuid.uuid1())'):
-        entry = self._shelf[id_]
-        return Entry(self._shelf, id_, entry)
+        return Entry(self._shelf, id_, self._shelf[id_])
 
     def get(self, id_: 'str(uuid.uuid1())') -> 'Entry':
         """Get an entry by ID."""
@@ -70,7 +67,6 @@ class ShelfQuery:
             ``Entry`` object.
 
         Example::
-
             shelfquery.first(lambda entry: entry['name'] == 'admin')
         '''
         try:
@@ -171,22 +167,20 @@ class ShelfQuery:
         if isinstance(patch, dict):
             patch.pop('_id', None)
             [entry._update_dict(patch) for entry in self]
-            return
-        if callable(patch):
+        elif callable(patch):
             [entry._update_fn(patch) for entry in self]
-            return
-
-        raise '`patch` is not an instance of `dict` or `function`'
+        else:
+            raise '`patch` is not an instance of `dict` or `function`'
 
     def replace(self, obj):
         """Replace queried entries with ``data``"""
         if isinstance(obj, dict):
-            obj = deepcopy(obj)
             obj.pop('_id', None)
             [entry._replace_dict(obj) for entry in self]
-            return
-        if callable(obj):
+        elif callable(obj):
             [entry._replace_fn(obj) for entry in self]
+        else:
+            raise '`patch` is not an instance of `dict` or `function`'
 
     def delete(self):
         """Delete queried entries"""

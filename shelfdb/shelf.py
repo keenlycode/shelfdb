@@ -6,7 +6,6 @@ import uuid
 from datetime import datetime
 from itertools import islice
 from functools import reduce
-from copy import deepcopy
 
 
 class DB:

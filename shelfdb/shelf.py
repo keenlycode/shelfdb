@@ -170,7 +170,6 @@ class ShelfQuery:
     def update(self, patch):
         """Update queried entries with ``patch``"""
         if isinstance(patch, dict):
-            patch = deepcopy(patch)
             patch.pop('_id', None)
             [entry._update_dict(patch) for entry in self]
             return
@@ -269,7 +268,6 @@ class Entry(dict):
             ``patch`` (dict): Data to update.
         """
         if isinstance(patch, dict):
-            patch = deepcopy(patch)
             return self._update_dict(patch)
         if callable(patch):
             return self._update_fn(patch)
@@ -282,7 +280,6 @@ class Entry(dict):
             ``obj`` (dict, function): Object to replace.
         """
         if isinstance(obj, dict):
-            obj = deepcopy(obj)
             return self._replace_dict(obj)
         if callable(obj):
             return self._replace_fn(obj)

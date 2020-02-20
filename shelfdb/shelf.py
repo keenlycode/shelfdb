@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime
 from itertools import islice
 from functools import reduce
+from collections import UserDict
 
 
 class DB:
@@ -27,13 +28,103 @@ class DB:
                     self._shelf[shelf_name]._shelf.dict,
                     shelve._ClosedDict)):
             shelf = shelve.open(os.path.join(self.path, shelf_name))
-            self._shelf[shelf_name] = ShelfQuery(shelf)
+            self._shelf[shelf_name] = Shelf(shelf, shelf.items)
         return self._shelf[shelf_name]
 
     def close(self):
         """Close all shelf files."""
         for k in self._shelf:
             self._shelf[k]._shelf.close()
+
+
+class Shelf:
+    def __init__(self, shelf: 'shelve.open()', iterator_function):
+        self._shelf = shelf
+        self._iterator_function = iterator_function
+
+    def __iter__(self):
+        """Iterator for items"""
+        return (item for item in self._iterator_function())
+
+    def get(self, id_: 'str(uuid.uuid1())'):
+        return Item(self._shelf, id_, self._shelf[id_])
+
+    def insert(self, data):
+        uuid1 = uuid.uuid1()
+        uuid1 = str(uuid1)
+        assert isinstance(data, dict)
+        self._shelf[uuid1] = data
+        return uuid1
+
+    def put(self, uuid1, data):
+        """Put entry with specified ID"""
+        uuid1 = uuid.UUID(uuid1)
+        assert uuid1.version == 1
+        assert isinstance(data, dict)
+        self._shelf[str(uuid1)] = data
+
+    def first(self, _filter=lambda item: True):
+        result = None
+        for item in self:
+            if _filter(item[1]):
+                result = item
+                break
+        return result
+
+    def filter(self, _filter=lambda item: True):
+        return Shelf(self._shelf, lambda: (item for item in self if _filter(item[1])))
+
+    def update(self, data):
+        for item in self:
+            item[1].update(data)
+            self._shelf[item[0]] = item[1]
+
+    def delete(self):
+        """Delete queried entries"""
+        for item in self._shelf.items():
+            del self._shelf[item[0]]
+    
+# class Items(Shelf):
+
+#     def __init__(self, shelf, items):
+#         self._shelf = shelf
+#         self._items = items
+
+#     def __iter__(self):
+#         return self._items
+
+#     def __next__(self):
+#         return next(self._items)
+
+
+class Item(UserDict):
+    """Entry API"""
+
+    def __init__(self, shelf, _id, data):
+        self._shelf = shelf
+        self.id = _id
+        self.data = data
+
+    @property
+    def datetime(self):
+        """Entry's timestamp from uuid1. Use formular from stack overflow.
+
+        See in stackoverflow.com : https://bit.ly/2EtH05b
+        """
+        try:
+            return self._datetime
+        except AttributeError:
+            self._datetime = datetime.fromtimestamp(
+                (uuid.UUID(self.id).time - 0x01b21dd213814000)*100/1e9)
+            return self._datetime
+
+    def _save(self):
+        self._shelf[self.id] = self.data
+
+    def delete(self):
+        """Delete this entry"""
+        del self._shelf[self.id]
+
 
 
 class ShelfQuery:
@@ -203,84 +294,84 @@ class ChainQuery(ShelfQuery):
         return next(self._results)
 
 
-class Entry(dict):
-    """Entry API"""
+# class Entry(dict):
+#     """Entry API"""
 
-    # To have `entry` as an argument is by design to be more efficient
-    # when call by `ShelfQuery._get_entry()`. Since entry data will be pull out
-    # from the shelf anyway before leave `__init__()`, then lets put this duty to
-    # the caller.
-    def __init__(self, shelf, id_, entry):
-        self._shelf = shelf
-        self._id = id_
-        super().__init__(entry)
-        super().__setitem__('_id', id_)
+#     # To have `entry` as an argument is by design to be more efficient
+#     # when call by `ShelfQuery._get_entry()`. Since entry data will be pull out
+#     # from the shelf anyway before leave `__init__()`, then lets put this duty to
+#     # the caller.
+#     def __init__(self, shelf, id_, entry):
+#         self._shelf = shelf
+#         self._id = id_
+#         super().__init__(entry)
+#         super().__setitem__('_id', id_)
 
-    @property
-    def ts(self):
-        """Entry's timestamp from uuid1. Use formular from stack overflow.
+#     @property
+#     def ts(self):
+#         """Entry's timestamp from uuid1. Use formular from stack overflow.
 
-        See in stackoverflow.com : https://bit.ly/2EtH05b
-        """
-        try:
-            return self._ts
-        except AttributeError:
-            self._ts = datetime.fromtimestamp(
-                (uuid.UUID(self._id).time - 0x01b21dd213814000)*100/1e9
-            )
-            return self._ts
+#         See in stackoverflow.com : https://bit.ly/2EtH05b
+#         """
+#         try:
+#             return self._ts
+#         except AttributeError:
+#             self._ts = datetime.fromtimestamp(
+#                 (uuid.UUID(self._id).time - 0x01b21dd213814000)*100/1e9
+#             )
+#             return self._ts
 
-    def _update_dict(self, patch):
-        super().update(patch)
-        self._save()
+#     def _update_dict(self, patch):
+#         super().update(patch)
+#         self._save()
 
-    def _update_fn(self, patch):
-        patch = patch(self.copy())
-        assert isinstance(patch, dict)
-        patch.pop('_id', None)
-        super().update(patch)
-        self._save()
+#     def _update_fn(self, patch):
+#         patch = patch(self.copy())
+#         assert isinstance(patch, dict)
+#         patch.pop('_id', None)
+#         super().update(patch)
+#         self._save()
 
-    def _replace_dict(self, patch):
-        super().clear()
-        super().update(patch)
-        self._save()
+#     def _replace_dict(self, patch):
+#         super().clear()
+#         super().update(patch)
+#         self._save()
 
-    def _replace_fn(self, patch):
-        patch = patch(self.copy())
-        assert isinstance(patch, dict)
-        patch.pop('_id', None)
-        super().clear()
-        super().update(patch)
-        self._save()
+#     def _replace_fn(self, patch):
+#         patch = patch(self.copy())
+#         assert isinstance(patch, dict)
+#         patch.pop('_id', None)
+#         super().clear()
+#         super().update(patch)
+#         self._save()
 
-    def update(self, patch):
-        """Update this entry with ``patch``.
+#     def update(self, patch):
+#         """Update this entry with ``patch``.
 
-        Args:
-            ``patch`` (dict): Data to update.
-        """
-        if isinstance(patch, dict):
-            return self._update_dict(patch)
-        if callable(patch):
-            return self._update_fn(patch)
-        raise '`patch` is not an instance of `dict` for `function`'
+#         Args:
+#             ``patch`` (dict): Data to update.
+#         """
+#         if isinstance(patch, dict):
+#             return self._update_dict(patch)
+#         if callable(patch):
+#             return self._update_fn(patch)
+#         raise '`patch` is not an instance of `dict` for `function`'
 
-    def replace(self, obj):
-        """Replace this entry with ``obj``
+#     def replace(self, obj):
+#         """Replace this entry with ``obj``
 
-        Args:
-            ``obj`` (dict, function): Object to replace.
-        """
-        if isinstance(obj, dict):
-            return self._replace_dict(obj)
-        if callable(obj):
-            return self._replace_fn(obj)
-        raise '`obj` is not an instance of `dict` for `function`'
+#         Args:
+#             ``obj`` (dict, function): Object to replace.
+#         """
+#         if isinstance(obj, dict):
+#             return self._replace_dict(obj)
+#         if callable(obj):
+#             return self._replace_fn(obj)
+#         raise '`obj` is not an instance of `dict` for `function`'
 
-    def _save(self):
-        self._shelf[self._id] = self.copy() # store only dict data.
+#     def _save(self):
+#         self._shelf[self._id] = self.copy() # store only dict data.
 
-    def delete(self):
-        """Delete this entry"""
-        del self._shelf[self._id]
+#     def delete(self):
+#         """Delete this entry"""
+#         del self._shelf[self._id]

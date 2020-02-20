@@ -63,29 +63,8 @@ class TestShelf(unittest.TestCase):
             # Check if _id is a valid uuid1
             assert uuid.UUID(note['_id'], version=1)
 
-        # for note in self.db.shelf('note'):
-        #     print(note)
-
-        # for note in self.db.shelf('note'):
-        #     print(note)
-
-        note = self.db.shelf('note').first(lambda item: item['title'] == 'note-1')
-        print(note)
-
-        # notes = self.db.shelf('note').filter(lambda note: note['title'] == 'note-1')
-        # for note in notes:
-        #     print(note)
-
-        # for note in notes:
-        #     print(note)
-
-        # for note in notes:
-        #     print(note)
-
-        # self.db.shelf('note').update({'title': 'update'})
-        # for note in self.db.shelf('note'):
-        #     print(note)
-
+        results = self.db.shelf('note').map(lambda item: 1).reduce(lambda sum,i: sum + i)
+        print(results)
     
     def test_get(self):
         assert True

@@ -7,6 +7,7 @@ from datetime import datetime
 from itertools import islice
 from functools import reduce
 from collections import UserDict
+from collections.abc import ItemsView
 
 
 class DB:
@@ -37,6 +38,16 @@ class DB:
             self._shelf[k]._shelf.close()
 
 
+# class Iterator:
+#     def __init__(self, iterator):
+#         self._iterator = iterator
+
+#     def __iter__(self):
+#         return self._iterator
+
+#     def map
+
+
 class Shelf:
     def __init__(self, shelf: 'shelve.open()', iterator_function):
         self._shelf = shelf
@@ -44,7 +55,12 @@ class Shelf:
 
     def __iter__(self):
         """Iterator for items"""
-        return (item for item in self._iterator_function())
+        return iter(self._iterator_function())
+
+    @staticmethod
+    def _get_datetime_from_uuid(_id):
+        return datetime.fromtimestamp(
+            (uuid.UUID(_id).time - 0x01b21dd213814000)*100/1e9)
 
     def get(self, id_: 'str(uuid.uuid1())'):
         return Item(self._shelf, id_, self._shelf[id_])
@@ -56,6 +72,14 @@ class Shelf:
         self._shelf[uuid1] = data
         return uuid1
 
+    def map(self, func):
+        return map(func, self)
+
+    def reduce(self, func, initializer=None):
+        if initializer is None:
+            return reduce(func, self)
+        return reduce(func, self, initializer)
+
     def put(self, uuid1, data):
         """Put entry with specified ID"""
         uuid1 = uuid.UUID(uuid1)
@@ -64,25 +88,39 @@ class Shelf:
         self._shelf[str(uuid1)] = data
 
     def first(self, _filter=lambda item: True):
-        result = None
         for item in self:
             if _filter(item[1]):
-                result = item
-                break
-        return result
+                return Item(self._shelf, item[0], item[1])
 
     def filter(self, _filter=lambda item: True):
         return Shelf(self._shelf, lambda: (item for item in self if _filter(item[1])))
 
     def update(self, data):
+        if callable(data):
+            data = data(self._shelf)
+        assert isinstance(data, dict)
         for item in self:
             item[1].update(data)
             self._shelf[item[0]] = item[1]
+
+    def replace(self, data):
+        if callable(data):
+            data = data(self._shelf)
+        assert isinstance(data, dict)
+        for item in self:
+            self._shelf[item[0]] = data
+
+    def slice(self, start, stop, step=None):
+        return Shelf(self._shelf, lambda: islice(self, start, stop, step))
+
+    def sort(self, key=lambda item: Shelf._get_datetime_from_uuid(item[0]), reverse=False):
+        return Shelf(self._shelf, lambda: iter(sorted(self, key=key, reverse=reverse)))
 
     def delete(self):
         """Delete queried entries"""
         for item in self._shelf.items():
             del self._shelf[item[0]]
+
     
 # class Items(Shelf):
 
@@ -107,9 +145,9 @@ class Item(UserDict):
 
     @property
     def datetime(self):
-        """Entry's timestamp from uuid1. Use formular from stack overflow.
-
-        See in stackoverflow.com : https://bit.ly/2EtH05b
+        """
+        Entry's timestamp from uuid1.
+        Formular from stackoverflow.com : https://bit.ly/2EtH05b
         """
         try:
             return self._datetime
@@ -118,13 +156,26 @@ class Item(UserDict):
                 (uuid.UUID(self.id).time - 0x01b21dd213814000)*100/1e9)
             return self._datetime
 
+    def update(self, data):
+        if callable(data):
+            data = data(self.data)
+        assert isinstance(data, dict)
+        self.data.update(data)
+        self._save()
+
+    def replace(self, data):
+        if callable(data):
+            data = data(self.data)
+        assert isinstance(data, dict)
+        self.data = data
+        self._save()
+
     def _save(self):
         self._shelf[self.id] = self.data
 
     def delete(self):
         """Delete this entry"""
         del self._shelf[self.id]
-
 
 
 class ShelfQuery:

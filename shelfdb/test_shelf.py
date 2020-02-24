@@ -43,7 +43,6 @@ class Field(BaseField):
 class Note(Model):
     title = Field().required().type(str)
     content = Field().type(str)
-    datetime = Field().default(datetime.utcnow).required()
 
 
 class TestShelf(unittest.TestCase):
@@ -54,26 +53,22 @@ class TestShelf(unittest.TestCase):
 
     def setUp(self):
         self.notes = [
-            dict(Note({'title': 'note-1'})),
-            dict(Note({'title': 'note-2'})),
-            dict(Note({'title': 'note-3'})),
+            Note({'title': 'note-1'}).copy(),
+            Note({'title': 'note-2'}).copy(),
+            Note({'title': 'note-3'}).copy(),
         ]
         for note in self.notes:
             note['_id'] = self.db.shelf('note').insert(note)
             # Check if _id is a valid uuid1
             assert uuid.UUID(note['_id'], version=1)
 
-        results = self.db.shelf('note').map(lambda item: 1).reduce(lambda sum,i: sum + i)
-        print(results)
-    
     def test_get(self):
         assert True
-
-    # def test_get(self):
-    #     note = self.notes[0]
-    #     note_from_db = self.db.shelf('note').get(note['_id'])
-    #     self.assertIsInstance(note_from_db, shelfdb.shelf.Entry)
-    #     self.assertEqual(note, note_from_db.copy())
+        note = self.notes[0]
+        note_from_db = self.db.shelf('note').get(note['_id'])
+        print(note_from_db)
+        # note_from_db.update({'_id': id})
+        # self.assertEqual(note, note_from_db)
 
     # def test_first(self):
     #     note_from_db = self.db.shelf('note').first()

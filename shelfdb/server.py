@@ -1,5 +1,5 @@
-import asyncio, uvloop, shelfdb, dill, re, sys, json, argparse, os
-
+import asyncio, uvloop, shelfdb, dill, re, sys, json, argparse, os, uuid
+from collections import UserDict
 
 class QueryHandler():
     """Handler for incoming query requests from shelfquery client.
@@ -57,16 +57,16 @@ class QueryHandler():
         self.chain_query = self.chain_query.sort(**kw)
         return self
 
-    def update(self, patch):
-        self.chain_query = self.chain_query.update(patch)
+    def update(self, data):
+        self.chain_query = self.chain_query.update(data)
         return self
 
-    def insert(self, entry):
-        self.chain_query = self.chain_query.insert(entry)
+    def insert(self, data):
+        self.chain_query = self.chain_query.insert(data)
         return self
 
-    def replace(self, obj):
-        self.chain_query = self.chain_query.replace(obj)
+    def replace(self, data):
+        self.chain_query = self.chain_query.replace(data)
         return self
 
     def delete(self):
@@ -82,17 +82,38 @@ class QueryHandler():
             else:
                 self = self.__getattribute__(query)()
 
-        if isinstance(self.chain_query, shelfdb.shelf.ShelfQuery):
-            entries = []
-            for entry in self.chain_query:
-                if isinstance(entry, dict):
-                    # Keep only dict value from entry.copy() into entries
-                    entries.append(entry.copy())
-            return entries
-        elif isinstance(self.chain_query, shelfdb.shelf.Entry):
-            return self.chain_query.copy()
+        if isinstance(self.chain_query, shelfdb.shelf.Shelf):
+            return [Item(item[0], item[1]).copy() for item in self.chain_query]
+            # for item in self.chain_query:
+            #     if isinstance(item[1], dict):
+            #         # Keep only dict value from entry.copy() into entries
+            #         items.append(item[1])
+            # return items
+        elif isinstance(self.chain_query, shelfdb.shelf.Item):
+            return self.chain_query
         else:
             return self.chain_query
+
+
+class Item(dict):
+    """Entry API"""
+
+    def __init__(self, id_, data):
+        self.id = id_
+        super().__init__(data)
+
+    @property
+    def datetime(self):
+        """
+        Entry's timestamp from uuid1.
+        Formular from stackoverflow.com : https://bit.ly/2EtH05b
+        """
+        try:
+            return self._datetime
+        except AttributeError:
+            self._datetime = datetime.fromtimestamp(
+                (uuid.UUID(self.id).time - 0x01b21dd213814000)*100/1e9)
+            return self._datetime
 
 
 class ShelfServer:

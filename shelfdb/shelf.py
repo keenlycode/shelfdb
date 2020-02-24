@@ -6,8 +6,7 @@ import uuid
 from datetime import datetime
 from itertools import islice
 from functools import reduce
-from collections import UserDict
-from collections.abc import ItemsView
+import inspect
 
 
 class DB:
@@ -39,38 +38,47 @@ class DB:
 
 
 class Shelf:
-    def __init__(self, shelf: 'shelve.open()', items_function):
+    def __init__(self, shelf: 'shelve.open()', items_iterator_function):
         self._shelf = shelf
-        self._items_function = items_function
+        self._items_iterator_function = items_iterator_function
 
     def __iter__(self):
         """Iterator for items"""
-        return iter(self._items_function())
+        return iter(self._items_iterator_function())
 
-    @staticmethod
-    def _get_datetime_from_uuid(_id):
-        return datetime.fromtimestamp(
-            (uuid.UUID(_id).time - 0x01b21dd213814000)*100/1e9)
+    def items_generator(self):
+        for item in self:
+            yield item
 
     def delete(self):
         """Delete queried entries"""
-        for item in self._shelf.items():
+        for item in self:
             del self._shelf[item[0]]
 
     def filter(self, filter_=lambda item: True):
-        return Shelf(self._shelf,
-                     lambda: (item for item in self if filter_(item[1])))
+        param = inspect.signature(filter_).parameters
+        param = len(param)
+        iterator_function = None
+        if param == 1:
+            iterator_function = lambda: (item for item in self if filter_(item[1]))
+        elif param == 2:
+            iterator_function = lambda: (item for item in self if filter_(item[0], item[1]))
+        return Shelf(self._shelf, iterator_function)
 
     def first(self, filter_=lambda item: True):
-        for item in self:
-            if filter_(item[1]):
-                return Item(self._shelf, item[0], item[1])
+        param = inspect.signature(filter_).parameters
+        param = len(param)
+        if param == 1:
+            for item in self:
+                if filter_(item[1]):
+                    return item
+        elif param == 2:
+            for item in self:
+                if filter_(item[0], item[1]):
+                    return item
 
-    def format(self, format):
-        return Shelf(self._shelf, lambda: (format(id, item) for id, item in self))
-
-    def get(self, id_: 'str(uuid.uuid1())'):
-        return Item(self._shelf, id_, self._shelf[id_])
+    def get(self, id: 'str(uuid.uuid1())'):
+        return Entry(self._shelf, id)
 
     def insert(self, data):
         uuid1 = uuid.uuid1()
@@ -80,7 +88,7 @@ class Shelf:
         return uuid1
 
     def map(self, func):
-        return Map(map(func, self))
+        return MapReduce(map(func, self))
 
     def put(self, uuid1, data):
         """Put entry with specified ID"""
@@ -90,50 +98,46 @@ class Shelf:
         self._shelf[str(uuid1)] = data
 
     def replace(self, data):
-        if callable(data):
-            data = data(self._shelf)
-        assert isinstance(data, dict)
-        for item in self:
-            self._shelf[item[0]] = data
+        if isinstance(data, dict):
+            for item in self:
+                self._shelf[item[0]] = data
+        elif callable(data):
+            generator = self.items_generator()
+            item = next(generator)
+            data_to_replace = data(item[0], item[1])
+            assert isinstance(data_to_replace, dict)
+            self._shelf[item[0]] = data_to_replace
+            for item in generator:
+                self._shelf[item[0]] = data(item[0], item[1])
 
     def slice(self, start, stop, step=None):
         return Shelf(self._shelf, lambda: islice(self, start, stop, step))
 
-    def sort(self, key=lambda item: Shelf._get_datetime_from_uuid(item[0]), reverse=False):
-        return Shelf(self._shelf, lambda: iter(sorted(self, key=key, reverse=reverse)))
+    def sort(self, func=lambda id, item: id, reverse=False):
+        return Shelf(self._shelf,
+            lambda: iter(
+                sorted(self,
+                    key=lambda item: func(item[0], item[1]),
+                    reverse=reverse)))
 
     def update(self, data):
-        if callable(data):
-            data = data(self._shelf)
-        assert isinstance(data, dict)
-        for item in self:
-            item[1].update(data)
-            self._shelf[item[0]] = item[1]
+        if isinstance(data, dict):
+            for item in self:
+                item[1].update(data)
+                self._shelf[item[0]] = item[1]
+        elif callable(data):
+            for item in self:
+                item[1].update(data(item[0], item[1]))
+                self._shelf[item[0]] = item[1]
 
 
-class Item(UserDict):
+class Entry(dict):
     """Entry API"""
 
-    def __init__(self, shelf, id_, data):
+    def __init__(self, shelf, id):
         self._shelf = shelf
-        self.id = id_
-        self.data = data
-
-    @property
-    def datetime(self):
-        """
-        Entry's timestamp from uuid1.
-        Formular from stackoverflow.com : https://bit.ly/2EtH05b
-        """
-        try:
-            return self._datetime
-        except AttributeError:
-            self._datetime = datetime.fromtimestamp(
-                (uuid.UUID(self.id).time - 0x01b21dd213814000)*100/1e9)
-            return self._datetime
-
-    def _save(self):
-        self._shelf[self.id] = self.data
+        self.id = id
+        super().__init__(shelf[id])
 
     def delete(self):
         """Delete this entry"""
@@ -141,27 +145,26 @@ class Item(UserDict):
 
     def replace(self, data):
         if callable(data):
-            data = data(self.data)
-        assert isinstance(data, dict)
-        self.data = data
-        self._save()
+            data = data(self)
+        self.clear()
+        super().update(data)
+        self._shelf[self.id] = self.copy()
 
     def update(self, data):
         if callable(data):
-            data = data(self.data)
-        assert isinstance(data, dict)
-        self.data.update(data)
-        self._save()
+            data = data(self)
+        super().update(data)
+        self._shelf[self.id] = self.copy()
 
 
-class Map:
-    def __init__(self, map_iterator):
-        self._map_iterator = map_iterator
+class MapReduce:
+    def __init__(self, map_obj):
+        self.map_obj = map_obj
 
     def __iter__(self):
-        return self._map_iterator
+        return iter(self.map_obj)
 
     def reduce(self, func, initializer=None):
         if initializer is None:
-            return reduce(func, self)
-        return reduce(func, self, initializer)
+            return reduce(func, self.map_obj)
+        return reduce(func, self.map_obj, initializer)

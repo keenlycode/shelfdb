@@ -71,11 +71,11 @@ class Shelf:
         if param == 1:
             for item in self:
                 if filter_(item[1]):
-                    return item
+                    return Entry(self._shelf, item[0])
         elif param == 2:
             for item in self:
                 if filter_(item[0], item[1]):
-                    return item
+                    return Entry(self._shelf, item[0])
 
     def get(self, id: 'str(uuid.uuid1())'):
         return Entry(self._shelf, id)

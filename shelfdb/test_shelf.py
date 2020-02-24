@@ -6,6 +6,7 @@ import shelve
 import uuid
 from datetime import datetime
 from dictify import Model, Field as BaseField, define
+from shelfdb.shelf import Entry
 
 
 class DB(unittest.TestCase):
@@ -63,22 +64,22 @@ class TestShelf(unittest.TestCase):
             assert uuid.UUID(note['_id'], version=1)
 
     def test_get(self):
-        assert True
         note = self.notes[0]
         note_from_db = self.db.shelf('note').get(note['_id'])
-        print(note_from_db)
-        # note_from_db.update({'_id': id})
-        # self.assertEqual(note, note_from_db)
+        self.assertIsInstance(note_from_db, Entry)
+        note_from_db.update({'_id': note_from_db.id})
+        self.assertEqual(note, note_from_db)
 
-    # def test_first(self):
-    #     note_from_db = self.db.shelf('note').first()
-    #     self.assertIsInstance(note_from_db, shelfdb.shelf.Entry)
+    def test_first(self):
+        note_from_db = self.db.shelf('note').first()
+        self.assertIsInstance(note_from_db, shelfdb.shelf.Entry)
 
-    #     note = self.notes[0]
-    #     note_from_db = self.db.shelf('note')\
-    #         .first(lambda n: n['title'] == note['title'])
-    #     self.assertIsInstance(note_from_db, shelfdb.shelf.Entry)
-    #     self.assertEqual(note, note_from_db.copy())
+        note = self.notes[0]
+        note_from_db = self.db.shelf('note')\
+            .first(lambda n: n['title'] == note['title'])
+        self.assertIsInstance(note_from_db, shelfdb.shelf.Entry)
+        note_from_db.update({'_id': note_from_db.id})
+        self.assertEqual(note, note_from_db)
 
     # def test_filter(self):
     #     note = self.notes[0]

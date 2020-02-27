@@ -134,7 +134,6 @@ class Item(dict):
     @property
     def timestamp(self):
         """Entry's timestamp from uuid1. Use formular from stack overflow.
-
         See in stackoverflow.com : https://bit.ly/2EtH05b
         """
         try:

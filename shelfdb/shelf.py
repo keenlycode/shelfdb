@@ -49,23 +49,26 @@ class Shelf:
         """Iterator for items"""
         return iter(self._items_iterator_function())
 
-    def items(self):
-        for item in self:
-            yield item
+    def count(self, filter_=None):
+        return reduce(lambda x, y: x+1, filter(filter_, self), 0)
 
     def delete(self):
         """Delete queried entries"""
         for item in self:
             del self._shelf[item.id]
 
-    def filter(self, filter_=lambda item: True):
+    def filter(self, filter_=None):
         return Shelf(self._shelf, lambda: filter(filter_, self))
 
-    def first(self, filter_=lambda item: True):
-        return next(filter(filter_, self))
+    def first(self, filter_=None):
+        try:
+            item = next(filter(filter_, self))
+        except StopIteration:
+            return None
+        return Entry(self._shelf, item.id, self._shelf[item.id])
 
     def get(self, id: 'str(uuid.uuid1())'):
-        return Entry(self._shelf, id)
+        return Entry(self._shelf, id, self._shelf[id])
 
     def insert(self, data):
         uuid1 = str(uuid.uuid1())
@@ -73,8 +76,17 @@ class Shelf:
         self._shelf[uuid1] = data
         return uuid1
 
+    def items(self):
+        for item in self:
+            yield item
+
     def map(self, func):
-        return MapReduce(map(func, self))
+        return Shelf(self._shelf, lambda: map(func, self))
+
+    def reduce(self, func, initializer=None):
+        if initializer is None:
+            return reduce(func, self)
+        return reduce(func, self, initializer)
 
     def put(self, uuid1, data):
         """Put entry with specified ID"""
@@ -134,10 +146,10 @@ class Item(dict):
 
 
 class Entry(Item):
-    def __init__(self, shelf, id):
+    def __init__(self, shelf, id, data):
         self._shelf = shelf
         self.id = id
-        super().__init__(id, shelf[id])
+        super().__init__(id, data)
 
     def delete(self):
         """Delete this entry"""
@@ -155,16 +167,3 @@ class Entry(Item):
             data = data(self)
         super().update(data)
         self._shelf[self.id] = self.copy()
-
-
-class MapReduce:
-    def __init__(self, map_obj):
-        self.map_obj = map_obj
-
-    def __iter__(self):
-        return iter(self.map_obj)
-
-    def reduce(self, func, initializer=None):
-        if initializer is None:
-            return reduce(func, self.map_obj)
-        return reduce(func, self.map_obj, initializer)

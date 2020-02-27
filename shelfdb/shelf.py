@@ -28,7 +28,10 @@ class DB:
                     self._shelf[shelf_name]._shelf.dict,
                     shelve._ClosedDict)):
             shelf = shelve.open(os.path.join(self.path, shelf_name))
-            self._shelf[shelf_name] = Shelf(shelf, shelf.items)
+            self._shelf[shelf_name] = Shelf(
+                shelf, 
+                lambda: (Item(item[0], item[1]) for item in shelf.items())
+            )
         return self._shelf[shelf_name]
 
     def close(self):
@@ -46,43 +49,26 @@ class Shelf:
         """Iterator for items"""
         return iter(self._items_iterator_function())
 
-    def items_generator(self):
+    def items(self):
         for item in self:
             yield item
 
     def delete(self):
         """Delete queried entries"""
         for item in self:
-            del self._shelf[item[0]]
+            del self._shelf[item.id]
 
     def filter(self, filter_=lambda item: True):
-        param = inspect.signature(filter_).parameters
-        param = len(param)
-        iterator_function = None
-        if param == 1:
-            iterator_function = lambda: (item for item in self if filter_(item[1]))
-        elif param == 2:
-            iterator_function = lambda: (item for item in self if filter_(item[0], item[1]))
-        return Shelf(self._shelf, iterator_function)
+        return Shelf(self._shelf, lambda: filter(filter_, self))
 
     def first(self, filter_=lambda item: True):
-        param = inspect.signature(filter_).parameters
-        param = len(param)
-        if param == 1:
-            for item in self:
-                if filter_(item[1]):
-                    return Entry(self._shelf, item[0])
-        elif param == 2:
-            for item in self:
-                if filter_(item[0], item[1]):
-                    return Entry(self._shelf, item[0])
+        return next(filter(filter_, self))
 
     def get(self, id: 'str(uuid.uuid1())'):
         return Entry(self._shelf, id)
 
     def insert(self, data):
-        uuid1 = uuid.uuid1()
-        uuid1 = str(uuid1)
+        uuid1 = str(uuid.uuid1())
         assert isinstance(data, dict)
         self._shelf[uuid1] = data
         return uuid1
@@ -97,47 +83,61 @@ class Shelf:
         assert isinstance(data, dict)
         self._shelf[str(uuid1)] = data
 
-    def replace(self, data):
-        if isinstance(data, dict):
+    def replace(self, obj):
+        if isinstance(obj, dict):
             for item in self:
-                self._shelf[item[0]] = data
-        elif callable(data):
-            generator = self.items_generator()
-            item = next(generator)
-            data_to_replace = data(item[0], item[1])
-            assert isinstance(data_to_replace, dict)
-            self._shelf[item[0]] = data_to_replace
-            for item in generator:
-                self._shelf[item[0]] = data(item[0], item[1])
+                self._shelf[item.id] = obj
+        elif callable(obj):
+            items = self.items()
+            item = next(items)
+            data = obj(item)
+            assert isinstance(data, dict)
+            self._shelf[item[0]] = data
+            for item in items:
+                self._shelf[item[0]] = obj(item)
 
     def slice(self, start, stop, step=None):
         return Shelf(self._shelf, lambda: islice(self, start, stop, step))
 
-    def sort(self, func=lambda id, item: id, reverse=False):
+    def sort(self, func=lambda item: item.timestamp, reverse=False):
         return Shelf(self._shelf,
-            lambda: iter(
-                sorted(self,
-                    key=lambda item: func(item[0], item[1]),
-                    reverse=reverse)))
+            lambda: sorted(self, key=lambda item: func(item), reverse=reverse))
 
     def update(self, data):
         if isinstance(data, dict):
             for item in self:
-                item[1].update(data)
-                self._shelf[item[0]] = item[1]
+                item.update(data)
+                self._shelf[item.id] = item
         elif callable(data):
             for item in self:
-                item[1].update(data(item[0], item[1]))
-                self._shelf[item[0]] = item[1]
+                item.update(data(item))
+                self._shelf[item.id] = item
 
 
-class Entry(dict):
-    """Entry API"""
+class Item(dict):
+    def __init__(self, id, data):
+        self.id = id
+        super().__init__(data)
 
+    @property
+    def timestamp(self):
+        """Entry's timestamp from uuid1. Use formular from stack overflow.
+
+        See in stackoverflow.com : https://bit.ly/2EtH05b
+        """
+        try:
+            return self._timestamp
+        except AttributeError:
+            self._timestamp = datetime.fromtimestamp(
+                (uuid.UUID(self.id).time - 0x01b21dd213814000)*100/1e9)
+            return self._timestamp
+
+
+class Entry(Item):
     def __init__(self, shelf, id):
         self._shelf = shelf
         self.id = id
-        super().__init__(shelf[id])
+        super().__init__(id, shelf[id])
 
     def delete(self):
         """Delete this entry"""

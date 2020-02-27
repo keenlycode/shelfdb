@@ -6,7 +6,8 @@ import shelve
 import uuid
 from datetime import datetime
 from dictify import Model, Field as BaseField, define
-from shelfdb.shelf import Entry
+from shelfdb.shelf import Item, Entry
+from sys import getsizeof
 
 
 class DB(unittest.TestCase):
@@ -53,41 +54,38 @@ class TestShelf(unittest.TestCase):
         cls.db = shelfdb.open('test_data/db')
 
     def setUp(self):
-        self.notes = [
-            Note({'title': 'note-1'}).copy(),
-            Note({'title': 'note-2'}).copy(),
-            Note({'title': 'note-3'}).copy(),
-        ]
+        self.notes = []
+        for i in range(10):
+            self.notes.append(Note({'title': 'note-' + str(i)}))
         for note in self.notes:
-            note['_id'] = self.db.shelf('note').insert(note)
+            note.id = self.db.shelf('note').insert(note.copy())
             # Check if _id is a valid uuid1
-            assert uuid.UUID(note['_id'], version=1)
+            assert uuid.UUID(note.id, version=1)
 
     def test_get(self):
         note = self.notes[0]
-        note_from_db = self.db.shelf('note').get(note['_id'])
-        self.assertIsInstance(note_from_db, Entry)
-        note_from_db.update({'_id': note_from_db.id})
+        note_from_db = self.db.shelf('note').get(note.id)
+        self.assertIsInstance(note_from_db, Item)
         self.assertEqual(note, note_from_db)
 
     def test_first(self):
         note_from_db = self.db.shelf('note').first()
-        self.assertIsInstance(note_from_db, shelfdb.shelf.Entry)
+        self.assertIsInstance(note_from_db, shelfdb.shelf.Item)
 
         note = self.notes[0]
         note_from_db = self.db.shelf('note')\
             .first(lambda n: n['title'] == note['title'])
-        self.assertIsInstance(note_from_db, shelfdb.shelf.Entry)
-        note_from_db.update({'_id': note_from_db.id})
+        self.assertIsInstance(note_from_db, shelfdb.shelf.Item)
         self.assertEqual(note, note_from_db)
 
     # def test_filter(self):
     #     note = self.notes[0]
     #     query = self.db.shelf('note')\
     #         .filter(lambda n: n['title'] == note['title'])
-    #     self.assertIsInstance(query, shelfdb.shelf.ChainQuery)
-    #     note_from_db = next(query)
-    #     self.assertEqual(note, note_from_db.copy())
+    #     self.assertIsInstance(query, shelfdb.shelf.Shelf)
+    #     id, note_from_db = next(query.items())
+    #     note_from_db.update({'_id': id})
+    #     self.assertEqual(note, note_from_db)
 
     # def test_map(self):
     #     def map_test(note):

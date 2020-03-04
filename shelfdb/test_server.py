@@ -91,7 +91,7 @@ class TestModifyData(unittest.TestCase):
     def tearDownClass(cls):
         db.shelf('note').delete().run()
 
-    def test_entry(self):
-        db.shelf('note').first().update({'title': 'test_entry'}).run()
+    def test_update(self):
+        db.shelf('note').first().update({'title': 'test_update'}).run()
         note = db.shelf('note').first().run()
-        self.assertEqual(note['title'], 'test_entry')
+        self.assertEqual(note['title'], 'test_update')

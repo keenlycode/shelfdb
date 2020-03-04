@@ -105,8 +105,9 @@ class ShelfServer:
             result = QueryHandler(self.shelfdb, shelf, queries).run()
             result = dill.dumps(result)
         except:
-            print("Unexpected error:", sys.exc_info()[1])
-            result = dill.dumps(sys.exc_info()[1])
+            exc_info = sys.exc_info()
+            print(exc_info[0], exc_info[1])
+            result = dill.dumps(exc_info[1])
             writer.write(result)
             await writer.drain()
             writer.close()

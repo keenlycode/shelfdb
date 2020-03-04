@@ -109,13 +109,16 @@ class ShelfServer:
             print(exc_info[0], exc_info[1])
             result = dill.dumps(exc_info[1])
             writer.write(result)
+            writer.write_eof()
             await writer.drain()
             writer.close()
             await writer.wait_closed()
             raise
         writer.write(result)
+        writer.write_eof()
         await writer.drain()
         writer.close()
+        await writer.wait_closed()
 
     async def run(self):
         # tcp-echo-server-using-streams

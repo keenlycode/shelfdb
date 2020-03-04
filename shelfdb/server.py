@@ -83,37 +83,16 @@ class QueryHandler():
                 self = self.__getattribute__(query)()
 
         if isinstance(self.chain_query, shelfdb.shelf.Shelf):
-            return [Item(item[0], item[1]).copy() for item in self.chain_query]
+            return [(item.id, item) for item in self.chain_query]
             # for item in self.chain_query:
             #     if isinstance(item[1], dict):
             #         # Keep only dict value from entry.copy() into entries
             #         items.append(item[1])
             # return items
         elif isinstance(self.chain_query, shelfdb.shelf.Item):
-            return self.chain_query
+            return (self.chain_query.id, dict(self.chain_query))
         else:
             return self.chain_query
-
-
-class Item(dict):
-    """Entry API"""
-
-    def __init__(self, id_, data):
-        self.id = id_
-        super().__init__(data)
-
-    @property
-    def datetime(self):
-        """
-        Entry's timestamp from uuid1.
-        Formular from stackoverflow.com : https://bit.ly/2EtH05b
-        """
-        try:
-            return self._datetime
-        except AttributeError:
-            self._datetime = datetime.fromtimestamp(
-                (uuid.UUID(self.id).time - 0x01b21dd213814000)*100/1e9)
-            return self._datetime
 
 
 class ShelfServer:

@@ -115,6 +115,7 @@ class ShelfServer:
             writer.write(result)
             await writer.drain()
             writer.close()
+            await writer.wait_closed()
             raise
         writer.write(result)
         await writer.drain()

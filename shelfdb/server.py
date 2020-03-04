@@ -84,11 +84,6 @@ class QueryHandler():
 
         if isinstance(self.chain_query, shelfdb.shelf.Shelf):
             return [(item.id, item) for item in self.chain_query]
-            # for item in self.chain_query:
-            #     if isinstance(item[1], dict):
-            #         # Keep only dict value from entry.copy() into entries
-            #         items.append(item[1])
-            # return items
         elif isinstance(self.chain_query, shelfdb.shelf.Item):
             return (self.chain_query.id, dict(self.chain_query))
         else:

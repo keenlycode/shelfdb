@@ -1,5 +1,5 @@
 import asyncio, uvloop, shelfdb, dill, re, sys, json, argparse, os, uuid
-from collections import UserDict
+
 
 class QueryHandler():
     """Handler for incoming query requests from shelfquery client.

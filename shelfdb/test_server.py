@@ -3,11 +3,10 @@ import unittest
 from multiprocessing import Process
 from pathlib import Path
 from time import sleep
-import uuid
 from datetime import datetime
 from shelfdb import server
 import shelfquery
-from dictify import Model, Field, define
+from dictify import Model, Field
 
 
 shelfdb_process = None
@@ -36,6 +35,7 @@ def setUpModule():
             if i >= 10:
                 raise TimeoutError
             i += 1
+
 
 def tearDownModule():
     global shelfdb_process

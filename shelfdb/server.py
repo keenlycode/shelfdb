@@ -149,6 +149,6 @@ def main():
     except KeyboardInterrupt:
         shelf_server.shelfdb.close()
 
-    
+
 if __name__ == '__main__':
     main()

@@ -9,8 +9,16 @@ from shelfdb import server
 import shelfquery
 from dictify import Model, Field, define
 
+
 shelfdb_process = None
 db = None
+
+
+class Note(Model):
+    title = Field().required().type(str)
+    note = Field().type(str)
+    datetime = Field().default(datetime.utcnow)
+
 
 def setUpModule():
     global shelfdb_process
@@ -29,17 +37,10 @@ def setUpModule():
                 raise TimeoutError
             i += 1
 
-
 def tearDownModule():
     global shelfdb_process
     shelfdb_process.terminate()
     shutil.rmtree(Path('db'))
-
-
-class Note(Model):
-    title = Field().required().type(str)
-    note = Field().type(str)
-    datetime = Field().default(datetime.utcnow)
 
 
 class TestRetrieveData(unittest.TestCase):
@@ -91,7 +92,12 @@ class TestModifyData(unittest.TestCase):
     def tearDownClass(cls):
         db.shelf('note').delete().run()
 
-    def test_update(self):
+    def test_entry_update(self):
         db.shelf('note').first().update({'title': 'test_update'}).run()
         note = db.shelf('note').first().run()
         self.assertEqual(note['title'], 'test_update')
+
+    def test_shelf_update(self):
+        db.shelf('note').update({'note': 'test-update'}).run()
+        for note in db.shelf('note').run():
+            self.assertEqual(note['note'], 'test-update')

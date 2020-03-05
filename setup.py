@@ -10,17 +10,13 @@ setup(
     author='Nitipit Nontasuwan',
     author_email='nitipit@gmail.com',
     license='MIT',
-    classifiers=[
-        'Programming Language :: Python :: 3.6',
-    ],
+    classifiers=['Programming Language :: Python :: 3.6'],
     python_requires='>=3.6',
     keywords='dict json database',
     packages=find_packages(),
-    install_requires=['uvloop>=0.12.1', 'dill>=0.2.9',],
+    install_requires=['uvloop>=0.12.1', 'dill>=0.2.9'],
     tests_require=['shelfquery'],
     entry_points={
-        'console_scripts': [
-            'shelfdb=shelfdb.server:main',
-        ],
+        'console_scripts': ['shelfdb=shelfdb.server:main'],
     },
 )

@@ -4,10 +4,8 @@ import shutil
 import dbm
 import shelve
 import uuid
-from datetime import datetime
-from dictify import Model, Field as BaseField, define
-from shelfdb.shelf import Item, Entry
-from sys import getsizeof
+from dictify import Model, Field
+from shelfdb.shelf import Item
 
 
 class DB(unittest.TestCase):
@@ -33,13 +31,6 @@ class DB(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         shutil.rmtree('test_data')
-
-
-class Field(BaseField):
-    @define.value
-    def uuid1(value):
-        uuid1 = uuid.UUID(value)
-        assert uuid1.version == 1
 
 
 class Note(Model):

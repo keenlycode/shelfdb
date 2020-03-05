@@ -73,7 +73,9 @@ class TestRetrieveData(unittest.TestCase):
         self.assertIsInstance(note, shelfquery.Item)
 
     def test_filter(self):
-        notes = db.shelf('note').filter(lambda note: note['title'] == 'note-1').run()
+        notes = db.shelf('note')\
+            .filter(lambda note: note['title'] == 'note-1')\
+            .run()
         self.assertIsInstance(notes, list)
         self.assertEqual(len(notes), 1)
         self.assertEqual(notes[0]['title'], 'note-1')

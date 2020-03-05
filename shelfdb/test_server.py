@@ -65,16 +65,19 @@ class TestRetrieveData(unittest.TestCase):
     def test_get(self):
         note = db.shelf('note').get(self.notes[0].id).run()
         self.assertDictEqual(self.notes[0], note)
+        self.assertIsInstance(note, shelfquery.Item)
 
     def test_first(self):
         note = db.shelf('note').first().run()
         self.assertIsInstance(note, dict)
+        self.assertIsInstance(note, shelfquery.Item)
 
     def test_filter(self):
         notes = db.shelf('note').filter(lambda note: note['title'] == 'note-1').run()
         self.assertIsInstance(notes, list)
         self.assertEqual(len(notes), 1)
         self.assertEqual(notes[0]['title'], 'note-1')
+        self.assertIsInstance(notes[0], shelfquery.Item)
 
 
 class TestModifyData(unittest.TestCase):

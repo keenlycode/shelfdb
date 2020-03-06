@@ -1,4 +1,4 @@
-import asyncio, uvloop, shelfdb, dill, re, sys, json, argparse, os
+import asyncio, uvloop, shelfdb, dill, re, sys, json, argparse, os, uuid
 
 
 class QueryHandler():
@@ -57,16 +57,16 @@ class QueryHandler():
         self.chain_query = self.chain_query.sort(**kw)
         return self
 
-    def update(self, patch):
-        self.chain_query = self.chain_query.update(patch)
+    def update(self, data):
+        self.chain_query = self.chain_query.update(data)
         return self
 
-    def insert(self, entry):
-        self.chain_query = self.chain_query.insert(entry)
+    def insert(self, data):
+        self.chain_query = self.chain_query.insert(data)
         return self
 
-    def replace(self, obj):
-        self.chain_query = self.chain_query.replace(obj)
+    def replace(self, data):
+        self.chain_query = self.chain_query.replace(data)
         return self
 
     def delete(self):
@@ -82,15 +82,10 @@ class QueryHandler():
             else:
                 self = self.__getattribute__(query)()
 
-        if isinstance(self.chain_query, shelfdb.shelf.ShelfQuery):
-            entries = []
-            for entry in self.chain_query:
-                if isinstance(entry, dict):
-                    # Keep only dict value from entry.copy() into entries
-                    entries.append(entry.copy())
-            return entries
-        elif isinstance(self.chain_query, shelfdb.shelf.Entry):
-            return self.chain_query.copy()
+        if isinstance(self.chain_query, shelfdb.shelf.Shelf):
+            return [(item.id, item) for item in self.chain_query]
+        elif isinstance(self.chain_query, shelfdb.shelf.Item):
+            return (self.chain_query.id, dict(self.chain_query))
         else:
             return self.chain_query
 
@@ -110,15 +105,20 @@ class ShelfServer:
             result = QueryHandler(self.shelfdb, shelf, queries).run()
             result = dill.dumps(result)
         except:
-            print("Unexpected error:", sys.exc_info()[1])
-            result = dill.dumps(sys.exc_info()[1])
+            exc_info = sys.exc_info()
+            print(exc_info[0], exc_info[1])
+            result = dill.dumps(exc_info[1])
             writer.write(result)
+            writer.write_eof()
             await writer.drain()
             writer.close()
+            await writer.wait_closed()
             raise
         writer.write(result)
+        writer.write_eof()
         await writer.drain()
         writer.close()
+        await writer.wait_closed()
 
     async def run(self):
         # tcp-echo-server-using-streams
@@ -149,6 +149,6 @@ def main():
     except KeyboardInterrupt:
         shelf_server.shelfdb.close()
 
-    
+
 if __name__ == '__main__':
     main()

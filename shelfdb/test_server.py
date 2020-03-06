@@ -3,112 +3,106 @@ import unittest
 from multiprocessing import Process
 from pathlib import Path
 from time import sleep
-import uuid
 from datetime import datetime
 from shelfdb import server
 import shelfquery
-from dictify import Model, Field as BaseField, define
+from dictify import Model, Field
 
 
-class Field(BaseField):
-    @define.value
-    def uuid1(value):
-        _id = uuid.UUID(value)
-        unittest.TestCase().assertEqual(_id.version, 1)
+shelfdb_process = None
+db = None
 
 
 class Note(Model):
-    _id = Field().uuid1()
     title = Field().required().type(str)
     note = Field().type(str)
     datetime = Field().default(datetime.utcnow)
 
 
+def setUpModule():
+    global shelfdb_process
+    global db
+    shelfdb_process = Process(target=server.main, daemon=True)
+    shelfdb_process.start()
+    db = shelfquery.db()
+    i = 0
+    while True:
+        sleep(0.1)
+        try:
+            db.shelf('note').first().run()
+            break
+        except ConnectionRefusedError:
+            if i >= 10:
+                raise TimeoutError
+            i += 1
+
+
+def tearDownModule():
+    global shelfdb_process
+    shelfdb_process.terminate()
+    shutil.rmtree(Path('db'))
+
+
 class TestRetrieveData(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
-        cls.shelfdb_process = Process(target=server.main, daemon=True)
-        cls.shelfdb_process.start()
-        cls.db = shelfquery.db()
-        cls.test_notes = []
-        test_notes = [
-            dict(Note({'title': 'note-1'})),
-            dict(Note({'title': 'note-2'})),
-            dict(Note({'title': 'note-3'})),
-        ]
-        i = 0
-        while True:
-            sleep(0.1)
-            try:
-                cls.db.shelf('note').first().run()
-                break
-            except ConnectionRefusedError:
-                if i >= 10:
-                    raise TimeoutError
-                i += 1
-        for note in test_notes:
-            _id = cls.db.shelf('note').insert(note).run()
-            note['_id'] = _id
-            cls.test_notes.append(note)
+        cls.notes = []
+        for i in range(5):
+            cls.notes.append(Note({'title': 'note-' + str(i)}))
+        for note in cls.notes:
+            id = db.shelf('note').insert(note.copy()).run()
+            note.id = id
+
+    @classmethod
+    def tearDownClass(cls):
+        db.shelf('note').delete().run()
 
     def test_iterator(self):
-        notes = self.db.shelf('note').run()
-        self.assertEqual(len(notes), 3)
-        for note in notes:
-            Note(note)
+        notes = db.shelf('note').run()
+        self.assertEqual(len(notes), len(self.notes))
 
     def test_get(self):
-        note = self.db.shelf('note').get(self.test_notes[0]['_id']).run()
-        Note(note)
+        note = db.shelf('note').get(self.notes[0].id).run()
+        self.assertDictEqual(self.notes[0], note)
+        self.assertIsInstance(note, shelfquery.Item)
 
     def test_first(self):
-        note = self.db.shelf('note').first().run()
-        note = Note(note)
+        note = db.shelf('note').first().run()
+        self.assertIsInstance(note, dict)
+        self.assertIsInstance(note, shelfquery.Item)
 
     def test_filter(self):
-        notes = self.db.shelf('note').filter(lambda note: note['title'] == 'note-1').run()
+        notes = db.shelf('note')\
+            .filter(lambda note: note['title'] == 'note-1')\
+            .run()
         self.assertIsInstance(notes, list)
         self.assertEqual(len(notes), 1)
         self.assertEqual(notes[0]['title'], 'note-1')
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.shelfdb_process.terminate()
-        shutil.rmtree(Path('db'))
+        self.assertIsInstance(notes[0], shelfquery.Item)
 
 
 class TestModifyData(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
-        cls.shelfdb_process = Process(target=server.main, daemon=True)
-        cls.shelfdb_process.start()
-        cls.db = shelfquery.db()
-        cls.test_notes = []
-        test_notes = [
-            dict(Note({'title': 'note-1'})),
-            dict(Note({'title': 'note-2'})),
-            dict(Note({'title': 'note-3'})),
-        ]
-        i = 0
-        while True:
-            sleep(0.1)
-            try:
-                cls.db.shelf('note').first().run()
-                break
-            except ConnectionRefusedError:
-                if i >= 10:
-                    raise TimeoutError
-                i += 1
-        for note in test_notes:
-            _id = cls.db.shelf('note').insert(note).run()
-            note['_id'] = _id
-            cls.test_notes.append(note)
-
-    def test_entry(self):
-        self.db.shelf('note').first().update({'title': 'test_entry'}).run()
-        self.assertEqual(self.db.shelf('note').first().run()['title'], 'test_entry')
+        cls.notes = []
+        for i in range(5):
+            cls.notes.append(Note({'title': 'note-' + str(i)}))
+        for note in cls.notes:
+            id = db.shelf('note').insert(note.copy()).run()
+            note.id = id
 
     @classmethod
     def tearDownClass(cls):
-        cls.shelfdb_process.terminate()
-        shutil.rmtree(Path('db'))
+        db.shelf('note').delete().run()
+
+    def test_entry_update(self):
+        db.shelf('note').first().update({'title': 'test_update'}).run()
+        note = db.shelf('note').first().run()
+        self.assertEqual(note['title'], 'test_update')
+
+    def test_shelf_update(self):
+        db.shelf('note').update({'note': 'test-update'}).run()
+        for note in db.shelf('note').run():
+            self.assertEqual(note['note'], 'test-update')

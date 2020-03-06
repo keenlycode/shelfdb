@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from itertools import islice
 from functools import reduce
-from copy import deepcopy
+import inspect
 
 
 class DB:
@@ -28,7 +28,10 @@ class DB:
                     self._shelf[shelf_name]._shelf.dict,
                     shelve._ClosedDict)):
             shelf = shelve.open(os.path.join(self.path, shelf_name))
-            self._shelf[shelf_name] = ShelfQuery(shelf)
+            self._shelf[shelf_name] = Shelf(
+                shelf, 
+                lambda: (Item(item[0], item[1]) for item in shelf.items())
+            )
         return self._shelf[shelf_name]
 
     def close(self):
@@ -37,260 +40,129 @@ class DB:
             self._shelf[k]._shelf.close()
 
 
-class ShelfQuery:
-    """Database query API. Return either ChainQuery or Entry object."""
-
-    def __init__(self, shelf: 'shelve.open()'):
+class Shelf:
+    def __init__(self, shelf: 'shelve.open()', items_iterator_function):
         self._shelf = shelf
+        self._items_iterator_function = items_iterator_function
 
     def __iter__(self):
-        """Iterator for entries"""
-        return map(self._get_entry, self._shelf.items())
+        """Iterator for items"""
+        return iter(self._items_iterator_function())
 
-    def _get_entry(self, items: 'self._shelf.items()') -> 'Entry':
-        """To be used in `def __iter__(self)`"""
-        return Entry(self._shelf, items[0], items[1])
+    def count(self, filter_=None):
+        return reduce(lambda x, y: x+1, filter(filter_, self), 0)
 
-    def __getitem__(self, id_: 'str(uuid.uuid1())'):
-        entry = self._shelf[id_]
-        return Entry(self._shelf, id_, entry)
+    def delete(self):
+        """Delete queried entries"""
+        for item in self:
+            del self._shelf[item.id]
 
-    def get(self, id_: 'str(uuid.uuid1())') -> 'Entry':
-        """Get an entry by ID."""
-        return self.__getitem__(id_)
+    def filter(self, filter_=None):
+        return Shelf(self._shelf, lambda: filter(filter_, self))
 
-    def first(self, filter_: 'function' = None) -> 'Entry':
-        '''
-        Get the first entry matched by `filter_` then stop iteration.
-        params:
-            filter_ (function): Filter function or lambda which get
-            Entry object as an argument. Must return **True** or **False**.
-            If return **True**, return Entry object and stop Iteration.
-
-        Return:
-            ``Entry`` object.
-
-        Example::
-
-            shelfquery.first(lambda entry: entry['name'] == 'admin')
-        '''
+    def first(self, filter_=None):
         try:
-            return next(filter(filter_, self))
+            item = next(filter(filter_, self))
         except StopIteration:
             return None
+        return Entry(self._shelf, item.id, self._shelf[item.id])
 
-    def filter(self, filter_):
-        """Get entries matched by ``filter_``.
+    def get(self, id: 'str(uuid.uuid1())'):
+        return Entry(self._shelf, id, self._shelf[id])
 
-        Args:
-            ``filter_`` (function): Filter function or lambda which get
-            Entry object as an argument. Must return **True** or **False**.
-            If return **True**, the entry will be kept in ChainQuery result.
+    def insert(self, data):
+        uuid1 = str(uuid.uuid1())
+        assert isinstance(data, dict)
+        self._shelf[uuid1] = data
+        return uuid1
 
-        Return:
-            ``ChainQuery`` object.
-        """
-        return ChainQuery(filter(filter_, self))
+    def items(self):
+        for item in self:
+            yield item
 
     def map(self, func):
-        """Apply map function on ``ChainQuery``.
-
-        Args:
-            ``fn`` (function): Function to apply by map, receive Entry object
-            as an argument. Can return anything which will be kept in
-            ChainQuery result.
-
-        Return:
-            ``ChainQuery`` of result from map function.
-        """
-        return ChainQuery(map(func, self))
+        return Shelf(self._shelf, lambda: map(func, self))
 
     def reduce(self, func, initializer=None):
-        """Apply reduce function on ``ChainQuery``.
-
-        See: https://docs.python.org/3/library/functools.html#functools.reduce
-        """
         if initializer is None:
             return reduce(func, self)
         return reduce(func, self, initializer)
 
-    def run(self):
-        """Iterate through ``ChainQuery`` and return results in a ``list``"""
-        return [obj for obj in self if obj is not None]
-
-    def slice(self, start, stop, step=None):
-        """Slice ``ChainQuery`` by applied ``islice`` function.
-
-        See: https://docs.python.org/3/library/itertools.html#itertools.islice
-        """
-        return ChainQuery(islice(self, start, stop, step))
-
-    def sort(self, key=lambda entry: entry.ts, reverse=False):
-        """Sort ``ChainQuery`` by ``key``.
-
-        Args:
-            ``key`` (function): function or lambda which return sort key.
-
-            ``reverse`` (bool): if **True**, reverse the order.
-
-        Return:
-            ChainQuery object.
-        """
-        return ChainQuery(iter(sorted(self, key=key, reverse=reverse)))
-
-    def insert(self, entry):
-        """Insert an entry. Automatic generate **uuid1** as entry's ID.
-
-        Args:
-            ``entry`` (dict): Entry to be inserted.
-
-        Return:
-            ``string``: Entry's UUID.
-        """
-
-        # Must generate uuid1 here, since id_=str(uuid.uuid1()) in def args
-        # will return the same value all the times after first call.
-        id_ = str(uuid.uuid1())
-        if not isinstance(entry, dict):
-            raise Exception('Entry is not a dict object')
-        entry.pop('_id', None)
-        self._shelf[id_] = entry
-        return id_
-
-    def put(self, uuid1, entry):
+    def put(self, uuid1, data):
         """Put entry with specified ID"""
         uuid1 = uuid.UUID(uuid1)
-        if uuid1.version != 1:
-            raise Exception('ID is not UUID1')
-        if not isinstance(entry, dict):
-            raise Exception('Entry is not a dict object')
-        entry.pop('_id', None)
-        self._shelf[str(uuid1)] = entry
-
-    def update(self, patch):
-        """Update queried entries with ``patch``"""
-        if isinstance(patch, dict):
-            patch = deepcopy(patch)
-            patch.pop('_id', None)
-            [entry._update_dict(patch) for entry in self]
-            return
-        if callable(patch):
-            [entry._update_fn(patch) for entry in self]
-            return
-
-        raise '`patch` is not an instance of `dict` or `function`'
+        assert uuid1.version == 1
+        assert isinstance(data, dict)
+        self._shelf[str(uuid1)] = data
 
     def replace(self, obj):
-        """Replace queried entries with ``data``"""
         if isinstance(obj, dict):
-            obj = deepcopy(obj)
-            obj.pop('_id', None)
-            [entry._replace_dict(obj) for entry in self]
-            return
-        if callable(obj):
-            [entry._replace_fn(obj) for entry in self]
+            for item in self:
+                self._shelf[item.id] = obj
+        elif callable(obj):
+            items = self.items()
+            item = next(items)
+            data = obj(item)
+            assert isinstance(data, dict)
+            self._shelf[item[0]] = data
+            for item in items:
+                self._shelf[item[0]] = obj(item)
 
-    def delete(self):
-        """Delete queried entries"""
-        [entry.delete() for entry in self]
+    def slice(self, start, stop, step=None):
+        return Shelf(self._shelf, lambda: islice(self, start, stop, step))
+
+    def sort(self, func=lambda item: item.timestamp, reverse=False):
+        return Shelf(self._shelf,
+            lambda: sorted(self, key=lambda item: func(item), reverse=reverse))
+
+    def update(self, data):
+        if isinstance(data, dict):
+            for item in self:
+                item.update(data)
+                self._shelf[item.id] = item
+        elif callable(data):
+            for item in self:
+                item.update(data(item))
+                self._shelf[item.id] = item
 
 
-class ChainQuery(ShelfQuery):
-    """Subclass of ShelfQuery to store query result.
-    The propose of ChainQuery object is to keep ShelfQuery object state
-    unmodified for future use.
-    """
-
-    def __init__(self, results):
-        self._results = results
-
-    def __iter__(self):
-        return self._results
-
-    def __next__(self):
-        return next(self._results)
-
-
-class Entry(dict):
-    """Entry API"""
-
-    # To have `entry` as an argument is by design to be more efficient
-    # when call by `ShelfQuery._get_entry()`. Since entry data will be pull out
-    # from the shelf anyway before leave `__init__()`, then lets put this duty to
-    # the caller.
-    def __init__(self, shelf, id_, entry):
-        self._shelf = shelf
-        self._id = id_
-        super().__init__(entry)
-        super().__setitem__('_id', id_)
+class Item(dict):
+    def __init__(self, id, data):
+        self.id = id
+        super().__init__(data)
 
     @property
-    def ts(self):
+    def timestamp(self):
         """Entry's timestamp from uuid1. Use formular from stack overflow.
-
         See in stackoverflow.com : https://bit.ly/2EtH05b
         """
         try:
-            return self._ts
+            return self._timestamp
         except AttributeError:
-            self._ts = datetime.fromtimestamp(
-                (uuid.UUID(self._id).time - 0x01b21dd213814000)*100/1e9
-            )
-            return self._ts
+            self._timestamp = datetime.fromtimestamp(
+                (uuid.UUID(self.id).time - 0x01b21dd213814000)*100/1e9)
+            return self._timestamp
 
-    def _update_dict(self, patch):
-        super().update(patch)
-        self._save()
 
-    def _update_fn(self, patch):
-        patch = patch(self.copy())
-        assert isinstance(patch, dict)
-        patch.pop('_id', None)
-        super().update(patch)
-        self._save()
-
-    def _replace_dict(self, patch):
-        super().clear()
-        super().update(patch)
-        self._save()
-
-    def _replace_fn(self, patch):
-        patch = patch(self.copy())
-        assert isinstance(patch, dict)
-        patch.pop('_id', None)
-        super().clear()
-        super().update(patch)
-        self._save()
-
-    def update(self, patch):
-        """Update this entry with ``patch``.
-
-        Args:
-            ``patch`` (dict): Data to update.
-        """
-        if isinstance(patch, dict):
-            patch = deepcopy(patch)
-            return self._update_dict(patch)
-        if callable(patch):
-            return self._update_fn(patch)
-        raise '`patch` is not an instance of `dict` for `function`'
-
-    def replace(self, obj):
-        """Replace this entry with ``obj``
-
-        Args:
-            ``obj`` (dict, function): Object to replace.
-        """
-        if isinstance(obj, dict):
-            obj = deepcopy(obj)
-            return self._replace_dict(obj)
-        if callable(obj):
-            return self._replace_fn(obj)
-        raise '`obj` is not an instance of `dict` for `function`'
-
-    def _save(self):
-        self._shelf[self._id] = self.copy() # store only dict data.
+class Entry(Item):
+    def __init__(self, shelf, id, data):
+        self._shelf = shelf
+        self.id = id
+        super().__init__(id, data)
 
     def delete(self):
         """Delete this entry"""
-        del self._shelf[self._id]
+        del self._shelf[self.id]
+
+    def replace(self, data):
+        if callable(data):
+            data = data(self)
+        self.clear()
+        super().update(data)
+        self._shelf[self.id] = self.copy()
+
+    def update(self, data):
+        if callable(data):
+            data = data(self)
+        super().update(data)
+        self._shelf[self.id] = self.copy()

@@ -83,9 +83,9 @@ class QueryHandler():
                 self = self.__getattribute__(query)()
 
         if isinstance(self.chain_query, shelfdb.shelf.Shelf):
-            return [(item.id, item) for item in self.chain_query]
+            return [(item.id, item.copy()) for item in self.chain_query]
         elif isinstance(self.chain_query, shelfdb.shelf.Item):
-            return (self.chain_query.id, dict(self.chain_query))
+            return (self.chain_query.id, dict(self.chain_query.copy()))
         else:
             return self.chain_query
 

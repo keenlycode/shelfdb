@@ -111,9 +111,9 @@ class Shelf:
     def slice(self, start, stop, step=None):
         return Shelf(self._shelf, lambda: islice(self, start, stop, step))
 
-    def sort(self, func=lambda item: item.timestamp, reverse=False):
+    def sort(self, key=lambda item: item.timestamp, reverse=False):
         return Shelf(self._shelf,
-            lambda: sorted(self, key=lambda item: func(item), reverse=reverse))
+            lambda: sorted(self, key=lambda item: key(item), reverse=reverse))
 
     def update(self, data):
         if isinstance(data, dict):

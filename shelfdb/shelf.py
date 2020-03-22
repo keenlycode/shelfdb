@@ -6,7 +6,6 @@ import uuid
 from datetime import datetime
 from itertools import islice
 from functools import reduce
-import inspect
 
 
 class DB:

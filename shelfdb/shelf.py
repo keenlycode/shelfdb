@@ -68,7 +68,10 @@ class Shelf:
         return Entry(self._shelf, item.id, self._shelf[item.id])
 
     def get(self, id: 'str(uuid.uuid1())'):
-        return Entry(self._shelf, id, self._shelf[id])
+        try:
+            return Entry(self._shelf, id, self._shelf[id])
+        except KeyError:
+            return None
 
     def insert(self, data):
         uuid1 = str(uuid.uuid1())
@@ -88,12 +91,10 @@ class Shelf:
             return reduce(func, self)
         return reduce(func, self, initializer)
 
-    def put(self, uuid1, data):
+    def put(self, id, data):
         """Put entry with specified ID"""
-        uuid1 = uuid.UUID(uuid1)
-        assert uuid1.version == 1
         assert isinstance(data, dict)
-        self._shelf[str(uuid1)] = data
+        self._shelf[str(id)] = data
 
     def replace(self, obj):
         if isinstance(obj, dict):
@@ -154,15 +155,15 @@ class Entry(Item):
         """Delete this entry"""
         del self._shelf[self.id]
 
+    def entry(self, func):
+        func(self)
+        self.replace(self.copy())
+
     def replace(self, data):
-        if callable(data):
-            data = data(self)
         self.clear()
         super().update(data)
         self._shelf[self.id] = self.copy()
 
     def update(self, data):
-        if callable(data):
-            data = data(self)
         super().update(data)
         self._shelf[self.id] = self.copy()

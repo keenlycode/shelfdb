@@ -121,6 +121,18 @@ class TestShelf(unittest.TestCase):
         for note in notes:
             self.assertEqual(note['content'], 'test_update_function')
 
+    def test_entry(self):
+        note = self.notes[0]
+        note = self.db.shelf('note')\
+            .first(lambda n: n['title'] == note['title'])
+
+        def _update_title(note):
+            note['title'] = 'test_entry'
+            
+        self.db.shelf('note').get(note.id).entry(_update_title)
+        note = self.db.shelf('note').get(note.id)
+        self.assertEqual(note['title'], 'test_entry')
+
     def test_replace(self):
         note = self.notes[0]
         note = self.db.shelf('note')\

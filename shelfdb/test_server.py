@@ -58,6 +58,9 @@ class TestRetrieveData(unittest.TestCase):
     def tearDownClass(cls):
         db.shelf('note').delete().run()
 
+    def test_exception(self):
+        db.shelf('note').update(lambda: 'hi').run()
+
     def test_iterator(self):
         notes = db.shelf('note').run()
         self.assertEqual(len(notes), len(self.notes))
@@ -66,6 +69,10 @@ class TestRetrieveData(unittest.TestCase):
         note = db.shelf('note').get(self.notes[0].id).run()
         self.assertDictEqual(self.notes[0], note)
         self.assertIsInstance(note, shelfquery.Item)
+
+    def test_count(self):
+        count = db.shelf('note').count().run()
+        self.assertEqual(count, 5)
 
     def test_first(self):
         note = db.shelf('note').first().run()
@@ -96,6 +103,15 @@ class TestModifyData(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         db.shelf('note').delete().run()
+
+    def test_entry_edit(self):
+        def _edit(note):
+            note['title'] = 'test_edit'
+            return note
+        note = db.shelf('note').first().run()
+        db.shelf('note').get(note.id).edit(_edit).run()
+        note = db.shelf('note').get(note.id).run()
+        self.assertEqual(note['title'], 'test_edit')
 
     def test_entry_update(self):
         db.shelf('note').first().update({'title': 'test_update'}).run()

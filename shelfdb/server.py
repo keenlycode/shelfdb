@@ -21,8 +21,16 @@ class QueryHandler():
         self.chain_query = db.shelf(shelf)
         self.queries = queries
 
-    def get(self, id_):
-        self.chain_query = self.chain_query.get(id_)
+    def count(self):
+        self.chain_query = self.chain_query.count()
+        return self
+
+    def delete(self):
+        self.chain_query = self.chain_query.delete()
+        return self
+
+    def edit(self, func):
+        self.chain_query = self.chain_query.edit(func)
         return self
 
     def first(self, filter_):
@@ -31,6 +39,14 @@ class QueryHandler():
 
     def filter(self, filter_):
         self.chain_query = self.chain_query.filter(filter_)
+        return self
+
+    def get(self, id_):
+        self.chain_query = self.chain_query.get(id_)
+        return self
+
+    def insert(self, data):
+        self.chain_query = self.chain_query.insert(data)
         return self
 
     def map(self, fn):
@@ -43,6 +59,10 @@ class QueryHandler():
 
     def reduce(self, fn):
         self.chain_query = self.chain_query.reduce(fn)
+        return self
+
+    def replace(self, data):
+        self.chain_query = self.chain_query.replace(data)
         return self
 
     def slice(self, args):
@@ -59,18 +79,6 @@ class QueryHandler():
 
     def update(self, data):
         self.chain_query = self.chain_query.update(data)
-        return self
-
-    def insert(self, data):
-        self.chain_query = self.chain_query.insert(data)
-        return self
-
-    def replace(self, data):
-        self.chain_query = self.chain_query.replace(data)
-        return self
-
-    def delete(self):
-        self.chain_query = self.chain_query.delete()
         return self
 
     def run(self):
@@ -105,15 +113,14 @@ class ShelfServer:
             result = QueryHandler(self.shelfdb, shelf, queries).run()
             result = dill.dumps(result)
         except:
-            exc_info = sys.exc_info()
-            print(exc_info[0], exc_info[1])
-            result = dill.dumps(exc_info[1])
+            result = dill.dumps(sys.exc_info()[1])
             writer.write(result)
             writer.write_eof()
             await writer.drain()
             writer.close()
             await writer.wait_closed()
             raise
+
         writer.write(result)
         writer.write_eof()
         await writer.drain()

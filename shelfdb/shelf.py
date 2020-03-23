@@ -6,7 +6,6 @@ import uuid
 from datetime import datetime
 from itertools import islice
 from functools import reduce
-import inspect
 
 
 class DB:
@@ -18,9 +17,9 @@ class DB:
             os.makedirs(self.path)
         self._shelf = {}
 
-    def shelf(self, shelf_name: str) -> 'ShelfQuery':
+    def shelf(self, shelf_name: str) -> 'Shelf':
         """
-        :param `shelf_name (str)`: 
+        :param `shelf_name (str)`:
         :io: create shelf file named `shelf_name` to store entries if needed.
         """
         if (shelf_name not in self._shelf or
@@ -29,7 +28,7 @@ class DB:
                     shelve._ClosedDict)):
             shelf = shelve.open(os.path.join(self.path, shelf_name))
             self._shelf[shelf_name] = Shelf(
-                shelf, 
+                shelf,
                 lambda: (Item(item[0], item[1]) for item in shelf.items())
             )
         return self._shelf[shelf_name]
@@ -57,6 +56,12 @@ class Shelf:
         for item in self:
             del self._shelf[item.id]
 
+    def edit(self, func):
+        for item in self:
+            data = func(item.copy())
+            assert isinstance(data, dict)
+            self._shelf[item.id] = data
+
     def filter(self, filter_=None):
         return Shelf(self._shelf, lambda: filter(filter_, self))
 
@@ -68,7 +73,10 @@ class Shelf:
         return Entry(self._shelf, item.id, self._shelf[item.id])
 
     def get(self, id: 'str(uuid.uuid1())'):
-        return Entry(self._shelf, id, self._shelf[id])
+        try:
+            return Entry(self._shelf, id, self._shelf[id])
+        except KeyError:
+            return None
 
     def insert(self, data):
         uuid1 = str(uuid.uuid1())
@@ -88,42 +96,29 @@ class Shelf:
             return reduce(func, self)
         return reduce(func, self, initializer)
 
-    def put(self, uuid1, data):
+    def put(self, id, data):
         """Put entry with specified ID"""
-        uuid1 = uuid.UUID(uuid1)
-        assert uuid1.version == 1
         assert isinstance(data, dict)
-        self._shelf[str(uuid1)] = data
+        self._shelf[str(id)] = data
 
     def replace(self, obj):
         if isinstance(obj, dict):
             for item in self:
                 self._shelf[item.id] = obj
-        elif callable(obj):
-            items = self.items()
-            item = next(items)
-            data = obj(item)
-            assert isinstance(data, dict)
-            self._shelf[item[0]] = data
-            for item in items:
-                self._shelf[item[0]] = obj(item)
 
     def slice(self, start, stop, step=None):
         return Shelf(self._shelf, lambda: islice(self, start, stop, step))
 
     def sort(self, key=lambda item: item.timestamp, reverse=False):
-        return Shelf(self._shelf,
+        return Shelf(
+            self._shelf,
             lambda: sorted(self, key=lambda item: key(item), reverse=reverse))
 
     def update(self, data):
-        if isinstance(data, dict):
-            for item in self:
-                item.update(data)
-                self._shelf[item.id] = item
-        elif callable(data):
-            for item in self:
-                item.update(data(item))
-                self._shelf[item.id] = item
+        assert isinstance(data, dict), 'Update data should be dict object'
+        for item in self:
+            item.update(data)
+            self._shelf[item.id] = item
 
 
 class Item(dict):
@@ -154,15 +149,14 @@ class Entry(Item):
         """Delete this entry"""
         del self._shelf[self.id]
 
+    def edit(self, func):
+        data = func(self.copy())
+        self.replace(data)
+
     def replace(self, data):
-        if callable(data):
-            data = data(self)
-        self.clear()
-        super().update(data)
-        self._shelf[self.id] = self.copy()
+        assert isinstance(data, dict)
+        self._shelf[self.id] = data
 
     def update(self, data):
-        if callable(data):
-            data = data(self)
         super().update(data)
         self._shelf[self.id] = self.copy()

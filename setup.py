@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='shelfdb',
-    version='0.5.4dev',
+    version='0.6.0',
     description='Python dict/json DB, Done right for Efficiency and Simplicity',
     long_description='Python dict/json DB `done right` to make your job done',
     url='https://github.com/nitipit/shelfdb',

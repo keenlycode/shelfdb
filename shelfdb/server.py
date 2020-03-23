@@ -1,4 +1,4 @@
-import asyncio, uvloop, shelfdb, dill, re, sys, json, argparse, os, uuid
+import asyncio, uvloop, shelfdb, dill, re, sys, argparse, os
 
 
 class QueryHandler():

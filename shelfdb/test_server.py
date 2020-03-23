@@ -4,6 +4,7 @@ from multiprocessing import Process
 from pathlib import Path
 from time import sleep
 from datetime import datetime
+import sys
 from shelfdb import server
 import shelfquery
 from dictify import Model, Field
@@ -59,7 +60,10 @@ class TestRetrieveData(unittest.TestCase):
         db.shelf('note').delete().run()
 
     def test_exception(self):
-        db.shelf('note').update(lambda: 'hi').run()
+        try:
+            db.shelf('note').update(lambda: 'hi').run()
+        except:
+            self.assertIsInstance(sys.exc_info()[1], Exception)
 
     def test_iterator(self):
         notes = db.shelf('note').run()

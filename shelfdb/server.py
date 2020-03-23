@@ -1,4 +1,11 @@
-import asyncio, uvloop, shelfdb, dill, re, sys, argparse, os
+import asyncio
+import dill
+import re
+import sys
+import argparse
+import os
+import uvloop
+import shelfdb
 
 
 class QueryHandler():

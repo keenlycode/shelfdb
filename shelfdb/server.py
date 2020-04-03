@@ -1,6 +1,6 @@
 import asyncio
 import dill
-import re
+import re  # to be call from client
 import sys
 import argparse
 import os
@@ -119,6 +119,11 @@ class ShelfServer:
             shelf = queries.pop(0)
             result = QueryHandler(self.shelfdb, shelf, queries).run()
             result = dill.dumps(result)
+            writer.write(result)
+            writer.write_eof()
+            await writer.drain()
+            writer.close()
+            await writer.wait_closed()
         except:
             result = dill.dumps(sys.exc_info()[1])
             writer.write(result)
@@ -126,13 +131,6 @@ class ShelfServer:
             await writer.drain()
             writer.close()
             await writer.wait_closed()
-            raise
-
-        writer.write(result)
-        writer.write_eof()
-        await writer.drain()
-        writer.close()
-        await writer.wait_closed()
 
     async def run(self):
         # tcp-echo-server-using-streams

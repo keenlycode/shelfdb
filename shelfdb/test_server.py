@@ -60,10 +60,8 @@ class TestRetrieveData(unittest.TestCase):
         db.shelf('note').delete().run()
 
     def test_exception(self):
-        try:
+        with self.assertRaises(Exception):
             db.shelf('note').update(lambda: 'hi').run()
-        except:
-            self.assertIsInstance(sys.exc_info()[1], Exception)
 
     def test_iterator(self):
         notes = db.shelf('note').run()

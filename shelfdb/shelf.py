@@ -80,10 +80,8 @@ class Shelf:
         
         Parameters
         ----------
-        func: function
-            Function to edit items.
-            - Signature: func(item: dict) -> dict
-            - Returned `dict` instance which will be saved to database.
+        func: function(item: Item) -> dict
+            Returned ``dict`` instance will be saved to database
         """
 
         for item in self:
@@ -96,8 +94,7 @@ class Shelf:
 
         Parameters
         ----------
-        filter_: funciton
-            - Signature: func(item: Item) -> bool
+        filter_: funciton(item: Item) -> bool
         """
 
         return Shelf(self._shelf, lambda: filter(filter_, self))
@@ -107,8 +104,7 @@ class Shelf:
 
         Parameters
         ----------
-        filter_: function
-            - Signature: func(item: Item) -> bool
+        filter_: function(item: Item) -> bool
         """
 
         try:
@@ -117,15 +113,16 @@ class Shelf:
             return None
         return Entry(self._shelf, item.id, self._shelf[item.id])
 
-    def get(self, id: str):
+    def get(self, id: str) -> 'Item':
         """Get item by id"""
 
+        assert isinstance(id, str)
         try:
             return Entry(self._shelf, id, self._shelf[id])
         except KeyError:
             return None
 
-    def insert(self, item: dict):
+    def insert(self, item: dict) -> uuid.UUID:
         """Insert item to database. Use UUID1 string as ID"""
         
         uuid1 = str(uuid.uuid1())
@@ -134,36 +131,59 @@ class Shelf:
         return uuid1
 
     def items(self) -> 'generator':
+        """Return generator of items"""
+
         for item in self:
             yield item
 
-    def map(self, func):
+    def map(self, func) -> 'Shelf':
+        """Apply ``map()`` on items
+
+        Parameters
+        ----------
+        func: function(item: Item) -> 'Any'
+            Mapping function which can return any instance
+            to keep in chain query.
+        """
+
         return Shelf(self._shelf, lambda: map(func, self))
 
-    def reduce(self, func, initializer=None):
+    def reduce(self, func, initializer=None) -> 'Any':
+        """Apply ``reduce()`` on items"""
+
         if initializer is None:
             return reduce(func, self)
         return reduce(func, self, initializer)
 
-    def put(self, id, data):
+    def put(self, id: str, item: dict):
         """Put entry with specified ID"""
+
+        assert isinstance(id, str), 'ID should be ``str`` instance.'
+        assert isinstance(item, dict), 'Item should be ``dict`` instance.'
+        self._shelf[id] = item
+
+    def replace(self, data: dict):
+        """Replace entry with data"""
+
         assert isinstance(data, dict)
-        self._shelf[str(id)] = data
+        for item in self:
+            self._shelf[item.id] = obj
 
-    def replace(self, obj):
-        if isinstance(obj, dict):
-            for item in self:
-                self._shelf[item.id] = obj
+    def slice(self, start: int, stop: int, step: int = None) -> 'Shelf':
+        """Slice items"""
 
-    def slice(self, start, stop, step=None):
         return Shelf(self._shelf, lambda: islice(self, start, stop, step))
 
-    def sort(self, key=lambda item: item.timestamp, reverse=False):
+    def sort(self, key=lambda item: item.timestamp, reverse=False) -> 'Shelf':
+        """Sort items"""
+
         return Shelf(
             self._shelf,
             lambda: sorted(self, key=lambda item: key(item), reverse=reverse))
 
-    def update(self, data):
+    def update(self, data: dict):
+        """Update entry with data"""
+
         assert isinstance(data, dict), 'Update data should be dict object'
         for item in self:
             item.update(data)
@@ -171,6 +191,8 @@ class Shelf:
 
 
 class Item(dict):
+    """Item class to read entry from database"""
+
     def __init__(self, id, data):
         self.id = id
         super().__init__(data)
@@ -189,6 +211,8 @@ class Item(dict):
 
 
 class Entry(Item):
+    """Entry class to write entry to database"""
+
     def __init__(self, shelf, id, data):
         self._shelf = shelf
         self.id = id
@@ -196,16 +220,30 @@ class Entry(Item):
 
     def delete(self):
         """Delete this entry"""
+
         del self._shelf[self.id]
 
-    def edit(self, func):
+    def edit(self, func) -> dict:
+        """Edit entry using provided function
+
+        Parameters
+        ----------
+        func: function(entry) -> dict
+            Returned ``dict`` instance will replace the entry.
+        """
+
         data = func(self.copy())
+        assert isinstance(data, dict)
         self.replace(data)
 
-    def replace(self, data):
+    def replace(self, data: dict):
+        """Replace entry with data"""
+
         assert isinstance(data, dict)
         self._shelf[self.id] = data
 
-    def update(self, data):
+    def update(self, data: dict):
+        """Update entry with data"""
+
         super().update(data)
         self._shelf[self.id] = self.copy()

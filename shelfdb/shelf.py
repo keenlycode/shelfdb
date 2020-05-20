@@ -1,5 +1,3 @@
-"""Module to handle file api for shelfdb."""
-
 import shelve
 import os
 import uuid
@@ -12,6 +10,16 @@ class DB:
     """Database class to manage `shelves.open()`"""
 
     def __init__(self, path: str):
+        """
+        1. Create database object.
+        2. Create database directory.
+
+        Parameters
+        ----------
+        path: str
+            Path to database (directory)
+        """
+
         self.path = path
         if not os.path.exists(self.path):
             os.makedirs(self.path)
@@ -19,18 +27,20 @@ class DB:
 
     def shelf(self, shelf_name: str) -> 'Shelf':
         """
-        :param `shelf_name (str)`:
-        :io: create shelf file named `shelf_name` to store entries if needed.
+        Create shelf file to store entries.
+
+        Parameters
+        ----------
+        shelf_name: str
         """
-        if (shelf_name not in self._shelf or
-                isinstance(
+        if (shelf_name not in self._shelf
+                or isinstance(
                     self._shelf[shelf_name]._shelf.dict,
                     shelve._ClosedDict)):
             shelf = shelve.open(os.path.join(self.path, shelf_name))
             self._shelf[shelf_name] = Shelf(
                 shelf,
-                lambda: (Item(item[0], item[1]) for item in shelf.items())
-            )
+                lambda: (Item(item[0], item[1]) for item in shelf.items()))
         return self._shelf[shelf_name]
 
     def close(self):
@@ -40,7 +50,14 @@ class DB:
 
 
 class Shelf:
-    def __init__(self, shelf: 'shelve.open()', items_iterator_function):
+    def __init__(self, shelf: shelve.DbfilenameShelf, items_iterator_function):
+        """
+        Parameters
+        ----------
+        shelf: shelve.DbfilenameShelf
+            `shelve.DbfilenameShelf` instace from shelve.open()
+        """
+
         self._shelf = shelf
         self._items_iterator_function = items_iterator_function
 
@@ -48,43 +65,75 @@ class Shelf:
         """Iterator for items"""
         return iter(self._items_iterator_function())
 
-    def count(self, filter_=None):
-        return reduce(lambda x, y: x+1, filter(filter_, self), 0)
+    def count(self, filter_=None) -> int:
+        """Count items using filter function"""
+
+        return reduce(lambda x, y: x + 1, filter(filter_, self), 0)
 
     def delete(self):
-        """Delete queried entries"""
+        """Delete entries in chain query"""
         for item in self:
             del self._shelf[item.id]
 
     def edit(self, func):
+        """Edit item using funcion
+        
+        Parameters
+        ----------
+        func: function
+            Function to edit items.
+            - Signature: func(item: dict) -> dict
+            - Returned `dict` instance which will be saved to database.
+        """
+
         for item in self:
             data = func(item.copy())
             assert isinstance(data, dict)
             self._shelf[item.id] = data
 
-    def filter(self, filter_=None):
+    def filter(self, filter_=None) -> 'Shelf':
+        """Filter items using filter function.
+
+        Parameters
+        ----------
+        filter_: funciton
+            - Signature: func(item: Item) -> bool
+        """
+
         return Shelf(self._shelf, lambda: filter(filter_, self))
 
-    def first(self, filter_=None):
+    def first(self, filter_=None) -> 'Item':
+        """Get first item matched with filter function.
+
+        Parameters
+        ----------
+        filter_: function
+            - Signature: func(item: Item) -> bool
+        """
+
         try:
             item = next(filter(filter_, self))
         except StopIteration:
             return None
         return Entry(self._shelf, item.id, self._shelf[item.id])
 
-    def get(self, id: 'str(uuid.uuid1())'):
+    def get(self, id: str):
+        """Get item by id"""
+
         try:
             return Entry(self._shelf, id, self._shelf[id])
         except KeyError:
             return None
 
-    def insert(self, data):
+    def insert(self, item: dict):
+        """Insert item to database. Use UUID1 string as ID"""
+        
         uuid1 = str(uuid.uuid1())
-        assert isinstance(data, dict)
-        self._shelf[uuid1] = data
+        assert isinstance(item, dict)
+        self._shelf[uuid1] = item
         return uuid1
 
-    def items(self):
+    def items(self) -> 'generator':
         for item in self:
             yield item
 
@@ -135,7 +184,7 @@ class Item(dict):
             return self._timestamp
         except AttributeError:
             self._timestamp = datetime.fromtimestamp(
-                (uuid.UUID(self.id).time - 0x01b21dd213814000)*100/1e9)
+                (uuid.UUID(self.id).time - 0x01b21dd213814000) * 100 / 1e9)
             return self._timestamp
 
 

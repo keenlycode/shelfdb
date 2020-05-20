@@ -1,6 +1,6 @@
 import asyncio
 import dill
-import re  # to be call from client
+import re  # to be used by client
 import sys
 import argparse
 import os
@@ -21,7 +21,8 @@ class QueryHandler():
             ...
         ]
     methods `<arg>` can be anything which can be pickle by dill.
-    See `run()` to learn how it extracts chain query into method call.
+    See `QueryHandler.run()` to learn how it extracts chain query
+    into method call.
     """
 
     def __init__(self, db, shelf, queries):
@@ -124,7 +125,7 @@ class ShelfServer:
             await writer.drain()
             writer.close()
             await writer.wait_closed()
-        except:
+        except Exception:
             result = dill.dumps(sys.exc_info()[1])
             writer.write(result)
             writer.write_eof()

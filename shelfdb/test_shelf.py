@@ -34,8 +34,8 @@ class DB(unittest.TestCase):
 
 
 class Note(Model):
-    title = Field().required().type(str)
-    content = Field().type(str)
+    title = Field(required=True).instance(str)
+    content = Field().instance(str)
 
 
 class TestShelf(unittest.TestCase):

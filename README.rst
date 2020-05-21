@@ -4,7 +4,7 @@ ShelfDB
 
 .. image:: https://raw.githubusercontent.com/nitipit/shelfdb/master/shelfdb.png
 
-Simple Python dictionary database with asyncio server.
+Python dictionary database with asyncio server
 
 Features
 ========

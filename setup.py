@@ -4,8 +4,8 @@ from setuptools import setup, find_packages
 setup(
     name='shelfdb',
     version='0.6.2dev',
-    description='Python dict/json DB, Done right for Efficiency and Simplicity',
-    long_description='Python dict/json DB `done right` to make your job done',
+    description='Python dictionary database with asyncio server',
+    long_description='Python dictionary database with asyncio server',
     url='https://github.com/nitipit/shelfdb',
     author='Nitipit Nontasuwan',
     author_email='nitipit@gmail.com',

@@ -1,7 +1,6 @@
 import asyncio
 import dill
 import re  # to be used by client
-import sys
 import argparse
 import os
 import uvloop

@@ -14,7 +14,7 @@ Features
 
 Install
 =======
-.. code-block:: bash
+.. code-block:: shell
 
     $ pip install shelfdb
 

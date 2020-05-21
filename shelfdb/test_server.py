@@ -4,7 +4,7 @@ from multiprocessing import Process
 from pathlib import Path
 from time import sleep
 from datetime import datetime
-import sys
+# import sys
 from shelfdb import server
 import shelfquery
 from dictify import Model, Field
@@ -15,9 +15,9 @@ db = None
 
 
 class Note(Model):
-    title = Field().required().type(str)
-    note = Field().type(str)
-    datetime = Field().default(datetime.utcnow)
+    title = Field(required=True).instance(str)
+    note = Field().instance(str)
+    datetime = Field(default=datetime.utcnow)
 
 
 def setUpModule():

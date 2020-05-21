@@ -4,71 +4,70 @@ ShelfDB
 
 .. image:: https://raw.githubusercontent.com/nitipit/shelfdb/master/shelfdb.png
 
-Simple Python dict/json DB **done right** to make your job done.
+Python dictionary database with asyncio server
 
 Features
 ========
-- Very simple Python dict/json Database.
-- Chainable Query.
-- Can remote process on Database Server.
-- Asyncio Server.
+- Simple Python dictionary database.
+- Chainable query.
+- Asyncio server.
 
 Install
 =======
-::
+.. code-block:: shell
 
-   $ pip install shelfdb
+    $ pip install shelfdb
 
 Quick Start
 ===========
-::
+.. code-block:: python
 
-   import shelfdb
-   db = shelfdb.open('db') # Get database
-   db.shelf('user') # get table/shelf 'user' from database 'db'
+    import re
+    import shelfdb
 
-   # Insert a user
-   db.shelf('user').insert({'name': 'Luna', 'gender': 'f'})
+    db = shelfdb.open('db') # Get database
+    db.shelf('note') # get table/shelf 'note' from database 'db'
 
-   # Get the first user whose name is 'admin'
-   db.shelf('user').first(lambda user: user['name'] == 'admin')
+    # Insert a note
+    db.shelf('note').insert({'title': 'Test', 'content': 'Note'})
 
-   # Get all user whose gender are 'f'
-   users = db.shelf('user').filter(lambda user: user['gender'] == 'f')
+    # Get the first note which has title start with 'Test' (case insensitive)
+    note = db.shelf('note').first(
+        lambda note: re.match('^test', note['title'], re.IGNORECASE))
 
-   # print() all users whose gender are 'f'
-   for user in users:
-       print(user)
+    # Get all note which has title start with 'Test' (case insensitive)
+    notes = db.shelf('note').filter(
+        lambda note: re.match('^test', note['title'], re.IGNORECASE))
+
+    # print() all notes whose gender are 'f'
+    for note in notes:
+        print(note)
 
 Asyncio Server
 ==============
-.. code-block:: bash
+.. code-block:: shell
 
-   $ shelfdb
-   Serving on ('127.0.0.1', 17000)
+    $ shelfdb
+    Serving on ('127.0.0.1', 17000)
 
 ShelfQuery Client
------------------
-::
+=================
+.. code-block:: shell
 
-   $ pip install shelfquery
+    $ pip install shelfquery
 
-::
+.. code-block:: python
 
-   import shelfquery
+    import shelfquery
 
-   # Use DB by default connection, host = '127.0.0.1', port = 17000
-   db = shelfquery.db()
+    # Use DB by default connection, host = '127.0.0.1', port = 17000
+    db = shelfquery.db()
 
-   # Make a query
-   query = db.shelf('user').first(lambda user: user['name'] == 'admin')
+    # Make a query
+    query = db.shelf('user').first(lambda user: user['name'] == 'admin')
 
-   # Send query to Database Server and keep result in `user`
-   user = query.run()
-
-Learn More
-==========
-See documentation at https://pythonhosted.org/shelfdb
+    # Send query to Database Server and keep result in `user`
+    user = query.run()
 
 GitHub
 ======

@@ -1,7 +1,6 @@
 import asyncio
 import dill
-import re  # to be call from client
-import sys
+import re  # to be used by client
 import argparse
 import os
 import uvloop
@@ -9,11 +8,11 @@ import shelfdb
 
 
 class QueryHandler():
-    """Handler for incoming query requests from shelfquery client.
+    """Class to handle incoming query requests from shelfquery client.
     It will extract python pickle dict queries (by dill), run process on
     server side, then return result back to client.
 
-    Format of incoming chain queries (in python object)
+    Format of incoming chain queries (Python ``list`` instance)
         [
             '<shelf name>',
             {'<method>': <arg>},
@@ -21,7 +20,11 @@ class QueryHandler():
             ...
         ]
     methods `<arg>` can be anything which can be pickle by dill.
-    See `run()` to learn how it extracts chain query into method call.
+    See `QueryHandler.run()` to learn how it extracts chain query
+    into method call.
+
+    Methods in QueryHandler are used to map arguments sent from client
+    to methods in ``shelfdb.shelf.Shelf``.
     """
 
     def __init__(self, db, shelf, queries):
@@ -91,10 +94,10 @@ class QueryHandler():
     def run(self):
         # Extract function call from request into chain query.
         for query in self.queries:
-            if isinstance(query, dict):
+            if isinstance(query, dict):  # method with arguments
                 q = query.popitem()
                 self = self.__getattribute__(q[0])(q[1])
-            else:
+            else:  # method with no arguments
                 self = self.__getattribute__(query)()
 
         if isinstance(self.chain_query, shelfdb.shelf.Shelf):
@@ -106,6 +109,12 @@ class QueryHandler():
 
 
 class ShelfServer:
+    """ShelfDB asyncio server
+
+    Follow and modify code from:
+    https://docs.python.org/3.8/library/asyncio-stream.html
+    """
+
     def __init__(self, host='127.0.0.1', port=17000, db_name='db'):
         self.host = host
         self.port = port
@@ -113,7 +122,7 @@ class ShelfServer:
         self.shelfdb = shelfdb.open(db_name)
 
     async def handler(self, reader, writer):
-        queries = await reader.read(-1)
+        queries = await reader.read(-1)  # Read until EOF
         try:
             queries = dill.loads(queries)
             shelf = queries.pop(0)
@@ -124,8 +133,8 @@ class ShelfServer:
             await writer.drain()
             writer.close()
             await writer.wait_closed()
-        except:
-            result = dill.dumps(sys.exc_info()[1])
+        except Exception as error:
+            result = dill.dumps(error)
             writer.write(result)
             writer.write_eof()
             await writer.drain()
@@ -133,8 +142,6 @@ class ShelfServer:
             await writer.wait_closed()
 
     async def run(self):
-        # tcp-echo-server-using-streams
-        # https: // docs.python.org/3.8/library/asyncio-stream.html
         server = await asyncio.start_server(self.handler, self.host, self.port)
         print('Serving on {}'.format(server.sockets[0].getsockname()))
         print('Database :', self.db_name)

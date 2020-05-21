@@ -36,12 +36,12 @@ Quick Start
         lambda note: re.match('^test', note['title'], re.IGNORECASE))
 
     # Get all note which has title start with 'Test' (case insensitive)
-    notes = db.shelf('user').filter(
+    notes = db.shelf('note').filter(
         lambda note: re.match('^test', note['title'], re.IGNORECASE))
 
     # print() all notes whose gender are 'f'
-    for user in users:
-        print(user)
+    for note in notes:
+        print(note)
 
 Asyncio Server
 ==============
@@ -68,10 +68,6 @@ ShelfQuery Client
 
     # Send query to Database Server and keep result in `user`
     user = query.run()
-
-Learn More
-==========
-See documentation at https://pythonhosted.org/shelfdb
 
 GitHub
 ======

@@ -62,7 +62,7 @@ class Shelf:
         self._items_iterator_function = items_iterator_function
 
     def __iter__(self):
-        """Iterator for items"""
+        """Items iterator"""
         return iter(self._items_iterator_function())
 
     def count(self, filter_=None) -> int:
@@ -116,7 +116,6 @@ class Shelf:
     def get(self, id: str) -> 'Item':
         """Get item by id"""
 
-        assert isinstance(id, str)
         try:
             return Entry(self._shelf, id, self._shelf[id])
         except KeyError:
@@ -130,11 +129,10 @@ class Shelf:
         self._shelf[uuid1] = item
         return uuid1
 
-    def items(self) -> 'generator':
-        """Return generator of items"""
+    def items(self) -> 'Iterator':
+        """Return Iterator instance of the Shelf"""
 
-        for item in self:
-            yield item
+        return iter(self)
 
     def map(self, func) -> 'Shelf':
         """Apply ``map()`` on items
@@ -148,19 +146,19 @@ class Shelf:
 
         return Shelf(self._shelf, lambda: map(func, self))
 
-    def reduce(self, func, initializer=None) -> 'Any':
-        """Apply ``reduce()`` on items"""
-
-        if initializer is None:
-            return reduce(func, self)
-        return reduce(func, self, initializer)
-
     def put(self, id: str, item: dict):
         """Put entry with specified ID"""
 
         assert isinstance(id, str), 'ID should be ``str`` instance.'
         assert isinstance(item, dict), 'Item should be ``dict`` instance.'
         self._shelf[id] = item
+
+    def reduce(self, func, initializer=None) -> 'Any':
+        """Apply ``reduce()`` on items"""
+
+        if initializer is None:
+            return reduce(func, self)
+        return reduce(func, self, initializer)
 
     def replace(self, data: dict):
         """Replace entry with data"""

@@ -4,8 +4,9 @@ import shutil
 import dbm
 import shelve
 import uuid
+from datetime import datetime
 from dictify import Model, Field
-from shelfdb.shelf import Item
+from shelfdb.shelf import Item, Entry
 
 
 class DB(unittest.TestCase):
@@ -50,72 +51,24 @@ class TestShelf(unittest.TestCase):
             self.notes.append(Note({'title': 'note-' + str(i)}))
         for note in self.notes:
             note.id = self.db.shelf('note').insert(note.copy())
-            # Check if _id is a valid uuid1
-            assert uuid.UUID(note.id, version=1)
 
-    def test_get(self):
-        note = self.notes[0]
-        note_from_db = self.db.shelf('note').get(note.id)
-        self.assertIsInstance(note_from_db, Item)
-        self.assertEqual(note, note_from_db)
-
-    def test_first(self):
-        note_from_db = self.db.shelf('note').first()
-        self.assertIsInstance(note_from_db, shelfdb.shelf.Item)
-
-        note = self.notes[0]
-        note_from_db = self.db.shelf('note')\
-            .first(lambda n: n['title'] == note['title'])
-        self.assertIsInstance(note_from_db, shelfdb.shelf.Item)
-        self.assertEqual(note, note_from_db)
-
-    def test_filter(self):
-        note = self.notes[0]
-        query = self.db.shelf('note')\
-            .filter(lambda n: n['title'] == note['title'])
-        self.assertIsInstance(query, shelfdb.shelf.Shelf)
-        note_from_db = next(query.items())
-        self.assertEqual(note, note_from_db)
-
-    def test_map(self):
-        def map_test(note):
-            note['map_test'] = 'test'
-            return note
-        notes = self.db.shelf('user').map(map_test)
-        for note in notes:
-            self.assertEqual(note['map_test'], 'test')
-
-    def test_reduce(self):
-        count_by_reduce = self.db.shelf('note').reduce(lambda x, y: x + 1, 0)
-        self.assertEqual(len(self.notes), count_by_reduce)
+    def test_iteration(self):
+        i = 0
+        for note in self.db.shelf('note'):
+            i += 1
+        self.assertEqual(len(self.notes), i)
 
     def test_count(self):
         self.assertEqual(len(self.notes), self.db.shelf('note').count())
 
-    def test_slice(self):
-        notes = self.db.shelf('note').slice(0, 2)
-        self.assertEqual(len(self.notes[0:2]), notes.count())
+        count = self.db.shelf('note').count(
+            lambda note: note['title'] == 'note-1')
+        self.assertEqual(count, 1)
 
-    def test_sort(self):
-        notes_sort_by_title = self.db.shelf('note')\
-            .sort(lambda note: note['title']).items()
-        prev_note = next(notes_sort_by_title)
-        for note in notes_sort_by_title:
-            self.assertTrue(prev_note['title'] < note['title'])
-            prev_note = note
-
-    def test_put(self):
-        uuid1 = str(uuid.uuid1())
-        note = dict(Note({'title': 'test_put'}))
-        self.db.shelf('note').put(uuid1, note)
-        note_from_db = self.db.shelf('note').get(uuid1)
-        self.assertEqual(note, note_from_db)
-
-    def test_update(self):
-        notes = self.db.shelf('user')
-        notes.update({'content': 'test_update'})
-        for note in notes:
-            self.assertEqual(note['content'], 'test_update')
+    def test_delete(self):
+        self.db.shelf('note').delete()
+        notes = list(self.db.shelf('note'))
+        self.assertEqual(notes, [])
 
     def test_edit(self):
         note = self.notes[0]
@@ -130,6 +83,61 @@ class TestShelf(unittest.TestCase):
         note = self.db.shelf('note').get(note.id)
         self.assertEqual(note['title'], 'test_edit')
 
+    def test_filter(self):
+        note = self.notes[0]
+        query = self.db.shelf('note')\
+            .filter(lambda n: n['title'] == note['title'])
+        self.assertIsInstance(query, shelfdb.shelf.Shelf)
+        note_from_db = next(query.items())
+        self.assertEqual(note, note_from_db)
+
+    def test_first(self):
+        note_from_db = self.db.shelf('note').first()
+        self.assertIsInstance(note_from_db, shelfdb.shelf.Item)
+
+        note = self.notes[0]
+        note_from_db = self.db.shelf('note')\
+            .first(lambda n: n['title'] == note['title'])
+        self.assertIsInstance(note_from_db, shelfdb.shelf.Item)
+        self.assertEqual(note, note_from_db)
+
+    def test_get(self):
+        note = self.notes[0]
+        note_from_db = self.db.shelf('note').get(note.id)
+        self.assertIsInstance(note_from_db, Item)
+        self.assertEqual(note, note_from_db)
+
+    def test_insert(self):
+        note = Note({'title': 'inserted note'})
+        note.id = self.db.shelf('note').insert(note.copy())
+        self.assertDictEqual(note, self.db.shelf('note').get(note.id))
+
+    def test_items(self):
+        i = 0
+        notes = self.db.shelf('note').items()
+        for note in notes:
+            i += 1
+        self.assertEqual(i, len(self.notes))
+
+    def test_map(self):
+        def map_test(note):
+            note['map_test'] = 'test'
+            return note
+        notes = self.db.shelf('user').map(map_test)
+        for note in notes:
+            self.assertEqual(note['map_test'], 'test')
+
+    def test_put(self):
+        uuid1 = str(uuid.uuid1())
+        note = dict(Note({'title': 'test_put'}))
+        self.db.shelf('note').put(uuid1, note)
+        note_from_db = self.db.shelf('note').get(uuid1)
+        self.assertEqual(note, note_from_db)
+
+    def test_reduce(self):
+        count_by_reduce = self.db.shelf('note').reduce(lambda x, y: x + 1, 0)
+        self.assertEqual(len(self.notes), count_by_reduce)
+
     def test_replace(self):
         note = self.notes[0]
         note = self.db.shelf('note')\
@@ -140,15 +148,82 @@ class TestShelf(unittest.TestCase):
         note = self.db.shelf('note').get(note.id)
         self.assertDictEqual(note, new_note)
 
-    def test_delete(self):
-        note = self.notes[0]
-        self.db.shelf('note')\
-            .first(lambda n: n['title'] == note['title'])\
-            .delete()
+    def test_slice(self):
+        notes = self.db.shelf('note').slice(0, 2)
+        self.assertEqual(len(self.notes[0:2]), notes.count())
 
-        note = self.db.shelf('note')\
-            .first(lambda n: n['title'] == note['title'])
-        self.assertIsNone(note)
+    def test_sort(self):
+        notes_sort_by_title = self.db.shelf('note')\
+            .sort(lambda note: note['title']).items()
+        prev_note = next(notes_sort_by_title)
+        for note in notes_sort_by_title:
+            self.assertTrue(prev_note['title'] < note['title'])
+            prev_note = note
+
+    def test_update(self):
+        notes = self.db.shelf('user')
+        notes.update({'content': 'test_update'})
+        for note in notes:
+            self.assertEqual(note['content'], 'test_update')
+
+    def tearDown(self):
+        self.db.shelf('note').delete()
+        self.db.close()
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree('test_data')
+
+
+class TestItem(unittest.TestCase):
+
+    def setUp(self):
+        self.id = str(uuid.uuid1())
+        self.data = {'item': 1}
+        self.item = Item(id=self.id, data=self.data)
+
+    def test_init(self):
+        self.assertEqual(self.id, self.item.id)
+        self.assertDictEqual(self.data, self.item)
+    
+    def test_timestamp(self):
+        self.assertIsInstance(self.item.timestamp, datetime)
+
+
+class TestEntry(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.db = shelfdb.open('test_data/db')
+
+    def setUp(self):
+        self.note = Note({'title': 'entry'})
+        self.db.shelf('note').insert(self.note.copy())
+
+    def note_from_db(self):
+        return self.db.shelf('note').first()
+
+    def test_init(self):
+        self.assertDictEqual(self.note_from_db(), self.note)
+
+    def test_edit(self):
+        def edit(note):
+            note['title'] = 'edit'
+            return note
+
+        self.note_from_db().edit(edit)
+        self.assertDictEqual(self.note_from_db(), {'title': 'edit'})
+
+    def test_replace(self):
+        note = Note({'title': 'replace'}).copy()
+        self.note_from_db().replace(note)
+        self.assertDictEqual(note, self.note_from_db())
+
+    def test_update(self):
+        data = {'content': 'update'}
+        self.note.update(data)
+        self.note_from_db().update(data)
+        self.assertDictEqual(self.note, self.note_from_db())
 
     def tearDown(self):
         self.db.shelf('note').delete()

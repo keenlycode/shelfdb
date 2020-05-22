@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 from pathlib import Path
 import asyncio
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -18,6 +19,27 @@ template = Environment(
 ).get_template
 
 
+def nodes_modules():
+    shutil.copytree(
+        'node_modules/bits-ui/dist',
+        'docs/static/lib/bits-ui',
+        dirs_exist_ok=True)
+
+
+async def bits_ui_watch():
+    src = Path('.').joinpath('docs-src/bits-ui/bits-ui.styl')
+    dest = Path('.').joinpath('docs/static/bits-ui/')
+    cmd = f'stylus --compress {src} -o {dest}'
+    print(cmd)
+    await asyncio.create_subprocess_shell(cmd)
+
+    async for changes in awatch(str(src.parent)):
+        for change in changes:
+            print(change)
+            print(cmd)
+            await asyncio.create_subprocess_shell(cmd)
+
+
 def template_to_html(src: 'pathlib.PosfixPath'):
     src = src.relative_to(template_dir)
     dest = docs_dest_dir.joinpath(src)
@@ -28,11 +50,6 @@ def template_to_html(src: 'pathlib.PosfixPath'):
     dest.write(html)
 
 
-async def stylus_build():
-    for src in template_dir.glob('**/[!_]*.styl'):
-        await stylus(src)
-
-
 async def stylus(src: 'pathlib.Postfixpath'):
     dest = docs_dest_dir.joinpath(src.relative_to(template_dir)).parent
     os.makedirs(dest, exist_ok=True)
@@ -41,12 +58,13 @@ async def stylus(src: 'pathlib.Postfixpath'):
     await asyncio.create_subprocess_shell(cmd)
 
 
-def template_build():
+async def template_watch():
     for src in template_dir.glob('**/[!_]*.html'):
         template_to_html(src)
 
+    for src in template_dir.glob('**/[!_]*.styl'):
+        await stylus(src)
 
-async def watch():
     async for changes in awatch(str(template_dir)):
         for change in changes:
             print(change)
@@ -60,10 +78,14 @@ async def watch():
                     await stylus(src)
 
 
+async def http_server():
+    await asyncio.create_subprocess_shell(
+        'python -m http.server --directory docs/')
+
+
 async def main():
-    template_build()
-    await stylus_build()
-    await asyncio.gather(watch())
+    nodes_modules()
+    await asyncio.gather(template_watch(), bits_ui_watch(), http_server())
 
 
 asyncio.run(main())

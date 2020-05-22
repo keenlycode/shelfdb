@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "bits-ui": "^2.0.6",
+    "parcel": "^2.0.0-alpha.3.2"
+  }
+}

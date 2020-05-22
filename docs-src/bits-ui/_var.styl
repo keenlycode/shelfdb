@@ -1,0 +1,39 @@
+red = #F44336
+pink = #E91E63
+purple = #9C27B0
+deep-purple = #673AB7
+indigo = #3F51B5
+blue = #2196F3
+light-blue = #03A9F4
+cyan = #00BCD4
+teal = #009688
+green = #4CAF50
+light-green = #8BC34A
+lime = #CDDC39
+yellow = #FFEB3B
+amber = #FFC107
+orange = #FF9800
+deep-orange = #FF5722
+brown = #795548
+grey = #9E9E9E
+gray = #9E9E9E
+blue-grey = #607D8B
+blue-gray = #607D8B
+
+$saturate = -15%
+$color-primary = amber
+$color-complement = saturate($color-primary + 180deg, $saturate)
+$color-analog-left = saturate($color-primary - 30deg, $saturate)
+$color-analog-right = saturate($color-primary + 30deg, $saturate)
+$color-triadic-left = saturate($color-primary + 150deg, $saturate)
+$color-triadic-right = saturate($color-primary + 210deg, $saturate)
+
+$color-p = $color-primary
+$color-c = $color-complement
+$color-a1 = $color-analog-left
+$color-a2 = $color-analog-right
+$color-t1 = $color-triadic-left
+$color-t2 = $color-triadic-right
+
+$ui-color = $color-p
+$border-radius = 4px

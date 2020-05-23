@@ -3,6 +3,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon-svg" theme="adwaita" href="/_static/lib/bits-ui/icon/adwaita.svg">
     <link rel="stylesheet" href="/_static/lib/bits-ui/normalize.css?v={{_v}}">
     <link rel="stylesheet" href="/_static/bits-ui/bits-ui.css?v={{_v}}">
     <link rel="stylesheet" href="/base.css?v={{_v}}">
@@ -14,9 +15,11 @@
         }
     </style>
     <script defer src="/_static/lib/bits-ui/bits-ui.js?v={{_v}}"></script>
+    <script defer src="/_include/sidebar/sidebar.js?v={{_v}}"></script>
     {% block head %}{% endblock %}
 </head>
 <body>
+{% include '_include/sidebar/sidebar.html' %}
 {% block body %}{% endblock %}
 </body>
 </html>

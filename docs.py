@@ -29,8 +29,8 @@ def nodes_modules():
 class BitsUI:
     
     async def run(self):
-        src = Path('.').joinpath('docs-src/bits-ui/bits-ui.styl')
-        dest = Path('.').joinpath('docs/_static/bits-ui/')
+        src = docs_src_dir.joinpath('_bits-ui/bits-ui.styl')
+        dest = docs_dest_dir.joinpath('_static/bits-ui/')
         cmd = f'stylus --compress {src} -o {dest}'
         print(cmd)
         await asyncio.create_subprocess_shell(cmd)
@@ -67,6 +67,12 @@ class Template:
         for src in template_dir.glob('**/[!_]*.styl'):
             await self.stylus(src)
 
+        for src in template_dir.glob('**/*.ico'):
+            dest = src.relative_to(template_dir)
+            dest = docs_dest_dir.joinpath(dest)
+            shutil.copyfile(src, dest)
+
+        # Copy static files
         shutil.copytree(
             docs_src_dir.joinpath('_static'),
             docs_dest_dir.joinpath('_static'),
@@ -80,7 +86,7 @@ class Template:
                     if re.match(r'.*\.html$', change[1]):
                         src = Path(change[1])
                         self.to_html(src)
-                    if re.match(r'.*\.styl$', change[1]):
+                    elif re.match(r'.*\.styl$', change[1]):
                         src = Path(change[1])
                         await self.stylus(src)
 
@@ -94,10 +100,15 @@ class HTTPServer:
 
 async def main():
     nodes_modules()
+    global http_server
     http_server = HTTPServer()
     template = Template()
     bits_ui = BitsUI()
     await asyncio.gather(template.run(), bits_ui.run(), http_server.run())
 
-
-asyncio.run(main())
+try:
+    http_server = None
+    asyncio.run(main())
+except KeyboardInterrupt:
+    http_server.process.terminate()
+    print('HTTP server has been terminated')

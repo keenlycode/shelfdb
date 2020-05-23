@@ -7,7 +7,6 @@ import mistune
 from jinja2 import (
     Environment,
     FileSystemLoader,
-    select_autoescape,
     contextfunction
 )
 from watchgod import awatch, Change
@@ -22,6 +21,11 @@ def nodes_modules():
     shutil.copytree(
         'node_modules/bits-ui/dist',
         'docs/_static/lib/bits-ui',
+        dirs_exist_ok=True)
+
+    shutil.copytree(
+        'node_modules/prismjs',
+        'docs/_static/lib/prismjs',
         dirs_exist_ok=True)
 
 
@@ -83,6 +87,11 @@ class Template:
         print(cmd)
         await asyncio.create_subprocess_shell(cmd)
 
+    def copy(self, src):
+        dest = docs_dest_dir.joinpath(src.relative_to(template_dir))
+        os.makedirs(dest.parent, exist_ok=True)
+        shutil.copyfile(src, dest)
+
     async def run(self):
         for src in template_dir.glob('**/[!_]*.html'):
             self.template_html(src)
@@ -117,17 +126,19 @@ class Template:
                     if re.match(r'.*\.html$', change[1]):
                         src = Path(change[1])
                         self.template_html(src)
-                    if re.match(r'.*\.md$', change[1]):
+                    elif re.match(r'.*\.md$', change[1]):
                         src = Path(change[1])
                         src = src.parent.joinpath(src.stem + '.html')
                         self.template_html(src)
-                        
                     elif re.match(r'.*\.styl$', change[1]):
                         src = Path(change[1])
                         await self.stylus(src)
                     elif re.match(r'.*\.js$', change[1]):
                         src = Path(change[1])
                         await self.parcel(src)
+                    elif re.match(r'.*\.(png|jpg)', change[1]):
+                        src = Path(change[1])
+                        self.copy(src)
 
 
 class HTTPServer:

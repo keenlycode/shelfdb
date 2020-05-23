@@ -5,7 +5,19 @@
 {% endblock %}
 
 {% block body %}
-<div class="container">
+<header class="flex">
+    <h1>Shelf DB</h1>
+    <h2>A tiny documents database<br>for Python</h2>
+    <div style="width: 100%; text-align: center;">{% include '_include/github-button.html' %}</div>
+    <button>Let's start</button>
+
+</header>
+<div class="flex">
+    <img src="/shelf.png"
+        style="max-width: 500px; width: 80%;
+            margin-top: 2rem;">
+</div>
+<div class="block">
 {{ markdown('index.md') }}
 </div>
 {% endblock %}

@@ -4,16 +4,57 @@
     font-family: "sarabun"
     src: url("/_static/font/Sarabun/Sarabun-Medium.ttf") format("truetype")
 
-body
-    font-family: "sarabun"
+.flex
+    display: flex
+    flex-wrap: wrap
+    width: 100%
+    justify-content: center
+    align-content: center
 
-h1
-    font-family: sarabun
-
-.container
+.block
     @media (min-width: 1000px)
         margin-left: 240px
 
+    display: block
     width: 90%
     max-width: 50rem
     margin: auto
+
+.row
+    width: 100%
+
+body
+    font-family: "sarabun"
+    margin:0
+    padding-bottom: 10rem
+
+header
+    align-content: center
+    position: relative
+    z-index: 101
+    min-height: 30vh
+    h1
+        margin: 1rem 0 1rem 0
+        text-align: center
+        width: 100%
+    h2
+        margin: 0.5rem 0 0.5rem 0
+        text-align: center
+        width: 100%
+
+p
+    width: 100%
+    max-width: 40rem
+
+pre[class*="language-"]
+    font-size: 0.8rem
+    @media $sm
+        font-size: 0.8rem
+    code[class*="language-"]
+        padding: 0
+
+code
+    bg-color(lighten(black, 40%))
+
+bits-tag
+    font-family: sarabun

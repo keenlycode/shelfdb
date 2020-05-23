@@ -4,4 +4,4 @@ dictify
 shelfquery
 jinja2
 watchgod
-mistune
+mistune==2.0.0a4

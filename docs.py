@@ -8,7 +8,7 @@ from jinja2 import (
     Environment,
     FileSystemLoader,
     select_autoescape,
-    evalcontextfunction
+    contextfunction
 )
 from watchgod import awatch, Change
 
@@ -46,16 +46,19 @@ class Template:
     def __init__(self):
         env = Environment(
             loader=FileSystemLoader(template_dir),
-            autoescape=select_autoescape(['html', 'xml']),
             trim_blocks=True,
             lstrip_blocks=True,
         )
         env.globals['markdown'] = self.markdown
         self.template = env.get_template
 
-    @evalcontextfunction
-    def markdown(context, value):
-        return 'hi'
+    @staticmethod
+    @contextfunction
+    def markdown(context, path):
+        template_path = context.name
+        path = template_dir.joinpath(template_path).parent.joinpath(path)
+        html = mistune.html(open(path, 'r').read())
+        return html
 
     def template_html(self, src: 'pathlib.PosfixPath'):
         src = src.relative_to(template_dir)
@@ -114,6 +117,11 @@ class Template:
                     if re.match(r'.*\.html$', change[1]):
                         src = Path(change[1])
                         self.template_html(src)
+                    if re.match(r'.*\.md$', change[1]):
+                        src = Path(change[1])
+                        src = src.parent.joinpath(src.stem + '.html')
+                        self.template_html(src)
+                        
                     elif re.match(r'.*\.styl$', change[1]):
                         src = Path(change[1])
                         await self.stylus(src)

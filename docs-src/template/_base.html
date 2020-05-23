@@ -3,16 +3,17 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/bits-ui/normalize.css?v={{_v}}">
-    <link rel="stylesheet" href="/static/bits-ui/bits-ui.min.css?v={{_v}}">
+    <link rel="stylesheet" href="/_static/lib/bits-ui/normalize.css?v={{_v}}">
+    <link rel="stylesheet" href="/_static/lib/bits-ui/bits-ui.css?v={{_v}}">
+    <link rel="stylesheet" href="/base.css?v={{_v}}">
     <style>
         @font-face {
             /* Set UI font, Cantarell is recommended */
             font-family: bits-ui;
-            src: url('/static/bits-ui/font/Cantarell/Cantarell-Regular.ttf?v={{_v}}');
+            src: url('/_static/bits-ui/font/Cantarell/Cantarell-Regular.ttf?v={{_v}}');
         }
     </style>
-    <script defer src="/static/bits-ui/bits-ui.min.js?v={{_v}}"></script>
+    <script defer src="/_static/lib/bits-ui/bits-ui.js?v={{_v}}"></script>
     {% block head %}{% endblock %}
 </head>
 <body>

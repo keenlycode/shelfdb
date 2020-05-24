@@ -7,7 +7,7 @@ $ pip install shelfdb shelfquery
 ```
 
 <h2>Database Server</h2>
-<a class="learn-more" href="/guide/server/">Learn more</a>
+<a class="learn-more" href="/shelfdb/guide/server/">Learn more</a>
 
 ```shell
 $ shelfdb

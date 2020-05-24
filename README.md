@@ -1,5 +1,5 @@
 # Shelf DB
-<img src="https://raw.githubusercontent.com/nitipit/shelfdb/master/docs/shelf.png">
+<img src="https://raw.githubusercontent.com/nitipit/shelfdb/master/docs/shelf.png" style="max-width: 400px;">
 
 ## Introduction
 **Shelf DB** is a tiny document database for Python to stores **documents** or **JSON**-like data.

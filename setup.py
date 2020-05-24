@@ -8,7 +8,7 @@ if sys.platform.startswith('linux'):
 
 setup(
     name='shelfdb',
-    version='0.6.2',
+    version='0.6.3',
     description='Python dictionary database with asyncio server',
     long_description='Python dictionary database with asyncio server',
     url='https://github.com/nitipit/shelfdb',

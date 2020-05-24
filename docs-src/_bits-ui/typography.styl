@@ -1,0 +1,64 @@
+html
+    font-size: 16px
+    line-height: 1.5
+
+h1
+    h1()
+h2
+    h2()
+h3
+    h3()
+h4
+    h4()
+h5
+    h5()
+h6
+    h6()
+p
+    p()
+
+@media $md
+    h1
+        h1($ratio: 0.9)
+    h2
+        h2($ratio: 0.9)
+    h3
+        h3($ratio: 0.9)
+    h4
+        h4($ratio: 0.9)
+    h5
+        h5($ratio: 0.9)
+    h6
+        h6($ratio: 0.9)
+    p
+        p($ratio: 1)
+
+@media $sm
+    h1
+        h1($ratio: 0.8)
+    h2
+        h2($ratio: 0.8)
+    h3
+        h3($ratio: 0.8)
+    h4
+        h4($ratio: 0.8)
+    h5
+        h5($ratio: 0.8)
+    h6
+        h6($ratio: 0.8)
+    p
+        p($ratio: 1)
+
+blockquote
+    margin: auto
+    margin-top: 1rem
+    margin-bottom: 1rem
+    box-sizing: border-box
+    padding-left: 1rem
+    padding-right: 1rem
+    border-left: 4px solid $color-p
+
+code
+    font-size: 0.8em
+    padding: 0.1rem 0.3rem
+    border-radius: 2px

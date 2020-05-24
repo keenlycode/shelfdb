@@ -163,7 +163,7 @@ def main():
 
     # Run server until Ctrl+C is pressed
     try:
-        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+        uvloop.install()
         asyncio.run(shelf_server.run())
     except KeyboardInterrupt:
         shelf_server.shelfdb.close()

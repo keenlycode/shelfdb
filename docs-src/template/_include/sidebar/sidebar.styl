@@ -1,0 +1,44 @@
+@require '../../../_bits-ui/_require.styl'
+
+#sidebar-button
+    position: absolute
+    top: 1.5rem
+    left: 1.5rem
+    font-size: 1.2rem
+
+bits-sidebar
+    [el="wrapper"]
+        width: 240px
+        bg-color(green)
+    
+    div[el="title"]
+        display: flex
+        bg-color(darken(green, 20%))
+        a[el="name"]
+            width: 100%
+            padding: 0.2rem
+            text-decoration: none
+            bg-int-color(darken(green, 20%))
+            h2
+                margin: 0
+                text-align: center
+        a[el="close"]
+            display: flex
+            width: 3rem
+            justify-content: center
+            align-content: center
+            padding: 0.2rem
+            font-size: 1.2rem
+            cursor: pointer
+            bg-int-color(darken(green, 20%))
+            @media (min-width: 1000px)
+                display: none
+    div[el="content"]
+        a
+            display: inline-block
+            width: 100%
+            bg-int-color(green)
+            padding: 0.2rem 0.2rem 0.2rem 0.5rem
+            box-sizing: border-box
+        h3
+            margin: 0

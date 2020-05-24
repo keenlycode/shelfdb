@@ -4,7 +4,6 @@ import re  # to be used by client
 import argparse
 import os
 import sys
-import uvloop
 import shelfdb
 
 
@@ -163,6 +162,7 @@ def main():
     shelf_server = ShelfServer(arg.host, arg.port, arg.db)
 
     if sys.platform.startswith('linux'):
+        import uvloop
         uvloop.install()
 
     # Run server until Ctrl+C is pressed

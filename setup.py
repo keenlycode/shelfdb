@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='shelfdb',
-    version='0.6.4',
+    version='0.6.5dev',
     description='Python dictionary database with asyncio server',
     long_description='Python dictionary database with asyncio server',
     url='https://github.com/nitipit/shelfdb',

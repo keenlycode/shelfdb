@@ -1,0 +1,8 @@
+{% extends '_base.html' %}
+
+{% block body %}
+{% include '_include/sidebar/sidebar.html' %}
+<div class="block">
+{{ markdown('index.md') }}
+</div>
+{% endblock %}

@@ -1,3 +1,6 @@
+## Introduction
+**Shelf DB** is a tiny document database for Python to stores **documents** or **JSON**-like data.
+
 ## Get it
 ```shell
 $ pip install shelfdb shelfquery
@@ -10,6 +13,8 @@ Serving on ('127.0.0.1', 17000)
 Database : db
 pid : 12359
 ```
+
+> <bits-tag>uvloop</bits-tag> built-in already to make it faster. See [uvloop](https://github.com/MagicStack/uvloop).
 
 ## Sync/Async query client through network.
 ```python
@@ -25,7 +30,7 @@ db.asyncio()
 db.sync()
 ```
 
-## Store data in Python dictionary instance
+## Store data
 ```python
 db.shelf('note').insert({
     'title': 'Shelf DB',
@@ -33,12 +38,12 @@ db.shelf('note').insert({
     'datetime': datetime.utcnow()})
 ```
 
-## Chainable query API with similar syntax to Python built-in function
+## Flexible query API with similar syntax
 ```python
 db.shelf('note')\
     .filter(lambda note:
         note['title'] == 'Shelf DB')\
-    .sort(key=lambda)
+    .sort(key=lambda note: note['datetime'])
     .run()
 ```
 No need to learn more syntax. Let's just query using `filter`, `slice`, `sort`, `map`, `reduce` which almost the same to Python built-in functions.
@@ -53,6 +58,10 @@ db.shelf('note')\
     .run()
 ```
 
-## Tiny
-<bits-tag>shelfdb ~ 12kB</bits-tag>
-<bits-tag>shelfquery ~ 4kB</bits-tag>
+<h2 style="display: inline-block; width: auto; margin-bottom: 0;">Tiny</h2>
+<span style="vertical-align: text-bottom;">
+    <bits-tag class="bg-c">shelfdb ~ 12kB</bits-tag>
+    <bits-tag class="bg-c">shelfquery ~ 4kB</bits-tag>
+</span>
+
+Runtime code is small, easy to install. <bits-tag>Shelf DB</bits-tag> also works on **Raspberry Pi**.

@@ -2,15 +2,17 @@
 
 header
     color: green
-
-a.github-button
-    margin: 0 100px
+    div[el="buttons"]
+        display: flex
+        justify-content: center
+        align-items: center
+        a[el="github"]
+            button(darken(white, 10%))
+            margin-left: 1rem
 
 h1, h2
     width: 100%
 
 .block
     display: block
-    width: 90%
-    max-width: 50rem
     margin: auto

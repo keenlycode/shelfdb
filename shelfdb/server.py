@@ -153,11 +153,14 @@ class ShelfServer:
 def main():
     arg = argparse.ArgumentParser(description='ShelfDB Asyncio Server')
     arg.add_argument(
-        '--host', nargs='?', type=str, default='127.0.0.1', help='server host')
+        '--host', nargs='?', type=str, default='127.0.0.1',
+        help="server host ip. (default: '127.0.0.1')")
     arg.add_argument(
-        '--port', nargs='?', type=int, default=17000, help='server port')
+        '--port', nargs='?', type=int, default=17000,
+        help="server port. (default: 17000)")
     arg.add_argument(
-        '--db', nargs='?', default='db', help='server database')
+        '--db', nargs='?', default='db',
+        help="server database directory. (default: 'db')")
     arg = arg.parse_args()
     shelf_server = ShelfServer(arg.host, arg.port, arg.db)
 

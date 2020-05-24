@@ -14,6 +14,13 @@ bits-sidebar
     div[el="title"]
         display: flex
         bg-color(darken(green, 20%))
+        a[el="home"]
+            display: flex
+            justify-content: center
+            align-content: center
+            padding: 0 0.8rem
+            font-size: 1.2rem
+            bg-int-color(darken(green, 20%))
         a[el="name"]
             width: 100%
             padding: 0.2rem
@@ -24,10 +31,9 @@ bits-sidebar
                 text-align: center
         a[el="close"]
             display: flex
-            width: 3rem
             justify-content: center
             align-content: center
-            padding: 0.2rem
+            padding: 0 0.8rem
             font-size: 1.2rem
             cursor: pointer
             bg-int-color(darken(green, 20%))

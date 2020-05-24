@@ -43,7 +43,8 @@
 </div>
 <div class="block">
 <h2>Introduction</h2>
-<p><strong>Shelf DB</strong> is a tiny document database for Python to stores <strong>documents</strong> or <strong>JSON</strong>-like data.</p>
+<p><strong>Shelf DB</strong> is a tiny document database for Python to stores <strong>documents</strong>
+or <strong>JSON</strong>-like data.</p>
 <h2>Get it</h2>
 <pre><code class="language-shell">$ pip install shelfdb shelfquery
 </code></pre>
@@ -54,7 +55,9 @@ Database : db
 pid : 12359
 </code></pre>
 <blockquote>
-<p><bits-tag>uvloop</bits-tag> built-in already to make it faster. See <a href="https://github.com/MagicStack/uvloop">uvloop</a>.</p>
+<p><strong>uvloop</strong> is implemented to make it faster.
+See <a class="bits-tag" href="https://github.com/MagicStack/uvloop">
+uvloop <bits-icon theme="adwaita" name="input-mouse"></bits-icon></a></p>
 </blockquote>
 <h2>Sync/Async query client through network.</h2>
 <pre><code class="language-python">import shelfquery
@@ -81,7 +84,8 @@ db.sync()
     .sort(key=lambda note: note['datetime'])
     .run()
 </code></pre>
-<p>No need to learn more syntax. Let's just query using <code>filter</code>, <code>slice</code>, <code>sort</code>, <code>map</code>, <code>reduce</code> which almost the same to Python built-in functions.</p>
+<p>No need to learn more syntax. Let's just query using <code>filter</code>, <code>slice</code>,
+<code>sort</code>, <code>map</code>, <code>reduce</code> which almost the same to Python built-in functions.</p>
 <h2>Regular expression</h2>
 <p>Python reqular expression <code>re</code> can be use inside query function</p>
 <pre><code class="language-python">import re
@@ -95,7 +99,8 @@ db.shelf('note')\
     <bits-tag class="bg-c">shelfdb ~ 12kB</bits-tag>
     <bits-tag class="bg-c">shelfquery ~ 4kB</bits-tag>
 </span>
-<p>Runtime code is small, easy to install. <bits-tag>Shelf DB</bits-tag> also works on <strong>Raspberry Pi</strong>.</p>
+<p>Runtime code is small, easy to install. <bits-tag>Shelf DB</bits-tag> can run
+on <strong>Raspberry Pi</strong>.</p>
 
 </div>
 </body>

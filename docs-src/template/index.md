@@ -1,5 +1,6 @@
 ## Introduction
-**Shelf DB** is a tiny document database for Python to stores **documents** or **JSON**-like data.
+**Shelf DB** is a tiny document database for Python to stores **documents**
+or **JSON**-like data.
 
 ## Get it
 ```shell
@@ -14,7 +15,9 @@ Database : db
 pid : 12359
 ```
 
-> <bits-tag>uvloop</bits-tag> built-in already to make it faster. See [uvloop](https://github.com/MagicStack/uvloop).
+> **uvloop** is implemented to make it faster.
+> See <a class="bits-tag" href="https://github.com/MagicStack/uvloop">
+> uvloop <bits-icon theme="adwaita" name="input-mouse"></bits-icon></a>
 
 ## Sync/Async query client through network.
 ```python
@@ -46,7 +49,8 @@ db.shelf('note')\
     .sort(key=lambda note: note['datetime'])
     .run()
 ```
-No need to learn more syntax. Let's just query using `filter`, `slice`, `sort`, `map`, `reduce` which almost the same to Python built-in functions.
+No need to learn more syntax. Let's just query using `filter`, `slice`,
+`sort`, `map`, `reduce` which almost the same to Python built-in functions.
 
 ## Regular expression
 Python reqular expression `re` can be use inside query function
@@ -64,4 +68,5 @@ db.shelf('note')\
     <bits-tag class="bg-c">shelfquery ~ 4kB</bits-tag>
 </span>
 
-Runtime code is small, easy to install. <bits-tag>Shelf DB</bits-tag> also works on **Raspberry Pi**.
+Runtime code is small, easy to install. <bits-tag>Shelf DB</bits-tag> can run
+on **Raspberry Pi**.

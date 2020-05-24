@@ -18,7 +18,7 @@
     <script defer src="/shelfdb/static/lib/prismjs/prism.js?v=1"></script>
     <script defer src="/shelfdb/static/lib/prismjs/components/prism-bash.min.js?v=1"></script>
     <script defer src="/shelfdb/static/lib/prismjs/components/prism-python.min.js?v=1"></script>
-<link rel="stylesheet" href="/shelfdb/guide/index.css?v=1">
+<link rel="stylesheet" href="/shelfdb/guide/query/index.css?v=1">
 </head>
 <body>
 <link rel="stylesheet" href="/shelfdb/include/sidebar/sidebar.css?v=1">
@@ -47,27 +47,32 @@
     </div>
     <div el="overlay"></div>
 </bits-sidebar><div class="block">
-<h1 class="color-p" style="text-align: center;">Shelf DB Guide</h2>
-<h2 id="install">Install</h2>
-<pre><code class="language-shell">$ pip install shelfdb shelfquery
-</code></pre>
-<h2>Database Server</h2>
-<a class="learn-more" href="/guide/server/">Learn more</a>
-<pre><code class="language-shell">$ shelfdb
-Serving on ('127.0.0.1', 17000)
-Database : db
-pid : 12359
-</code></pre>
-<h2>Query</h2>
-<a class="learn-more" href="/guide/query.html">Learn more</a>
-<pre><code class="language-python">db.shelf('note')\
-    .insert(
-        {'title': 'Title',
-        'content': 'Content',
-        'datetime': dateimte.utcnow()})\
-    .run()
+<h1 class="color-p" style="text-align: center;">Query</h1>
+<p>Use <code>shelfquery</code> to query <strong>Shelf DB</strong> database.</p>
+<h2>Sync/Async query client.</h2>
+<pre><code class="language-python">import shelfquery
 
-db.shelf('note').run()
+# Sync client point to 127.0.0.1:17000
+db = shelfquery.db()
+
+# Make it async client
+db.asyncio()
+
+# Make it sync client again
+db.sync()
+</code></pre>
+<h2>Store data</h2>
+<pre><code class="language-python">db.shelf('note').insert({
+    'title': 'Shelf DB',
+    'content': 'Simple note',
+    'datetime': datetime.utcnow()})
+</code></pre>
+<h2>Get data</h2>
+<pre><code class="language-python">db.shelf('note')\
+    .filter(lambda note:
+        note['title'] == 'Shelf DB')\
+    .sort(key=lambda note: note['datetime'])
+    .run()
 </code></pre>
 
 </div>

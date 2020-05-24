@@ -17,7 +17,7 @@ pid : 12359
 ```
 
 <h2>Query</h2>
-<a class="learn-more" href="/guide/query.html">Learn more</a>
+<a class="learn-more" href="/shelfdb/guide/query/">Learn more</a>
 
 ```python
 db.shelf('note')\

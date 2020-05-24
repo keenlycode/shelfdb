@@ -33,7 +33,7 @@ db.asyncio()
 db.sync()
 ```
 
-## Store data
+## Store entry
 ```python
 db.shelf('note').insert({
     'title': 'Shelf DB',

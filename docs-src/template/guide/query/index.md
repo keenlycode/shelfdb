@@ -16,7 +16,7 @@ db.asyncio()
 db.sync()
 ```
 
-## Store data
+## Store entries
 ```python
 db.shelf('note').insert({
     'title': 'Shelf DB',
@@ -24,7 +24,7 @@ db.shelf('note').insert({
     'datetime': datetime.utcnow()})
 ```
 
-## Get data
+## Get entries
 ```python
 db.shelf('note')\
     .filter(lambda note:

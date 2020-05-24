@@ -61,13 +61,13 @@ db.asyncio()
 # Make it sync client again
 db.sync()
 </code></pre>
-<h2>Store data</h2>
+<h2>Store entries</h2>
 <pre><code class="language-python">db.shelf('note').insert({
     'title': 'Shelf DB',
     'content': 'Simple note',
     'datetime': datetime.utcnow()})
 </code></pre>
-<h2>Get data</h2>
+<h2>Get entries</h2>
 <pre><code class="language-python">db.shelf('note')\
     .filter(lambda note:
         note['title'] == 'Shelf DB')\

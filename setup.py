@@ -2,13 +2,9 @@ from setuptools import setup, find_packages
 import sys
 
 
-install_requires = ['dill>=0.3.0']
-if sys.platform.startswith('linux'):
-    install_requires.append('uvloop>=0.12.1')
-
 setup(
     name='shelfdb',
-    version='0.6.4dev',
+    version='0.6.4',
     description='Python dictionary database with asyncio server',
     long_description='Python dictionary database with asyncio server',
     url='https://github.com/nitipit/shelfdb',

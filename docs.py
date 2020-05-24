@@ -11,21 +11,19 @@ from jinja2 import (
 )
 from watchgod import awatch, Change
 
-
 docs_src_dir = Path(__file__).parent.joinpath('docs-src')
 docs_dest_dir = Path(__file__).parent.joinpath('docs')
 template_dir = docs_src_dir.joinpath('template')
 
-
 def nodes_modules():
     shutil.copytree(
         'node_modules/bits-ui/dist',
-        'docs/_static/lib/bits-ui',
+        'docs/static/lib/bits-ui',
         dirs_exist_ok=True)
 
     shutil.copytree(
         'node_modules/prismjs',
-        'docs/_static/lib/prismjs',
+        'docs/static/lib/prismjs',
         dirs_exist_ok=True)
 
 
@@ -33,7 +31,7 @@ class BitsUI:
     
     async def run(self):
         src = docs_src_dir.joinpath('_bits-ui/bits-ui.styl')
-        dest = docs_dest_dir.joinpath('_static/bits-ui/')
+        dest = docs_dest_dir.joinpath('static/bits-ui/')
         cmd = f'stylus --compress {src} -o {dest}'
         print(cmd)
         await asyncio.create_subprocess_shell(cmd)
@@ -114,8 +112,8 @@ class Template:
 
         # Copy static files
         shutil.copytree(
-            docs_src_dir.joinpath('_static'),
-            docs_dest_dir.joinpath('_static'),
+            docs_src_dir.joinpath('static'),
+            docs_dest_dir.joinpath('static'),
             dirs_exist_ok=True)
 
         async for changes in awatch(str(template_dir)):

@@ -5,3 +5,4 @@ shelfquery
 jinja2
 watchgod
 mistune==2.0.0a4
+sanic

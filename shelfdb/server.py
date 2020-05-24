@@ -3,6 +3,7 @@ import dill
 import re  # to be used by client
 import argparse
 import os
+import sys
 import uvloop
 import shelfdb
 
@@ -161,9 +162,11 @@ def main():
     arg = arg.parse_args()
     shelf_server = ShelfServer(arg.host, arg.port, arg.db)
 
+    if sys.platform.startswith('linux'):
+        uvloop.install()
+
     # Run server until Ctrl+C is pressed
     try:
-        uvloop.install()
         asyncio.run(shelf_server.run())
     except KeyboardInterrupt:
         shelf_server.shelfdb.close()

@@ -4,7 +4,7 @@ import sys
 
 install_requires = ['dill>=0.3.0']
 if sys.platform.startswith('linux'):
-    install_requires.append('uvloop=>0.12.1')
+    install_requires.append('uvloop>=0.12.1')
 
 setup(
     name='shelfdb',
@@ -23,4 +23,3 @@ setup(
     tests_require=['shelfquery', 'dictify'],
     entry_points={'console_scripts': ['shelfdb=shelfdb.server:main']},
 )
-

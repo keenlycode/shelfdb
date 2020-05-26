@@ -1,19 +1,23 @@
 <h1 class="color-p" style="text-align: center;">Query</h1>
 
-Use `shelfquery` to query **Shelf DB** database.
+You can query **Shelf DB** server using `shelfquery`.  
+`shelfquery` can act as **sync** or **async** client depends on your need.
 
-## Sync/Async query client.
+## Try it
+The best way to try `shelfquery` is using
+<a href="https://ipython.org/"><bits-tag class="bg-c">ipython</bits-tag></a>
+or native python shell
+
+
+
+## Run as Sync or Async client.
 ```python
 import shelfquery
 
 # Sync client point to 127.0.0.1:17000
 db = shelfquery.db()
-
 # Make it async client
 db.asyncio()
-
-# Make it sync client again
-db.sync()
 ```
 
 ## Store entries

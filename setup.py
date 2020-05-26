@@ -10,8 +10,8 @@ setup(
     author='Nitipit Nontasuwan',
     author_email='nitipit@gmail.com',
     license='MIT',
-    classifiers=['Programming Language :: Python :: 3.6'],
-    python_requires='>=3.6',
+    classifiers=['Programming Language :: Python :: 3.7'],
+    python_requires='>=3.7',
     keywords='dict json database',
     packages=find_packages(),
     install_requires=[

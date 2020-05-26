@@ -13,7 +13,7 @@
 
 .block
     @media (min-width: 1000px)
-        margin-left: 260px
+        margin-left: 280px
 
     display: block
     width: 90%
@@ -49,6 +49,12 @@ header
 p
     width: 100%
 
+ul p
+    margin: 0
+
+p ~ ul
+    margin-top: -0.5rem
+
 pre[class*="language-"]
     font-size: 0.8rem
     @media $sm
@@ -60,4 +66,5 @@ code
     bg-color(lighten(black, 40%))
 
 bits-tag
+    tag($bg-color: $color-c)
     font-family: sarabun

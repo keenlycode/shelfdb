@@ -1,8 +1,7 @@
 <h1 class="color-p" style="text-align: center;">Database Server</h1>
 
 **Shelf DB** server is built on **Python** asyncio server to handle concurrent
-requests. It also implements **uvloop** to speed up concurrency if it runs
-on **Linux** platform.
+requests. It also implements **uvloop** to speed up concurrency if possible.
 
 ## Shelf DB Server
 
@@ -75,6 +74,6 @@ db
 0 directories, 1 file
 ```
 
-Next, we can learn how to to store and get entries from database.
+Next, let's learn how to query **Shelf DB** database.
 
 <a class="button" href="/shelfdb/guide/query/">Next: Query</a>

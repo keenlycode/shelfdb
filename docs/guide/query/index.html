@@ -56,32 +56,63 @@
     <div el="overlay"></div>
 </bits-sidebar><div class="block">
 <h1 class="color-p" style="text-align: center;">Query</h1>
-<p>You can query <strong>Shelf DB</strong> server using <code>shelfquery</code>.<br />
-<code>shelfquery</code> can act as <strong>sync</strong> or <strong>async</strong> client depends on your need.</p>
-<h2>Try it</h2>
-<p>The best way to try <code>shelfquery</code> is using
-<a href="https://ipython.org/"><bits-tag class="bg-c">ipython</bits-tag></a>
-or native python shell</p>
-<h2>Run as Sync or Async client.</h2>
+<h2><code>shelfquery</code></h2>
+<p>You can query <strong>Shelf DB</strong> database using <code>shelfquery</code> module, which can
+execute as <strong>sync</strong> or <strong>async</strong> client.</p>
 <pre><code class="language-python">import shelfquery
 
-# Sync client point to 127.0.0.1:17000
-db = shelfquery.db()
-# Make it async client
-db.asyncio()
+db = shelfquery.db() # sync client point to host 127.0.0.1:17000
+db.asyncio() # make it async client.
+db.sync()  # make it sync client again.
 </code></pre>
-<h2>Store entries</h2>
-<pre><code class="language-python">db.shelf('note').insert({
+<h2>Try it</h2>
+<p>The best way to try <code>shelfquery</code> is using
+<a href="https://ipython.org/"><bits-tag>ipython</bits-tag></a>
+or native python shell then run the codes in this guide.</p>
+<blockquote>
+<p><bits-icon class="color-p" theme="adwaita" name="dialog-information"
+style="font-size: 1.5rem; vertical-align: middle;"></bits-icon>
+<i><strong>sync</strong> client is recommened if you want to try and run simple codes
+in python shell.</i></p>
+</blockquote>
+<h2>Query syntax</h2>
+<p><strong>shelfquery</strong> use method chaining as a syntax to query database. Every query
+will have a sequence steps as<br />
+<bits-tag>select database</bits-tag> -&gt; <bits-tag>select shelf</bits-tag> -&gt; 
+<bits-tag>chain queries</bits-tag> -&gt; <bits-tag>run()</bits-tag>. For example,</p>
+<pre><code class="language-python">import shelfquery
+
+shelfquery.db()\
+    .shelf('note')\
+    .insert({
+        'title': 'Shelf DB',
+        'content': 'Simple note',
+        'datetime': datetime.utcnow()})\
+    .run()
+
+# .db()  : select database, default to 127.0.0.1:17000
+# .shelf('note')  : select shelf 'note'
+# .insert({..})  : insert entry to database.
+# .run()  : send query to database.
+
+</code></pre>
+<p><strong>Shelf DB</strong> will store entries <strong>only as</strong> python <code>dict</code> instances with
+<strong>UUID1</strong> as entries hash key in database.</p>
+<p>There're 2 query APIs to store
+entries to database, <strong>insert</strong> and <strong>put</strong>.</p>
+<ul>
+<li><code>insert(entry: dict)</code> will add a new entry to database with generated
+<strong>UUID1</strong> string as the entry's unique ID</li>
+<li><code>put(uuid1: str, entry: dict)</code> will add/replace an entry with provided
+<strong>UUID1</strong>  string. It will replace existing entry in database.</li>
+</ul>
+<p>Let's insert a <strong>note</strong> to database.</p>
+<pre><code class="language-python">note_id = db.shelf('note').insert({
     'title': 'Shelf DB',
     'content': 'Simple note',
     'datetime': datetime.utcnow()})
-</code></pre>
-<h2>Get entries</h2>
-<pre><code class="language-python">db.shelf('note')\
-    .filter(lambda note:
-        note['title'] == 'Shelf DB')\
-    .sort(key=lambda note: note['datetime'])
-    .run()
+
+note_id  # 'f41a6eb0-9f82-11ea-809e-04d3b02081c2'
 </code></pre>
 
 </div>

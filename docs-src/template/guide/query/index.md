@@ -1,4 +1,12 @@
-<h1 class="color-p" style="text-align: center;">Introduction</h1>
+<ul id="path" class="bits-path bits-tag">
+    <li><a href="/shelfdb/guide/">Guide</a></li>
+    <li><a href="/shelfdb/guide/query/">Query</a></li>
+</ul>
+
+<h1 id="title" class="color-p"
+        style="text-align: center;">
+    Query
+</h1>
 
 You can query **Shelf DB** database using `shelfquery` module, which can
 execute as **sync** or **async** client.
@@ -66,8 +74,11 @@ entries to database, **insert** and **put**.
   **UUID1**  string. It will replace existing entry in database.
 
 To query entries from database, you can use APIs such as
-`get`, `filter`, `sort`, `map`, `slice`, etc. For example, to query:
-**first 10 notes sorted by datetime which have title start with 'Shelf'**
+`get`, `filter`, `sort`, `map`, `slice`, etc. For example, to run chain query
+in the following order.
+1. notes which have title start with 'Shelf'
+2. then, sort by datetime
+3. then, get the first 10 items
 
 ```python
 entries = shelfquery.db().shelf('note')\

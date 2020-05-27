@@ -1,4 +1,11 @@
-<h1 class="color-p" style="text-align: center;">Shelf DB Guide</h2>
+<ul id="path" class="bits-path bits-tag">
+    <li><a href="/shelfdb/guide/">Guide</a></li>
+</ul>
+
+<h1 id="title" class="color-p"
+        style="text-align: center;">
+    Shelf DB Guide
+</h1>
 
 <h2 id="install">Install</h2>
 
@@ -6,8 +13,8 @@
 $ pip install shelfdb shelfquery
 ```
 
-<h2>Database Server</h2>
-<a class="learn-more" href="/shelfdb/guide/server/">Learn more</a>
+<h2>Database</h2>
+<a class="learn-more" href="/shelfdb/guide/database/">Learn more</a>
 
 ```shell
 $ shelfdb

@@ -49,13 +49,20 @@
         </div>
         <div el="content">
             <a href="/shelfdb/guide/"><strong>Install</strong></a>
-            <a href="/shelfdb/guide/server/"><strong>Database Server</strong></a>
+            <a href="/shelfdb/guide/database/"><strong>Database</strong></a>
             <a href="/shelfdb/guide/query/"><strong>Query</strong></a>
         </div>
     </div>
     <div el="overlay"></div>
 </bits-sidebar><div class="block">
-<h1 class="color-p" style="text-align: center;">Introduction</h1>
+<ul id="path" class="bits-path bits-tag">
+    <li><a href="/shelfdb/guide/">Guide</a></li>
+    <li><a href="/shelfdb/guide/query/">Query</a></li>
+</ul>
+<h1 id="title" class="color-p"
+        style="text-align: center;">
+    Query
+</h1>
 <p>You can query <strong>Shelf DB</strong> database using <code>shelfquery</code> module, which can
 execute as <strong>sync</strong> or <strong>async</strong> client.</p>
 <pre><code class="language-python">import shelfquery
@@ -113,8 +120,13 @@ entries to database, <strong>insert</strong> and <strong>put</strong>.</p>
 <strong>UUID1</strong>  string. It will replace existing entry in database.</li>
 </ul>
 <p>To query entries from database, you can use APIs such as
-<code>get</code>, <code>filter</code>, <code>sort</code>, <code>map</code>, <code>slice</code>, etc. For example, to query:
-<strong>first 10 notes sorted by datetime which have title start with 'Shelf'</strong></p>
+<code>get</code>, <code>filter</code>, <code>sort</code>, <code>map</code>, <code>slice</code>, etc. For example, to run chain query
+in the following order.</p>
+<ol>
+<li>notes which have title start with 'Shelf'</li>
+<li>then, sort by datetime</li>
+<li>then, get the first 10 items</li>
+</ol>
 <pre><code class="language-python">entries = shelfquery.db().shelf('note')\
     .filter(lambda note: re.match('Shelf.*', note['title']))\
     .sort(key=lambda note: note['datetime'])\

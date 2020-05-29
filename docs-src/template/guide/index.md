@@ -1,6 +1,7 @@
-<ul id="path" class="bits-path bits-tag">
-    <li><a href="/shelfdb/guide/">Guide</a></li>
-</ul>
+<el-path>
+    <a href="">Guide</a>
+    <a href="">Guide</a>
+</el-path>
 
 <h1 id="title" class="color-p"
         style="text-align: center;">

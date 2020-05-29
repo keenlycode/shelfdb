@@ -15,6 +15,7 @@ docs_src_dir = Path(__file__).parent.joinpath('docs-src')
 docs_dest_dir = Path(__file__).parent.joinpath('docs')
 template_dir = docs_src_dir.joinpath('template')
 
+
 def nodes_modules():
     shutil.copytree(
         'node_modules/bits-ui/dist',
@@ -112,8 +113,8 @@ class Template:
 
         # Copy static files
         shutil.copytree(
-            docs_src_dir.joinpath('static'),
-            docs_dest_dir.joinpath('static'),
+            docs_src_dir.joinpath('asset'),
+            docs_dest_dir.joinpath('static/asset'),
             dirs_exist_ok=True)
 
         async for changes in awatch(str(template_dir)):

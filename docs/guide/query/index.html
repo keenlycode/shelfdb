@@ -59,14 +59,11 @@
     </div>
     <div el="overlay"></div>
 </bits-sidebar><div class="block">
-<ul id="path" class="bits-path bits-tag">
-    <li><a href="/shelfdb/guide/">Guide</a></li>
-    <li><a href="/shelfdb/guide/query/">Query</a></li>
-</ul>
-<h1 id="title" class="color-p"
-        style="text-align: center;">
-    Query
-</h1>
+<el-path>
+    <a href="/shelfdb/guide/">Guide</a>
+    <a href="/shelfdb/guide/query/">Query</a>
+</el-path>
+<h1 class="title">Query</h1>
 <p>You can query <strong>Shelf DB</strong> database using <code>shelfquery</code> module, which can
 execute as <strong>sync</strong> or <strong>async</strong> client.</p>
 <pre><code class="language-python">import shelfquery
@@ -85,14 +82,14 @@ style="font-size: 1.5rem; vertical-align: middle;"></bits-icon>
 <i><strong>sync</strong> client is recommened if you want to try and run simple codes
 in python shell.</i></p>
 </blockquote>
-<h2>Query syntax</h2>
+<h2>Query</h2>
 <p><strong>shelfquery</strong> use method chaining as a syntax to query database. Every query
 will have a sequence steps as<br />
 <bits-tag>select database</bits-tag>
 <bits-icon theme="adwaita" name="go-next"></bits-icon>
 <bits-tag>select shelf</bits-tag>
 <bits-icon theme="adwaita" name="go-next"></bits-icon>
-<bits-tag>chain queries</bits-tag>
+<bits-tag>chained query</bits-tag>
 <bits-icon theme="adwaita" name="go-next"></bits-icon>
 <bits-tag>run()</bits-tag>. For example,</p>
 <pre><code class="language-python">import shelfquery

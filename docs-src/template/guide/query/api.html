@@ -5,5 +5,8 @@
 {% endblock %}
 
 {% block body %}
-
+{% include 'include/sidebar/sidebar.html' %}
+<div class="block">
+{{ markdown('api.md') }}
+</div>
 {% endblock %}

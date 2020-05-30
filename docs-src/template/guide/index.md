@@ -1,12 +1,8 @@
 <el-path>
     <a href="">Guide</a>
-    <a href="">Guide</a>
 </el-path>
 
-<h1 id="title" class="color-p"
-        style="text-align: center;">
-    Shelf DB Guide
-</h1>
+<h1 class="title">Shelf DB Guide</h1>
 
 <h2 id="install">Install</h2>
 

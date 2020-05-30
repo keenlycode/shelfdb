@@ -1,12 +1,9 @@
-<ul id="path" class="bits-path bits-tag">
-    <li><a href="/shelfdb/guide/">Guide</a></li>
-    <li><a href="/shelfdb/guide/database/">Database</a></li>
-</ul>
+<el-path>
+    <a href="/shelfdb/guide/">Guide</a>
+    <a href="/shelfdb/guide/database/">Database</a>
+</el-path>
 
-<h1 id="title" class="color-p"
-        style="text-align: center;">
-    Database
-</h1>
+<h1 class="title">Database</h1>
 
 **Shelf DB** server is built on **Python** asyncio server to handle concurrent
 requests. It also implements **uvloop** to speed up concurrency if possible.

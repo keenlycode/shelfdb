@@ -30,6 +30,111 @@
 <link rel="stylesheet" href="/shelfdb/guide/query/api.css?v=1">
 </head>
 <body>
+<link rel="stylesheet" href="/shelfdb/include/sidebar/sidebar.css?v=1">
+<script src="/shelfdb/include/sidebar/sidebar.js?v=1"></script>
+<span id="sidebar-button" class="bits-button-pin">
+    <bits-icon theme="adwaita" name="open-menu"></bits-icon>
+</span>
 
+<bits-sidebar show="1000px">
+    <div el="wrapper">
+        <!-- Sidebar contents -->
+        <div el="title">
+            <a el="home" href="/shelfdb/">
+                <bits-icon theme="adwaita" name="go-home"></bits-icon>
+            </a>
+            <a el="name" href="/shelfdb/guide/"><h2>Guide</h2></a>
+            <a el="close">
+                <bits-icon theme="adwaita" name="window-close"></bits-icon>
+            </a>
+        </div>
+        <div el="content">
+            <a href="/shelfdb/guide/"><strong>Install</strong></a>
+            <a href="/shelfdb/guide/database/"><strong>Database</strong></a>
+            <a href="/shelfdb/guide/query/"><strong>Query</strong></a>
+            <ul class="sidebar-ul">
+                <li><a href="/shelfdb/guide/query/api.html">API</a></li>
+            </ul>
+        </div>
+    </div>
+    <div el="overlay"></div>
+</bits-sidebar><div class="block">
+<el-path>
+    <a href="/shelfdb/guide/">Guide</a>
+    <a href="/shelfdb/guide/query/">Query</a>
+    <a href="/shelfdb/guide/query/api.html">API</a>
+</el-path>
+<h1 class="title">Query API</h1>
+<p>To query something on database, we need to construct chain query then send it
+to database server.
+Let's recap query sequence in prior section.</p>
+<p el="query-sequence">
+    <bits-tag>select database</bits-tag>
+    <bits-icon theme="adwaita" name="go-next"></bits-icon>
+    <bits-tag>select shelf</bits-tag>
+    <bits-icon theme="adwaita" name="go-next"></bits-icon>
+    <bits-tag>chained query</bits-tag>
+    <bits-icon theme="adwaita" name="go-next"></bits-icon>
+    <bits-tag>run()</bits-tag>
+</p>
+<p>For example, we can write code as:</p>
+<pre><code class="language-python">import shelfquery
+
+shelfquery.db().shelf('note')\
+    .filter(lambda note: note['datetime'] &gt;= datetime.fromisoformat('2020-01-01'))\
+    .run()
+</code></pre>
+<p>Following this query sequence, we can devide Query API in 2 main parts:</p>
+<ol>
+<li>Database &amp; Shelf Selection</li>
+<li>Chained Query</li>
+</ol>
+<h2>Database &amp; Shelf Selection</h2>
+<h3><code>db(host='127.0.0.1', port=17000)</code></h3>
+<p>Select database <strong>IP Address</strong> and <strong>Port</strong></p>
+<h3><code>shelf(name: str)</code></h3>
+<p>Select shelf by name</p>
+<h2>Chained Query</h2>
+<h3><code>count() -&gt; int</code></h3>
+<p>Count entries</p>
+<h3><code>delete() -&gt; None</code></h3>
+<p>Delete entries</p>
+<h3><code>edit(func(entry) -&gt; entry: dict)</code></h3>
+<p>Edit entries using function.
+For example according to the function's signature above,</p>
+<pre><code class="language-python">def add_like(note)  # Get an entry as the argument.
+    note['like'] += 1  # Add 1 like
+    return note  # Return the entry to save in database.
+
+db.shelf('note')\
+    .get('7742df1c-a27f-11ea-8c6a-04d3b02081c2')\
+    .edit(add_like)\
+    .run()
+</code></pre>
+<h3><code>filter(func(entry) -&gt; bool) -&gt; entries</code></h3>
+<p>Filter entries using function/lambda</p>
+<pre><code class="language-python">notes = db.shelf('note')\
+    .filter(lambda note: 'some words' in note['title'])\
+    .run()
+</code></pre>
+<h3><code>first(func(entry) -&gt; bool) -&gt; entry</code></h3>
+<p>Get the first entry matched by function/lambda</p>
+<pre><code class="language-python">note = db.shelf('note')\
+    .first(lambda note: 'some words' in note['title'])\
+    .run()
+</code></pre>
+<h3><code>get(id: 'UUID1 String')</code></h3>
+<h3><code>insert(entry: dict)</code></h3>
+<h3><code>map(func(entry) -&gt; Any)</code></h3>
+<h3><code>put(id: 'UUID1 String', entry: dict)</code></h3>
+<h3><code>reduce(func(accumulator, current_value, initializer=None) -&gt; accumulator)</code></h3>
+<p>See <a href="https://docs.python.org/3/library/functools.html#functools.reduce"><bits-tag>functool.reduce</bits-tag></a></p>
+<h3><code>replace(entry: dict)</code></h3>
+<h3><code>slice(start: int, stop: int, step=1)</code></h3>
+<h3><code>sort(key=lambda entry: entry.timestamp, reverse=False)</code></h3>
+<h3><code>update(patch: dict)</code></h3>
+<h3><code>run()</code></h3>
+
+</div>
 </body>
 </html>

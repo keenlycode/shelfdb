@@ -1,6 +1,5 @@
 {
   "dependencies": {
-    "bits-ui": "^2.0.6",
     "lit-html": "^1.2.1",
     "parcel": "^2.0.0-alpha.3.2",
     "prismjs": "^1.20.0"

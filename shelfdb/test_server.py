@@ -4,7 +4,6 @@ from multiprocessing import Process
 from pathlib import Path
 from time import sleep
 from datetime import datetime
-# import sys
 from shelfdb import server
 import shelfquery
 from dictify import Model, Field

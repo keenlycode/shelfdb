@@ -1,12 +1,9 @@
-<ul id="path" class="bits-path bits-tag">
-    <li><a href="/shelfdb/guide/">Guide</a></li>
-    <li><a href="/shelfdb/guide/query/">Query</a></li>
-</ul>
+<el-path>
+    <a href="/shelfdb/guide/">Guide</a>
+    <a href="/shelfdb/guide/query/">Query</a>
+</el-path>
 
-<h1 id="title" class="color-p"
-        style="text-align: center;">
-    Query
-</h1>
+<h1 class="title">Query</h1>
 
 You can query **Shelf DB** database using `shelfquery` module, which can
 execute as **sync** or **async** client.
@@ -30,7 +27,7 @@ or native python shell then run the codes in this guide.
 > <i>**sync** client is recommened if you want to try and run simple codes
 > in python shell.</i>
 
-## Query syntax
+## Query
 
 **shelfquery** use method chaining as a syntax to query database. Every query
 will have a sequence steps as  
@@ -38,7 +35,7 @@ will have a sequence steps as
 <bits-icon theme="adwaita" name="go-next"></bits-icon>
 <bits-tag>select shelf</bits-tag>
 <bits-icon theme="adwaita" name="go-next"></bits-icon>
-<bits-tag>chain queries</bits-tag>
+<bits-tag>chained query</bits-tag>
 <bits-icon theme="adwaita" name="go-next"></bits-icon>
 <bits-tag>run()</bits-tag>. For example,
 

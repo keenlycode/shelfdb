@@ -59,14 +59,11 @@
     </div>
     <div el="overlay"></div>
 </bits-sidebar><div class="block">
-<ul id="path" class="bits-path bits-tag">
-    <li><a href="/shelfdb/guide/">Guide</a></li>
-    <li><a href="/shelfdb/guide/database/">Database</a></li>
-</ul>
-<h1 id="title" class="color-p"
-        style="text-align: center;">
-    Database
-</h1>
+<el-path>
+    <a href="/shelfdb/guide/">Guide</a>
+    <a href="/shelfdb/guide/database/">Database</a>
+</el-path>
+<h1 class="title">Database</h1>
 <p><strong>Shelf DB</strong> server is built on <strong>Python</strong> asyncio server to handle concurrent
 requests. It also implements <strong>uvloop</strong> to speed up concurrency if possible.</p>
 <h2>Shelf DB Server</h2>

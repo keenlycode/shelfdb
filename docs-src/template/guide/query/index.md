@@ -22,8 +22,7 @@ The best way to try `shelfquery` is using
 <a href="https://ipython.org/"><bits-tag>ipython</bits-tag></a>
 or native python shell then run the codes in this guide.
 
-> <bits-icon class="color-p" theme="adwaita" name="dialog-information"
-> style="font-size: 1.5rem; vertical-align: middle;"></bits-icon>
+> <bits-icon class="quote-icon" theme="adwaita" name="dialog-information"></bits-icon>
 > <i>**sync** client is recommened if you want to try and run simple codes
 > in python shell.</i>
 
@@ -84,3 +83,5 @@ entries = shelfquery.db().shelf('note')\
     .slice(0,10)\
     .run()
 ```
+
+<a class="button" href="/shelfdb/guide/query/api.html">Next: Query APIs</a>

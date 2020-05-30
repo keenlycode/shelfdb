@@ -6,52 +6,76 @@
 
 <h1 class="title">Query API</h1>
 
-To query something on database, we need to construct chain query then send it
-to database server.
-Let's recap query sequence in prior section.
+## Query APIs concept.
 
+To send query to database, we need to create query
+which consists of 4 main parts:
 <p el="query-sequence">
-    <bits-tag>select database</bits-tag>
+    <bits-tag>database selection</bits-tag>
     <bits-icon theme="adwaita" name="go-next"></bits-icon>
-    <bits-tag>select shelf</bits-tag>
+    <bits-tag>shelf selection</bits-tag>
     <bits-icon theme="adwaita" name="go-next"></bits-icon>
     <bits-tag>chained query</bits-tag>
     <bits-icon theme="adwaita" name="go-next"></bits-icon>
     <bits-tag>run()</bits-tag>
 </p>
 
-For example, we can write code as:
+1. **Database Selection** : Select database IP address and port.
+2. **Shelf Selection** : Select shelf in database.
+3. **Chained Query** : Create entries operations on selected shelf.
+4. **Run** : Send query to database.
+
+> <bits-icon class="quote-icon" theme="adwaita" name="dialog-information"></bits-icon>
+> The created query won't send anything to database until `run()` is called.
+
+For example, to query notes which have `datetime` start from year 2020.
+
 ```python
 import shelfquery
 
-shelfquery.db().shelf('note')\
+notes = shelfquery\
+    .db()\
+    .shelf('note')\
     .filter(lambda note: note['datetime'] >= datetime.fromisoformat('2020-01-01'))\
     .run()
 ```
 
-Following this query sequence, we can devide Query API in 2 main parts:
-1. Database & Shelf Selection
-2. Chained Query
-
 ## Database & Shelf Selection
 
-### `db(host='127.0.0.1', port=17000)`
-Select database **IP Address** and **Port**
+Let's start with database selection using code below.
 
-### `shelf(name: str)`
-Select shelf by name
+```python
+db = shelfquery.db(host='127.0.0.1', port=17000)
+```
 
-## Chained Query
+This will create **DB** instance which contains information
+of database IP adress and port.
 
-### `count() -> int`
+Next, we can select shelf in database and we're ready to use
+**Chained Query APIs**.
+
+```python
+note_shelf = db.shelf('note')
+```
+
+## Chained Query APIs
+
+> <bits-icon class="quote-icon" theme="adwaita" name="dialog-information"></bits-icon>
+> `db` in this section is a variable which keep **DB** instance.
+
+### `count() -> number: int`
 Count entries
+- Returns count number.
+
+```python
+count = db.shelf('note').count()
+```
 
 ### `delete() -> None`
 Delete entries
 
 ### `edit(func(entry) -> entry: dict)`
 Edit entries using function.
-For example according to the function's signature above,
 
 ```python
 def add_like(note)  # Get an entry as the argument.
@@ -65,7 +89,7 @@ db.shelf('note')\
 ```
 
 ### `filter(func(entry) -> bool) -> entries`
-Filter entries using function/lambda
+Filter entries using function/lambda.
 
 ```python
 notes = db.shelf('note')\
@@ -74,7 +98,7 @@ notes = db.shelf('note')\
 ```
 
 ### `first(func(entry) -> bool) -> entry`
-Get the first entry matched by function/lambda
+Get the first entry matched by function/lambda.
 
 ```python
 note = db.shelf('note')\
@@ -82,24 +106,108 @@ note = db.shelf('note')\
     .run()
 ```
 
-### `get(id: 'UUID1 String')`
+### `get(id: 'UUID1 String') -> entry`
 
-### `insert(entry: dict)`
+Get the entry at **UUID1** hash key in database.
+
+```python
+note = db.shelf('note')\
+    .get('6c286bcc-a2a9-11ea-8eff-04d3b02081c2')\
+    .run()
+```
+
+### `insert(entry: dict) -> uuid1: str`
+
+Insert an entry at generated **UUID1** hash key in database.  
+Return UUID1 hash of the inserted entry.
+
+```python
+note_uuid1 = db.shelf('note')\
+    .insert({'title': 'Shelf DB', 'content': 'Test'})\
+    .run()
+```
 
 ### `map(func(entry) -> Any)`
 
-### `put(id: 'UUID1 String', entry: dict)`
+Mapping function to entries (See python
+[<bits-tag>map()</bits-tag>](https://docs.python.org/3/library/functions.html#map))  
+Return value from provided function will be kept in chained query's result.
+
+```python
+# Get all note titles.
+note_titles = db.shelf('note').map(lambda note: note['title']).run()
+```
+```python
+# Get user without password.
+def user_without_password(user):
+    del user['password']
+    return user
+
+users = db.shelf('user').map(user_without_password).run()
+```
+
+### `put(uuid1: str, entry: dict)`
+
+Put an entry at provided UUID1 hash in database. It will replace any existing
+entry if any.
+
+```python
+db.shelf('note')\
+    .put(
+        '6c286bcc-a2a9-11ea-8eff-04d3b02081c2',
+        {'title': 'Shelf DB', 'content': 'Test'})\
+    .run()
+```
 
 ### `reduce(func(accumulator, current_value, initializer=None) -> accumulator)`
 
-See [<bits-tag>functool.reduce</bits-tag>](https://docs.python.org/3/library/functools.html#functools.reduce)
+Apply **reduce** function. (See [<bits-tag>reduce()</bits-tag>](https://docs.python.org/3/library/functools.html#functools.reduce))  
+Could be useful with **map** function. (See [<bits-tag>MapReduce</bits-tag>](https://www.google.com/search?q=map+reduce))
 
-### `replace(entry: dict)`
+```python
+# Get total size of all photos in the shelf.
+total_size = db.shelf('photo')\
+    .map(lambda photo: photo['size'])\
+    .reduce(lambda total, current: total + current)
+    .run()
+```
+
+### `replace(data: dict)`
+
+Replace data to an entry/entries in chained query's result.
 
 ### `slice(start: int, stop: int, step=1)`
 
+Slice chained query's result.
+
+```python
+# Sort notes by datetime and get notes at index [20:40]
+notes = db.shelf('note')\
+    .sort(key=lambda note: note['datetime'])\
+    .slice(20,40)\
+    .run()
+```
+
 ### `sort(key=lambda entry: entry.timestamp, reverse=False)`
+
+Sort entries. See [<bits-tag>sort</bits-tag>](https://docs.python.org/3/howto/sorting.html#sortinghowto)
+
+```python
+# Sort then slice [0:50]
+notes = db.shelf('note')\
+    .sort(key=lambda note: note['datetime'])\
+    .slice(0,50)\
+    .run()
+```
 
 ### `update(patch: dict)`
 
+Update patch to an entry/entries in chained query's result.
+
+```python
+db.shelf('note').update({'publish': False}).run()
+```
+
 ### `run()`
+
+Send chained query to database.

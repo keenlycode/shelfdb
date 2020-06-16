@@ -105,6 +105,13 @@ class TestModifyData(unittest.TestCase):
     def tearDownClass(cls):
         db.shelf('note').delete().run()
 
+    def test_apply(self):
+        def get_title(note):
+            return note['title']
+
+        title = db.shelf('note').first().apply(get_title).run()
+        self.assertIsInstance(title, str)
+
     def test_entry_edit(self):
         def _edit(note):
             note['title'] = 'test_edit'

@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='shelfdb',
-    version='0.6.5',
+    version='0.6.6dev',
     description='Python dictionary database with asyncio server',
     long_description='Python dictionary database with asyncio server',
     url='https://github.com/nitipit/shelfdb',
@@ -15,8 +15,8 @@ setup(
     keywords='dict json database',
     packages=find_packages(),
     install_requires=[
-        'dill>=0.3.0',
-        'uvloop>=0.12.1;platform_system=="Linux"'
+        'dill==0.3.2',
+        'uvloop==0.14.0;platform_system=="Linux"'
     ],
     tests_require=['shelfquery', 'dictify'],
     entry_points={'console_scripts': ['shelfdb=shelfdb.server:main']},

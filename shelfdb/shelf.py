@@ -234,6 +234,17 @@ class Entry(Item):
         assert isinstance(data, dict)
         self.replace(data)
 
+    def apply(self, func) -> 'Any':
+        """Apply ``func()`` on the entry.
+
+        Parameters
+        ----------
+        func: function(item: Item) -> 'Any'
+            Mapping function which can return any instance as result.
+        """
+
+        return func(self)
+
     def replace(self, data: dict):
         """Replace entry with data"""
 

@@ -234,8 +234,8 @@ class Entry(Item):
         assert isinstance(data, dict)
         self.replace(data)
 
-    def apply(self, func) -> 'Any':
-        """Apply ``func()`` on the entry.
+    def map(self, func) -> 'Any':
+        """map ``func()`` on the entry.
 
         Parameters
         ----------

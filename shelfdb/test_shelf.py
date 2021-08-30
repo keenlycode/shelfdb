@@ -213,13 +213,6 @@ class TestEntry(unittest.TestCase):
 
         self.note_from_db().edit(edit)
         self.assertDictEqual(self.note_from_db(), {'title': 'edit'})
-
-    def test_apply(self):
-        def note_title(note):
-            return note['title']
-
-        title = self.note_from_db().apply(note_title)
-        self.assertIsInstance(title, str)
         
     def test_replace(self):
         note = Note({'title': 'replace'}).copy()

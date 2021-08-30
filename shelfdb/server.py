@@ -32,10 +32,6 @@ class QueryHandler():
         self.chain_query = db.shelf(shelf)
         self.queries = queries
 
-    def apply(self, func):
-        self.chain_query = self.chain_query.apply(func)
-        return self
-
     def count(self):
         self.chain_query = self.chain_query.count()
         return self

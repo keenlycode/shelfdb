@@ -1,7 +1,7 @@
 uvloop
 dill
 dictify
-shelfquery
+shelfquery>=3.2.0
 jinja2
 watchgod
 mistune

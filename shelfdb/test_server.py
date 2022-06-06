@@ -51,7 +51,7 @@ class TestRetrieveData(unittest.TestCase):
         for i in range(5):
             cls.notes.append(Note({'title': 'note-' + str(i)}))
         for note in cls.notes:
-            id = db.shelf('note').insert(note.copy()).run()
+            id = db.shelf('note').add(note.copy()).run()
             note.id = id
 
     @classmethod

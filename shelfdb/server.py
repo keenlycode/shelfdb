@@ -32,6 +32,10 @@ class QueryHandler():
         self.chain_query = db.shelf(shelf)
         self.queries = queries
 
+    def add(self, data):
+        self.chain_query = self.chain_query.add(data)
+        return self
+
     def count(self):
         self.chain_query = self.chain_query.count()
         return self
@@ -56,12 +60,17 @@ class QueryHandler():
         self.chain_query = self.chain_query.get(id_)
         return self
 
+    # Deprecated
     def insert(self, data):
         self.chain_query = self.chain_query.insert(data)
         return self
 
     def map(self, fn):
         self.chain_query = self.chain_query.map(fn)
+        return self
+
+    def patch(self, args):
+        self.chain_query = self.chain_query.patch(*args)
         return self
 
     def put(self, args):

@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime
 from itertools import islice
 from functools import reduce
+from warnings import warn
 
 
 class DB:
@@ -65,6 +66,15 @@ class Shelf:
         """Items iterator"""
         return iter(self._items_iterator_function())
 
+    def add(self, item: dict) -> uuid.UUID:
+        """Add item to database. Use UUID1 string as ID"""
+        
+        uuid1 = str(uuid.uuid1())
+        assert isinstance(item, dict)
+        self._shelf[uuid1] = item
+        return uuid1
+
+
     def count(self, filter_=None) -> int:
         """Count items using filter function"""
 
@@ -124,6 +134,7 @@ class Shelf:
     def insert(self, item: dict) -> uuid.UUID:
         """Insert item to database. Use UUID1 string as ID"""
         
+        warn('`insert()` is deprecated. Please use `add()`', DeprecationWarning, stacklevel=2)
         uuid1 = str(uuid.uuid1())
         assert isinstance(item, dict)
         self._shelf[uuid1] = item
@@ -146,12 +157,24 @@ class Shelf:
 
         return Shelf(self._shelf, lambda: map(func, self))
 
-    def put(self, id: str, item: dict):
-        """Put entry with specified ID"""
+    def patch(self, id_: str, data: dict):
+        """Patch entry"""
+        assert isinstance(id_, str), 'ID should be ``str`` instance.'
+        assert isinstance(data, dict), 'Data should be ``dict`` instance.'
+        entry = dict()
+        try:
+            entry = self._shelf[id_]
+        except KeyError:
+            pass
+        entry.update(data)
+        self._shelf[id_] = entry
 
-        assert isinstance(id, str), 'ID should be ``str`` instance.'
+    def put(self, id_: str, item: dict):
+        """Put entry"""
+
+        assert isinstance(id_, str), 'ID should be ``str`` instance.'
         assert isinstance(item, dict), 'Item should be ``dict`` instance.'
-        self._shelf[id] = item
+        self._shelf[id_] = item
 
     def reduce(self, func, initializer=None) -> 'Any':
         """Apply ``reduce()`` on items"""
@@ -165,7 +188,7 @@ class Shelf:
 
         assert isinstance(data, dict)
         for item in self:
-            self._shelf[item.id] = obj
+            self._shelf[item.id] = data
 
     def slice(self, start: int, stop: int, step: int = None) -> 'Shelf':
         """Slice items"""
@@ -191,8 +214,8 @@ class Shelf:
 class Item(dict):
     """Item class to read entry from database"""
 
-    def __init__(self, id, data):
-        self.id = id
+    def __init__(self, id_, data):
+        self.id = id_
         super().__init__(data)
 
     @property

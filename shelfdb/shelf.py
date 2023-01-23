@@ -1,5 +1,6 @@
 import shelve
 import os
+from typing import Any, Iterator
 import uuid
 from datetime import datetime
 from itertools import islice
@@ -176,7 +177,7 @@ class Shelf:
         assert isinstance(item, dict), 'Item should be ``dict`` instance.'
         self._shelf[id_] = item
 
-    def reduce(self, func, initializer=None) -> 'Any':
+    def reduce(self, func, initializer=None) -> Any:
         """Apply ``reduce()`` on items"""
 
         if initializer is None:
@@ -257,7 +258,7 @@ class Entry(Item):
         assert isinstance(data, dict)
         self.replace(data)
 
-    def map(self, func) -> 'Any':
+    def map(self, func) -> Any:
         """map ``func()`` on the entry.
 
         Parameters

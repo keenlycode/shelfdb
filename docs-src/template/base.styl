@@ -1,0 +1,99 @@
+@require '../_bits-ui/_require.styl'
+
+@font-face
+    font-family: "sarabun"
+    src: url("/shelfdb/static/asset/font/Sarabun/Sarabun-Medium.ttf") format("truetype")
+
+.flex
+    display: flex
+    flex-wrap: wrap
+    width: 100%
+    justify-content: center
+    align-content: center
+
+.block
+    @media (min-width: 1000px)
+        margin-left: 280px
+
+    display: block
+    width: 90%
+    max-width: 50rem
+    margin: auto
+
+.row
+    width: 100%
+
+body
+    font-family: "sarabun"
+    margin:0
+    padding-bottom: 10rem
+
+a
+    text-decoration: none
+    color: inherit
+
+header
+    align-content: center
+    position: relative
+    z-index: 101
+    min-height: 30vh
+    h1
+        margin: 1rem 0 1rem 0
+        text-align: center
+        width: 100%
+    h2
+        margin: 0.5rem 0 0.5rem 0
+        text-align: center
+        width: 100%
+
+p
+    width: 100%
+
+ul p
+    margin: 0
+
+ul.sidebar-ul
+    padding-left: 1rem
+
+p ~ ul
+    margin-top: -0.5rem
+
+p ~ ol
+    margin-top: -0.5rem
+
+pre[class*="language-"]
+    font-size: 0.8rem
+    @media $sm
+        font-size: 0.8rem
+    code[class*="language-"]
+        padding: 0
+
+code
+    bg-color(lighten(black, 40%))
+
+bits-tag
+    tag($bg-color: $color-c)
+    font-family: sarabun
+
+blockquote
+    border: 2px solid $color-p
+    bits-icon.quote-icon
+        font-size: 1.5rem
+        vertical-align: middle
+        color: $color-p
+
+h1.title
+    margin-top: 0
+    padding-top: 3rem
+    color: $color-p
+    text-align: center
+
+el-path ul.bits-path
+    path($color: white)
+    padding: 0 0.5rem
+    position: fixed
+    left: 50%
+    transform: translate(-50%, 0)
+    margin-top: 0.5rem
+    li:not(:first-of-type)
+        margin-left: 0.3rem

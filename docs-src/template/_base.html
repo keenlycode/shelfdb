@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+{% set _v = 1 %}
+<html>
+<head>
+    {% include 'include/gtag.html' %}
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon-svg" theme="adwaita" href="/shelfdb/static/lib/bits-ui/icon/adwaita.svg">
+    <link rel="stylesheet" href="/shelfdb/static/lib/bits-ui/normalize.css?v={{_v}}">
+    <link rel="stylesheet" href="/shelfdb/static/bits-ui/bits-ui.css?v={{_v}}">
+    <link rel="stylesheet" href="/shelfdb/static/lib/prismjs/themes/prism-okaidia.css?v={{_v}}">
+    <link rel="stylesheet" href="/shelfdb/base.css?v={{_v}}">
+    <style>
+        @font-face {
+            /* Set UI font, Cantarell is recommended */
+            font-family: bits-ui;
+            src: url('/shelfdb/static/lib/bits-ui/font/Cantarell/Cantarell-Regular.ttf?v={{_v}}');
+        }
+    </style>
+    <script defer src="/shelfdb/static/lib/bits-ui/bits-ui.js?v={{_v}}"></script>
+    <script defer src="/shelfdb/static/lib/prismjs/prism.js?v={{_v}}"></script>
+    <script defer src="/shelfdb/static/lib/prismjs/components/prism-bash.min.js?v={{_v}}"></script>
+    <script defer src="/shelfdb/static/lib/prismjs/components/prism-python.min.js?v={{_v}}"></script>
+    <script defer src="/shelfdb/base.js?v={{_v}}"></script>
+    {% block head %}{% endblock %}
+</head>
+<body>
+{% block body %}{% endblock %}
+</body>
+</html>

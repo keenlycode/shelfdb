@@ -1,0 +1,60 @@
+darkshade($color)
+    if (hue($color) >= 30deg) and (hue($color) <= 200deg)
+        if lightness($color) >= 50%
+            return false
+        else
+            return true
+    else
+        if lightness($color) >= 70%
+            return false
+        else
+            return true
+
+bg-color($bg-color)
+    background-color: $bg-color
+    if darkshade($bg-color)
+        color: white
+    else
+        color: black
+
+border-top-radius($radius=$border-radius)
+    border-top-left-radius: $radius
+    border-top-right-radius: $radius
+
+border-right-radius($radius=$border-radius)
+    border-top-right-radius: $radius
+    border-bottom-right-radius: $radius
+
+border-bottom-radius($radius=$border-radius)
+    border-bottom-right-radius: $radius
+    border-bottom-left-radius: $radius
+
+border-left-radius($radius=$border-radius)
+    border-top-left-radius: $radius
+    border-bottom-left-radius: $radius
+
+bg-int-color($bg-color=$color-p)
+    bg-color($bg-color)
+    &:hover
+        background-color: tint($bg-color, 20%)
+    &:active
+        background-color: darken($bg-color, 20%)
+
+ui-font()
+    font-family: bits-ui
+    font-size: 1em
+
+lift-1()
+    box-shadow: 0 1px 3px 0 darken(white, 70%)
+
+lift-2()
+    box-shadow: 0 2px 5px 0 darken(white, 70%)
+
+lift-3()
+    box-shadow: 0 4px 9px 0 darken(white, 70%)
+
+lift-4()
+    box-shadow: 0 8px 17px 0 darken(white, 70%)
+
+lift-5()
+    box-shadow: 0 16px 33px 0 darken(white, 70%)

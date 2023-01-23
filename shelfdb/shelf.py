@@ -151,7 +151,7 @@ class Shelf:
 
         Parameters
         ----------
-        func: function(item: Item) -> 'Any'
+        func: function(item: Item) -> Any
             Mapping function which can return any instance
             to keep in chain query.
         """
@@ -263,7 +263,7 @@ class Entry(Item):
 
         Parameters
         ----------
-        func: function(item: Item) -> 'Any'
+        func: function(item: Item) -> Any
             Mapping function which can return any instance as result.
         """
 

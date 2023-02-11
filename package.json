@@ -1,7 +1,13 @@
 {
+  "devDependencies": {
+    "@nitipit/adapter": "^1.0.1",
+    "@parcel/transformer-sass": "^2.8.3",
+    "color": "^4.2.3",
+    "gadjet": "^1.0.4",
+    "highlight.js": "^11.7.0",
+    "parcel": "^2.8.3"
+  },
   "dependencies": {
-    "lit-html": "^1.2.1",
-    "parcel": "^2.0.0-alpha.3.2",
-    "prismjs": "^1.20.0"
+    "@nitipit/icon": "^0.0.6"
   }
 }

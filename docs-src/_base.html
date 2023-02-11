@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+{% set _v = 2 %}
+<html>
+<head>
+    {% include '_include/gtag.html' %}
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{to_root}}base.css?v={{_v}}">
+    <script defer src="{{to_root}}base.js?v={{_v}}"></script>
+    {% block head %}{% endblock %}
+</head>
+<body>
+{% block body %}{% endblock %}
+
+<el-sidebar showAt="1100px">
+<!-- <el-sidebar showAt="0px"> -->
+    <div el="content">
+        <!-- Sidebar contents -->
+        <div el="title">
+            <a el="home" href="{{to_root}}">
+                Shelf DB
+            </a>
+            <a el="close"><el-button-square><el-icon name="window-close"></el-icon></el-button-square></a>
+        </div>
+        <div el="menu">
+            <a href="{{to_root}}guide/guide.html"><strong>Guide</strong></a>
+            <a href="{{to_root}}guide/database/database.html"><strong>Database</strong></a>
+            <a href="{{to_root}}guide/query/query.html"><strong>Query</strong></a>
+            <ul class="sidebar-ul">
+                <li><a href="{{to_root}}guide/query/api/api.html">API</a></li>
+            </ul>
+        </div>
+    </div>
+    <div el="overlay"></div>
+</el-sidebar>
+
+{% block footer %}
+<div class="empty" style="padding-bottom: 10rem;"></div>
+{% endblock %}
+
+</body>
+</html>

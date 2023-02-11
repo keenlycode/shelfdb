@@ -1,0 +1,9 @@
+{% extends 'guide/_base.html' %}
+
+{% set to_root = '../' %}
+
+{% block body %}
+<div class="container">
+{{ markdown('guide.html.md') }}
+</div>
+{% endblock %}

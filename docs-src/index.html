@@ -1,0 +1,38 @@
+{% extends '_base.html' %}
+
+{% block head %}
+{{ super() }}
+<script defer src="{{to_root}}index.js?v={{_v}}"></script>
+{% endblock %}
+
+{% block body %}
+<el-header>
+    <div class="container">
+        <h1>Shelf DB</h1>
+        <h2 style="margin-bottom: 2rem;">A tiny document database for Python</h2>
+        <button el="guide">Guide</button> <button el="github" style="margin-left: 1rem;">Github</button>
+    </div>
+</el-header>
+<div class="container text">
+{{markdown('index.html.md')}}
+</div>
+
+<div class="container">
+    <h2 style="width: 100%; margin-bottom: 0; font-size: 3rem; text-align: center;">Tiny</h2>
+    <hr>
+    <div style="display: flex; justify-content: center; align-items: center;">
+        <el-tag>shelfdb</el-tag>
+        <strong style="font-size: 2rem; margin-left: 1rem;">~ 12 kB</strong>
+    </div>
+    <div style="display: flex; justify-content: center; align-items: center;">
+        <el-tag>shelfquery</el-tag>
+        <strong style="font-size: 2rem; margin-left: 1rem;">~ 4 kB</strong>
+    </div>
+
+    <p style="text-align: center;">
+        Runtime code is small, easy to install. <strong>shelfdb</strong>
+        can run on <strong>Raspberry Pi</strong>.
+    </p>
+</div>
+
+{% endblock %}

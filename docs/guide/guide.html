@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-36104934-9"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    gtag('config', 'UA-36104934-9');
+</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../base.css?v=2">
+    <script defer src="../base.js?v=2"></script>
+    
+
+<script defer src="../guide/base.js?v=2"></script>
+
+</head>
+<body>
+
+<div class="container">
+<h1>Guide</h1>
+<h2>Install</h2>
+<div class="no-margin-next-element">
+    <el-code-title>shell</el-code-title>
+</div>
+<pre><code class="language-shell">$ pip install shelfdb shelfquery
+</code></pre>
+<h2>Database</h2>
+<a href="database/database.html">Learn more</a>
+<div class="no-margin-next-element">
+    <el-code-title>shell</el-code-title>
+</div>
+<pre><code class="language-shell">$ shelfdb
+Serving on ('127.0.0.1', 17000)
+Database : db
+pid : 12359
+</code></pre>
+<h2>Query</h2>
+<a class="learn-more" href="./query/query.html">Learn more</a>
+<pre><code class="language-python">db.shelf('note')\
+    .insert(
+        {'title': 'Title',
+        'content': 'Content',
+        'datetime': dateimte.utcnow()})\
+    .run()
+
+db.shelf('note').run()
+</code></pre>
+
+</div>
+
+
+<el-sidebar showAt="1100px">
+<!-- <el-sidebar showAt="0px"> -->
+    <div el="content">
+        <!-- Sidebar contents -->
+        <div el="title">
+            <a el="home" href="../">
+                Shelf DB
+            </a>
+            <a el="close"><el-button-square><el-icon name="window-close"></el-icon></el-button-square></a>
+        </div>
+        <div el="menu">
+            <a href="../guide/guide.html"><strong>Guide</strong></a>
+            <a href="../guide/database/database.html"><strong>Database</strong></a>
+            <a href="../guide/query/query.html"><strong>Query</strong></a>
+            <ul class="sidebar-ul">
+                <li><a href="../guide/query/api/api.html">API</a></li>
+            </ul>
+        </div>
+    </div>
+    <div el="overlay"></div>
+</el-sidebar>
+
+
+<div class="empty" style="padding-bottom: 10rem;"></div>
+
+
+</body>
+</html>

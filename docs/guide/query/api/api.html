@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-36104934-9"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    gtag('config', 'UA-36104934-9');
+</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../../base.css?v=2">
+    <script defer src="../../../base.js?v=2"></script>
+    
+
+<script defer src="../../../guide/base.js?v=2"></script>
+
+</head>
+<body>
+
+<div class="container">
+<h1>Query API</h1>
+<h2>Query APIs concept.</h2>
+<p>To send query to database, we need to create query
+which consists of 4 main parts:</p>
+<ol>
+<li><strong>Database Selection</strong> : Select database IP address and port.</li>
+<li><strong>Shelf Selection</strong> : Select shelf in database.</li>
+<li><strong>Chained Query</strong> : Create entries operations on selected shelf.</li>
+<li><strong>Run</strong> : Send query to database.</li>
+</ol>
+<blockquote>
+<p><bits-icon class="quote-icon" theme="adwaita" name="dialog-information"></bits-icon>
+The created query won't send anything to database until <code>run()</code> is called.</p>
+</blockquote>
+<p>For example, to query notes which have <code>datetime</code> start from year 2020.</p>
+<div class="no-margin-next-element">
+    <el-code-title>python</el-code-title>
+</div>
+<pre><code class="language-python">import shelfquery
+
+notes = shelfquery\
+    .db()\
+    .shelf('note')\
+    .filter(lambda note: note['datetime'] &gt;= datetime.fromisoformat('2020-01-01'))\
+    .run()
+</code></pre>
+<h2>Database &amp; Shelf Selection</h2>
+<p>Let's start with database selection using code below.</p>
+<div class="no-margin-next-element">
+    <el-code-title>python</el-code-title>
+</div>
+<pre><code class="language-python">db = shelfquery.db(host='127.0.0.1', port=17000)
+</code></pre>
+<p>This will create <strong>DB</strong> instance which contains information
+of database IP adress and port.</p>
+<p>Next, we can select shelf in database and we're ready to use
+<strong>Chained Query APIs</strong>.</p>
+<div class="no-margin-next-element">
+    <el-code-title>python</el-code-title>
+</div>
+<pre><code class="language-python">note_shelf = db.shelf('note')
+</code></pre>
+<h2>Chained Query APIs</h2>
+<blockquote>
+<p><code>db</code> in this section is a variable which keep <strong>DB</strong> instance.</p>
+</blockquote>
+<h3><code>count() -&gt; number: int</code></h3>
+<p>Count entries</p>
+<ul>
+<li>Returns count number.</li>
+</ul>
+<div class="no-margin-next-element">
+    <el-code-title>python</el-code-title>
+</div>
+<pre><code class="language-python">count = db.shelf('note').count()
+</code></pre>
+<h3><code>delete() -&gt; None</code></h3>
+<p>Delete entries</p>
+<h3><code>edit(func(entry) -&gt; entry: dict) -&gt; None</code></h3>
+<p>Edit entries using function.</p>
+<div class="no-margin-next-element">
+    <el-code-title>python</el-code-title>
+</div>
+<pre><code class="language-python">def add_like(note)  # Get an entry as the argument.
+    note['like'] += 1  # Add 1 like
+    return note  # Return the entry to save in database.
+
+db.shelf('note')\
+    .get('7742df1c-a27f-11ea-8c6a-04d3b02081c2')\
+    .edit(add_like)\
+    .run()
+</code></pre>
+<h3><code>filter(func(entry) -&gt; bool) -&gt; entries</code></h3>
+<p>Filter entries using function/lambda.</p>
+<div class="no-margin-next-element">
+    <el-code-title>python</el-code-title>
+</div>
+<pre><code class="language-python">notes = db.shelf('note')\
+    .filter(lambda note: 'some words' in note['title'])\
+    .run()
+</code></pre>
+<h3><code>first(func(entry) -&gt; bool) -&gt; entry</code></h3>
+<p>Get the first entry matched by function/lambda.</p>
+<div class="no-margin-next-element">
+    <el-code-title>python</el-code-title>
+</div>
+<pre><code class="language-python">note = db.shelf('note')\
+    .first(lambda note: 'some words' in note['title'])\
+    .run()
+</code></pre>
+<h3><code>get(id: 'UUID1 String') -&gt; entry</code></h3>
+<p>Get the entry at <strong>UUID1</strong> hash key in database.</p>
+<div class="no-margin-next-element">
+    <el-code-title>python</el-code-title>
+</div>
+<pre><code class="language-python">note = db.shelf('note')\
+    .get('6c286bcc-a2a9-11ea-8eff-04d3b02081c2')\
+    .run()
+</code></pre>
+<h3><code>add(entry: dict) -&gt; uuid1: str</code></h3>
+<p>Insert an entry at generated <strong>UUID1</strong> hash key in database.<br />
+Return <strong>UUID1</strong> hash of the inserted entry.</p>
+<div class="no-margin-next-element">
+    <el-code-title>python</el-code-title>
+</div>
+<pre><code class="language-python">note_uuid1 = db.shelf('note')\
+    .insert({'title': 'Shelf DB', 'content': 'Test'})\
+    .run()
+</code></pre>
+<h3><code>map(func(entry) -&gt; Any) -&gt; Iterator</code></h3>
+<p>Mapping function to entries (See python
+<a href="https://docs.python.org/3/library/functions.html#map"><code>map()</code></a>)<br />
+Return value from provided function will be kept in chained query's result
+as iterator.</p>
+<div class="no-margin-next-element">
+    <el-code-title>python</el-code-title>
+</div>
+<pre><code class="language-python"># Get all note titles.
+note_titles = db.shelf('note').map(lambda note: note['title']).run()
+</code></pre>
+<div class="no-margin-next-element">
+    <el-code-title>python</el-code-title>
+</div>
+<pre><code class="language-python"># Get user without password.
+def user_without_password(user):
+    del user['password']
+    return user
+
+users = db.shelf('user').map(user_without_password).run()
+</code></pre>
+<h3><code>patch(uuid1: str, data: dict)</code></h3>
+<p>Patch an entry at provided UUID1 hash in database.
+Create one if not exists.</p>
+<div class="no-margin-next-element">
+    <el-code-title>python</el-code-title>
+</div>
+<h3><code>put(uuid1: str, entry: dict)</code></h3>
+<p>Put an entry at provided UUID1 hash in database. It will replace any existing
+entry if any.</p>
+<div class="no-margin-next-element">
+    <el-code-title>python</el-code-title>
+</div>
+<pre><code class="language-python">db.shelf('note')\
+    .put(
+        '6c286bcc-a2a9-11ea-8eff-04d3b02081c2',
+        {'title': 'Shelf DB', 'content': 'Test'})\
+    .run()
+</code></pre>
+<h3><code>reduce(func(accumulator, current_value, initializer=None) -&gt; accumulator)</code></h3>
+<p>Apply <strong>reduce</strong> function. (See <a href="https://docs.python.org/3/library/functools.html#functools.reduce"><code>reduce()</code></a>)<br />
+Can be use with <strong>map</strong> function. (See <a href="https://www.google.com/search?q=map+reduce"><code>MapReduce</code></a>)</p>
+<pre><code class="language-python"># Get total size of all photos in the shelf.
+total_size = db.shelf('photo')\
+    .map(lambda photo: photo['size'])\
+    .reduce(lambda total, current: total + current)
+    .run()
+</code></pre>
+<h3><code>replace(data: dict)</code></h3>
+<p>Replace data to an entry/entries in chained query's result.</p>
+<h3><code>slice(start: int, stop: int, step=1)</code></h3>
+<p>Slice chained query's result.</p>
+<div class="no-margin-next-element">
+    <el-code-title>python</el-code-title>
+</div>
+<pre><code class="language-python"># Sort notes by datetime and get notes at index [20:40]
+notes = db.shelf('note')\
+    .sort(key=lambda note: note['datetime'])\
+    .slice(20,40)\
+    .run()
+</code></pre>
+<h3><code>sort(key=lambda entry: entry.timestamp, reverse=False)</code></h3>
+<p>Sort entries. See <a href="https://docs.python.org/3/howto/sorting.html#sortinghowto"><code>sort</code></a></p>
+<div class="no-margin-next-element">
+    <el-code-title>python</el-code-title>
+</div>
+<pre><code class="language-python"># Sort then slice [0:50]
+notes = db.shelf('note')\
+    .sort(key=lambda note: note['datetime'])\
+    .slice(0,50)\
+    .run()
+</code></pre>
+<h3><code>update(patch: dict)</code></h3>
+<p>Update patch to an entry/entries in chained query's result.</p>
+<pre><code class="language-python">db.shelf('note').update({'publish': False}).run()
+</code></pre>
+<h3><code>run()</code></h3>
+<p>Send chained query to database.</p>
+
+</div>
+
+
+<el-sidebar showAt="1100px">
+<!-- <el-sidebar showAt="0px"> -->
+    <div el="content">
+        <!-- Sidebar contents -->
+        <div el="title">
+            <a el="home" href="../../../">
+                Shelf DB
+            </a>
+            <a el="close"><el-button-square><el-icon name="window-close"></el-icon></el-button-square></a>
+        </div>
+        <div el="menu">
+            <a href="../../../guide/guide.html"><strong>Guide</strong></a>
+            <a href="../../../guide/database/database.html"><strong>Database</strong></a>
+            <a href="../../../guide/query/query.html"><strong>Query</strong></a>
+            <ul class="sidebar-ul">
+                <li><a href="../../../guide/query/api/api.html">API</a></li>
+            </ul>
+        </div>
+    </div>
+    <div el="overlay"></div>
+</el-sidebar>
+
+
+<div class="empty" style="padding-bottom: 10rem;"></div>
+
+
+</body>
+</html>

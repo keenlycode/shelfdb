@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-36104934-9"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    gtag('config', 'UA-36104934-9');
+</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../base.css?v=2">
+    <script defer src="../../base.js?v=2"></script>
+    
+
+<script defer src="../../guide/base.js?v=2"></script>
+
+</head>
+<body>
+
+<div class="container">
+<h1 class="title">Query</h1>
+<p>You can query <strong>Shelf DB</strong> database using <code>shelfquery</code> module, which can
+execute as <strong>sync</strong> or <strong>async</strong> client.</p>
+<pre><code class="language-python">import shelfquery
+
+db = shelfquery.db() # sync client point to host 127.0.0.1:17000
+db.asyncio() # make it async client.
+db.sync()  # make it sync client again.
+</code></pre>
+<h3>Try it</h3>
+<p>The best way to try <code>shelfquery</code> is using
+<a href="https://ipython.org/"><bits-tag>ipython</bits-tag></a>
+or native python shell then run the codes in this guide.</p>
+<blockquote>
+<p><strong>sync</strong> client is recommened if you want to try and run simple codes
+in python shell.</p>
+</blockquote>
+<h2>Query</h2>
+<p><strong>shelfquery</strong> use method chaining as a syntax to query database. Every query
+will have a sequence steps as<br />
+<strong>select database</strong> -&gt; <strong>select shelf</strong> -&gt; <strong>chained query</strong> -&gt; <strong>run</strong>. For example,</p>
+<div class="no-margin-next-element">
+    <el-code-title>python</el-code-title>
+</div>
+<pre><code class="language-python">import shelfquery
+
+shelfquery.db()\
+    .shelf('note')\
+    .insert({
+        'title': 'Shelf DB',
+        'content': 'Simple note',
+        'datetime': datetime.utcnow()})\
+    .run()
+
+# Explanation ::
+# .db()  : select database, default to 127.0.0.1:17000
+# .shelf('note')  : select shelf 'note'
+# .insert({..})  : insert entry to database.
+# .run()  : send query to database.
+
+</code></pre>
+<p><strong>Shelf DB</strong> will store entries <strong>only as</strong> python <code>dict</code> instances with
+<strong>UUID1</strong> as entries hash key in database. It will return errors if store
+other instances or not use <strong>UUID1</strong> as IDs.</p>
+<p>There're 2 query APIs to store
+entries to database, <strong>insert</strong> and <strong>put</strong>.</p>
+<ul>
+<li><code>add(entry: dict)</code> will add a new entry to database with generated
+<strong>UUID1</strong> string as the entry's unique ID</li>
+<li><code>put(uuid1: str, entry: dict)</code> will add/replace an entry with provided
+<strong>UUID1</strong>  string.</li>
+</ul>
+<p>To query entries from database, you can use APIs such as
+<code>get</code>, <code>filter</code>, <code>sort</code>, <code>map</code>, <code>slice</code>, etc. For example, to run chain query
+in the following order.</p>
+<ol>
+<li>notes which have title start with 'Shelf'</li>
+<li>then, sort by datetime</li>
+<li>then, get the first 10 items</li>
+</ol>
+<div class="no-margin-next-element">
+    <el-code-title>python</el-code-title>
+</div>
+<pre><code class="language-python">entries = shelfquery.db().shelf('note')\
+    .filter(lambda note: re.match('Shelf.*', note['title']))\
+    .sort(key=lambda note: note['datetime'])\
+    .slice(0,10)\
+    .run()
+</code></pre>
+
+</div>
+
+
+<el-sidebar showAt="1100px">
+<!-- <el-sidebar showAt="0px"> -->
+    <div el="content">
+        <!-- Sidebar contents -->
+        <div el="title">
+            <a el="home" href="../../">
+                Shelf DB
+            </a>
+            <a el="close"><el-button-square><el-icon name="window-close"></el-icon></el-button-square></a>
+        </div>
+        <div el="menu">
+            <a href="../../guide/guide.html"><strong>Guide</strong></a>
+            <a href="../../guide/database/database.html"><strong>Database</strong></a>
+            <a href="../../guide/query/query.html"><strong>Query</strong></a>
+            <ul class="sidebar-ul">
+                <li><a href="../../guide/query/api/api.html">API</a></li>
+            </ul>
+        </div>
+    </div>
+    <div el="overlay"></div>
+</el-sidebar>
+
+
+<div class="empty" style="padding-bottom: 10rem;"></div>
+
+
+</body>
+</html>

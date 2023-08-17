@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-36104934-9"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    gtag('config', 'UA-36104934-9');
+</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../base.css?v=2">
+    <script defer src="../../base.js?v=2"></script>
+    
+</head>
+<body>
+
+<div class="container">
+<h1 class="title">Database</h1>
+<p><strong>Shelf DB</strong> server is built on <strong>Python</strong> asyncio server to handle concurrent
+requests. It also implements <strong>uvloop</strong> to speed up concurrency if possible.</p>
+<h2>Shelf DB Server</h2>
+<p>Use command-line <code>shelfdb</code> to start <strong>Shelf DB</strong> server.</p>
+<div class="no-margin-next-element">
+    <el-code-title>shell</el-code-title>
+</div>
+<pre><code class="language-shell">$ shelfdb  # Run server
+Serving on ('127.0.0.1', 17000)
+Database : db
+pid : 11138
+</code></pre>
+<div class="no-margin-next-element">
+    <el-code-title>shell</el-code-title>
+</div>
+<pre><code class="language-shell">$ shelfdb --help  # See help.
+usage: shelfdb [-h] [--host [HOST]] [--port [PORT]] [--db [DB]]
+
+ShelfDB Asyncio Server
+
+optional arguments:
+  -h, --help     show this help message and exit
+  --host [HOST]  server host ip. (default: '127.0.0.1')
+  --port [PORT]  server port. (default: 17000)
+  --db [DB]      server database directory. (default: 'db')
+</code></pre>
+<p><strong>Shelf DB</strong> will create database directory name <code>db</code> if it's not existed and
+use it to store shelf files. Unlike <strong>tables</strong> in <strong>SQL</strong> database,
+<strong>shelf files</strong> will be created on the fly if needed when recieve query from
+client. There's no need to create and define shema for <strong>shelf files</strong> before
+using them.</p>
+<h2>Example</h2>
+<p>After running <strong>Shelf DB</strong> server (default optinal arguments).
+Directory named <code>db</code> will be created.</p>
+<div class="no-margin-next-element">
+    <el-code-title>shell</el-code-title>
+</div>
+<pre><code class="language-shell"># in new terminal.
+$ tree db
+db
+
+0 directories, 0 files
+</code></pre>
+<p>Let's query something from database. Create file named <code>query.py</code>
+and write the code below which ask for all entries store in
+<bits-tag>shelf: note</bits-tag></p>
+<div class="no-margin-next-element">
+    <el-code-title>python</el-code-title>
+</div>
+<pre><code class="language-python"># query.py
+import shelfquery
+db = shelfquery.db()
+db.shelf('note').run()
+</code></pre>
+<p>Then run the script.</p>
+<pre><code class="language-shell">$ python query.py
+[]
+</code></pre>
+<p><strong>Shelf DB</strong> server has created database directory <code>db</code> and return empty
+<code>list</code>. Let's check directory <code>db</code> again.</p>
+<pre><code class="language-shell">$ tree db
+db
+└── note
+
+0 directories, 1 file
+</code></pre>
+
+</div>
+
+
+<el-sidebar showAt="1100px">
+<!-- <el-sidebar showAt="0px"> -->
+    <div el="content">
+        <!-- Sidebar contents -->
+        <div el="title">
+            <a el="home" href="../../">
+                Shelf DB
+            </a>
+            <a el="close"><el-button-square><el-icon name="window-close"></el-icon></el-button-square></a>
+        </div>
+        <div el="menu">
+            <a href="../../guide/guide.html"><strong>Guide</strong></a>
+            <a href="../../guide/database/database.html"><strong>Database</strong></a>
+            <a href="../../guide/query/query.html"><strong>Query</strong></a>
+            <ul class="sidebar-ul">
+                <li><a href="../../guide/query/api/api.html">API</a></li>
+            </ul>
+        </div>
+    </div>
+    <div el="overlay"></div>
+</el-sidebar>
+
+
+<div class="empty" style="padding-bottom: 10rem;"></div>
+
+
+</body>
+</html>

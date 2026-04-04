@@ -1,5 +1,6 @@
-venv/
+.venv/
 data/
 *.pyc
 node_modules/
-docs/shelfdb
+docs/
+dist/

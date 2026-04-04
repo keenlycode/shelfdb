@@ -9,6 +9,29 @@
 $ pip install shelfdb shelfquery
 ```
 
+## Develop with uv
+```shell
+$ uv sync --dev
+```
+
+Run the test suite:
+
+```shell
+$ uv run python -m unittest
+```
+
+Run the server CLI:
+
+```shell
+$ uv run shelfdb
+```
+
+Build distributions:
+
+```shell
+$ uv build
+```
+
 ## Start asyncio server
 ```shell
 $ shelfdb

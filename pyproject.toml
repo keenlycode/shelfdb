@@ -1,6 +1,38 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
+requires = ["uv_build>=0.11.3,<0.12"]
+build-backend = "uv_build"
+
+[project]
+name = "shelfdb"
+version = "1.1.2.dev0"
+description = "A tiny documents database for Python"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Nitipit Nontasuwan", email = "nitipit@gmail.com" },
 ]
-build-backend = "setuptools.build_meta"
+keywords = ["dict", "json", "database"]
+classifiers = [
+    "Programming Language :: Python :: 3.10",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "dill>=0.3.3",
+    "uvloop>=0.16.0; platform_system == 'Linux'",
+]
+
+[project.scripts]
+shelfdb = "shelfdb.server:main"
+
+[dependency-groups]
+dev = [
+    "dictify",
+    "shelfquery",
+]
+
+[tool.uv.build-backend]
+module-name = "shelfdb"
+module-root = ""

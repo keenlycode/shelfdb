@@ -2,8 +2,8 @@
 
 import asyncio
 from dataclasses import dataclass
-from typing import Any
 import sys
+from urllib.parse import urlparse
 
 from cyclopts import App
 
@@ -12,61 +12,48 @@ from .server import ShelfServer
 
 @dataclass(frozen=True, slots=True)
 class ServerConfig:
-    tcp: str = "127.0.0.1:17000"
+    url: str = "tcp://127.0.0.1:17000"
     db: str = "db"
-    unix: str | None = None
 
     def __post_init__(self):
         if not self.db.strip():
             raise ValueError("db must not be empty")
-        if self.unix is not None:
-            if not self.unix.strip():
-                raise ValueError("unix must not be empty")
-            return
+        parse_server_url(self.url)
 
-        if not self.tcp.strip():
-            raise ValueError("tcp must include a non-empty host")
-        if ":" not in self.tcp:
-            raise ValueError("tcp must include a port")
-        host, _, port = self.tcp.rpartition(":")
-        if not host.strip():
-            raise ValueError("tcp must include a non-empty host")
-        if not port:
-            raise ValueError("tcp must include a port")
-        try:
-            port_number = int(port)
-        except ValueError as error:
-            raise ValueError("tcp port must be an integer") from error
-        if not 0 < port_number < 65536:
-            raise ValueError("tcp port must be between 1 and 65535")
 
-    @property
-    def host(self) -> str:
-        host, _, _ = self.tcp.rpartition(":")
-        return host
+def parse_server_url(url: str) -> tuple[str, str | int]:
+    """Parse a TCP or Unix server URL into transport-specific values."""
+    parsed = urlparse(url)
+    if parsed.scheme == "tcp":
+        if parsed.hostname is None:
+            raise ValueError("tcp URL must include a hostname")
+        if parsed.port is None:
+            raise ValueError("tcp URL must include a port")
+        return parsed.hostname, parsed.port
 
-    @property
-    def port(self) -> int:
-        _, _, port = self.tcp.rpartition(":")
-        return int(port)
+    if parsed.scheme == "unix":
+        if not parsed.path:
+            raise ValueError("unix URL must include a socket path")
+        return "unix", parsed.path
+
+    raise ValueError("url must use tcp:// or unix:// scheme")
 
 
 app = App(help="ShelfDB Asyncio Server")
 
 
 @app.default
-def serve(
-    tcp: str = "127.0.0.1:17000",
-    db: str = "db",
-    unix: str | None = None,
-):
-    config = ServerConfig(tcp=tcp, db=db, unix=unix)
-    if config.unix is None:
-        shelf_server = ShelfServer(config.host, config.port, config.db)
-    else:
+def serve(url: str = "tcp://127.0.0.1:17000", db: str = "db"):
+    config = ServerConfig(url=url, db=db)
+    transport, value = parse_server_url(config.url)
+    if transport == "unix":
+        assert isinstance(value, str)
         shelf_server = ShelfServer(
-            host=None, port=None, db_name=config.db, unix_path=config.unix
+            host=None, port=None, db_name=config.db, unix_path=value
         )
+    else:
+        assert isinstance(value, int)
+        shelf_server = ShelfServer(transport, value, config.db)
 
     if sys.platform.startswith("linux"):
         import uvloop
@@ -80,7 +67,4 @@ def serve(
 
 
 def main(tokens: list[str] | None = None):
-    command, bound, _ = app.parse_args(tokens)
-    if "tcp" in bound.arguments and "unix" in bound.arguments:
-        raise ValueError("tcp and unix are mutually exclusive")
-    return command(**bound.arguments)
+    app(tokens)

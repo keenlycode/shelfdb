@@ -4,6 +4,7 @@ import asyncio
 from datetime import datetime  # to be used by client
 import os
 import re  # to be used by client
+from typing import cast
 import stat
 
 import dill
@@ -18,14 +19,18 @@ def replay_queries(shelf, queries):
     for query in queries:
         if isinstance(query, dict):
             name, value = next(iter(query.items()))
+            assert isinstance(name, str), "Query name must be a string."
             method = getattr(current, name)
             if name in {"put", "slice"}:
+                assert isinstance(value, tuple), f"`{name}` expects tuple arguments."
                 current = method(*value)
             elif name == "sort":
-                current = method(**value)
+                assert isinstance(value, dict), "`sort` expects keyword arguments."
+                current = method(**cast(dict[str, object], value))
             else:
                 current = method(value)
         else:
+            assert isinstance(query, str), "Query name must be a string."
             current = getattr(current, query)()
     return current
 

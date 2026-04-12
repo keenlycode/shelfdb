@@ -50,7 +50,7 @@ class QueryHandler:
             else:
                 self.chain_query = getattr(self.chain_query, query)()
         if isinstance(self.chain_query, shelfdb.shelf.Shelf):
-            return self.chain_query.items()
+            return list(self.chain_query.items())
         if isinstance(self.chain_query, shelfdb.shelf.Tx):
             return self.chain_query.run()
         return self.chain_query

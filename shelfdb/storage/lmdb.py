@@ -25,16 +25,18 @@ class LMDBStore:
     def all_items(self, txn=None):
         if txn is not None:
             cursor = txn.cursor()
-            return [
+            return (
                 self._item_type(key.decode(), self._deserialize(value))
                 for key, value in cursor
-            ]
-        with self.begin() as txn:
-            cursor = txn.cursor()
-            return [
-                self._item_type(key.decode(), self._deserialize(value))
-                for key, value in cursor
-            ]
+            )
+
+        def iterator():
+            with self.begin() as txn:
+                cursor = txn.cursor()
+                for key, value in cursor:
+                    yield self._item_type(key.decode(), self._deserialize(value))
+
+        return iterator()
 
     def fetch_item(self, key: str, txn=None):
         if txn is None:

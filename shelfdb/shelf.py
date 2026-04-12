@@ -66,12 +66,12 @@ class Shelf:
         return Tx(self, write=write)
 
     def __iter__(self):
-        return iter(self.items())
+        return self.items()
 
-    def items(self) -> list[Item]:
+    def items(self):
         if self._selection is None:
             return self._store.all_items()
-        return list(self._selection)
+        return iter(self._selection)
 
     def query(self) -> "Shelf":
         return self
@@ -88,12 +88,10 @@ class Shelf:
         )
 
     def filter(self, filter_=None) -> "Shelf":
-        items = list(filter(filter_, self.items()))
-        return Shelf(self._store, items, [item[0] for item in items])
+        return Shelf(self._store, filter(filter_, self.items()))
 
     def slice(self, start: int, stop: int, step: int = None) -> "Shelf":
-        items = list(islice(self.items(), start, stop, step))
-        return Shelf(self._store, items, [item[0] for item in items])
+        return Shelf(self._store, islice(self.items(), start, stop, step))
 
     def sort(self, key=None, reverse: bool = False) -> "Shelf":
         items = sorted(self.items(), key=key, reverse=reverse)
@@ -102,13 +100,13 @@ class Shelf:
     def first(self, filter_=None) -> Item | None:
         items = self.items()
         if filter_ is not None:
-            items = list(filter(filter_, items))
-        return items[0] if items else None
+            items = filter(filter_, items)
+        return next(items, None)
 
     def count(self, filter_=None) -> int:
         items = self.items()
         if filter_ is not None:
-            items = list(filter(filter_, items))
+            items = filter(filter_, items)
         return reduce(lambda total, _: total + 1, items, 0)
 
     def patch(self, key: str, data: Data) -> "Shelf":
@@ -176,14 +174,12 @@ class Tx:
     @tx_step
     def filter(self, txn, selection, filter_=None):
         shelf = self._require_shelf(selection, "filter")
-        items = list(filter(filter_, shelf.items()))
-        return Shelf(self._shelf._store, items, [item[0] for item in items])
+        return Shelf(self._shelf._store, filter(filter_, shelf.items()))
 
     @tx_step
     def slice(self, txn, selection, start: int, stop: int, step: int = None):
         shelf = self._require_shelf(selection, "slice")
-        items = list(islice(shelf.items(), start, stop, step))
-        return Shelf(self._shelf._store, items, [item[0] for item in items])
+        return Shelf(self._shelf._store, islice(shelf.items(), start, stop, step))
 
     @tx_step
     def sort(self, txn, selection, key=None, reverse: bool = False):
@@ -196,15 +192,15 @@ class Tx:
         shelf = self._require_shelf(selection, "first")
         items = shelf.items()
         if filter_ is not None:
-            items = list(filter(filter_, items))
-        return items[0] if items else None
+            items = filter(filter_, items)
+        return next(items, None)
 
     @tx_step
     def count(self, txn, selection, filter_=None):
         shelf = self._require_shelf(selection, "count")
         items = shelf.items()
         if filter_ is not None:
-            items = list(filter(filter_, items))
+            items = filter(filter_, items)
         return reduce(lambda total, _: total + 1, items, 0)
 
     @tx_step
@@ -280,5 +276,5 @@ class Tx:
             for func, args, kwargs in self._operations:
                 selection = func(self, txn, selection, *args, **kwargs)
         if isinstance(selection, Shelf):
-            return selection.items()
+            return list(selection.items())
         return selection

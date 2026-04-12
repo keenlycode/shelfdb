@@ -44,7 +44,7 @@ def test_items_and_iteration(db):
     notes = seed_notes(db)
     shelf = db.shelf("note")
 
-    assert shelf.items() == [Item(key, data) for key, data in notes]
+    assert list(shelf.items()) == [Item(key, data) for key, data in notes]
     assert list(shelf) == [Item(key, data) for key, data in notes]
 
 
@@ -56,13 +56,13 @@ def test_key_filter_slice_sort_first_and_count(db):
     assert shelf.key("missing").first() is None
 
     filtered = shelf.filter(lambda item: item[1]["title"] in {"note-1", "note-3"})
-    assert filtered.items() == [
+    assert list(filtered.items()) == [
         Item("note-1", {"title": "note-1"}),
         Item("note-3", {"title": "note-3"}),
     ]
 
     sliced = shelf.sort(lambda item: item[0], reverse=True).slice(0, 2)
-    assert sliced.items() == [
+    assert list(sliced.items()) == [
         Item("note-4", {"title": "note-4"}),
         Item("note-3", {"title": "note-3"}),
     ]
@@ -116,6 +116,18 @@ def test_item_is_plain_tuple():
 def test_replace_rejects_unsupported_msgpack_values(db):
     with pytest.raises(TypeError):
         db.shelf("note").key("dt").replace({"created_at": datetime.now()})
+
+
+def test_filtered_shelf_is_one_shot(db):
+    seed_notes(db, 3)
+
+    filtered = db.shelf("note").filter(lambda item: item[0] != "note-1")
+
+    assert list(filtered.items()) == [
+        Item("note-0", {"title": "note-0"}),
+        Item("note-2", {"title": "note-2"}),
+    ]
+    assert list(filtered.items()) == []
 
 
 def test_tx_read_chain_uses_run(db):

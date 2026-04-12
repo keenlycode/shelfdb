@@ -4,69 +4,35 @@ import asyncio
 from datetime import datetime  # to be used by client
 import os
 import re  # to be used by client
-from typing import cast
 import stat
 
 import dill
 import msgpack
 
 from . import open as open_db
-from .shelf import Item, Shelf
+from .rpc import normalize_result, run_request
 
 
-def replay_queries(shelf, queries):
-    current = shelf
-    for query in queries:
-        if isinstance(query, dict):
-            name, value = next(iter(query.items()))
-            assert isinstance(name, str), "Query name must be a string."
-            method = getattr(current, name)
-            if name in {"put", "slice"}:
-                assert isinstance(value, tuple), f"`{name}` expects tuple arguments."
-                current = method(*value)
-            elif name == "sort":
-                assert isinstance(value, dict), "`sort` expects keyword arguments."
-                current = method(**cast(dict[str, object], value))
-            else:
-                current = method(value)
-        else:
-            assert isinstance(query, str), "Query name must be a string."
-            current = getattr(current, query)()
-    return current
+async def _write_payload(writer, payload: bytes):
+    """Write one encoded response payload and close the stream."""
+    writer.write(payload)
+    writer.write_eof()
+    await writer.drain()
+    writer.close()
+    await writer.wait_closed()
 
 
-def normalize_result(result):
-    if isinstance(result, Shelf):
-        return [normalize_result(item) for item in result.items()]
-    if isinstance(result, Item):
-        return [result[0], normalize_result(result[1])]
-    if isinstance(result, tuple):
-        return [normalize_result(value) for value in result]
-    if isinstance(result, list):
-        return [normalize_result(value) for value in result]
-    if isinstance(result, dict):
-        return {key: normalize_result(value) for key, value in result.items()}
-    return result
-
-
-def run_query_request(db, payload):
-    return replay_queries(db.shelf(payload["shelf"]), payload["queries"])
-
-
-def run_transaction_request(db, payload):
-    last_result = None
-    with db.transaction(write=payload["write"]):
-        for tx in payload["txs"]:
-            last_result = replay_queries(db.shelf(tx["shelf"]), tx["queries"])
-    return last_result
-
-
-def run_request(db, payload):
-    if payload["type"] == "query":
-        return run_query_request(db, payload)
-    if payload["type"] == "transaction":
-        return run_transaction_request(db, payload)
-    raise AssertionError(f"Unsupported request type: {payload['type']}")
+def _pack_error(error: Exception) -> bytes:
+    """Encode one exception as a msgpack RPC error payload."""
+    return msgpack.packb(
+        {
+            "error": {
+                "type": type(error).__name__,
+                "message": str(error),
+            }
+        },
+        use_bin_type=True,
+    )
 
 
 class ShelfServer:
@@ -99,27 +65,11 @@ class ShelfServer:
         try:
             payload = dill.loads(payload)
             result = run_request(self.shelfdb, payload)
-            result = msgpack.packb(normalize_result(result), use_bin_type=True)
-            writer.write(result)
-            writer.write_eof()
-            await writer.drain()
-            writer.close()
-            await writer.wait_closed()
-        except Exception as error:
-            result = msgpack.packb(
-                {
-                    "error": {
-                        "type": type(error).__name__,
-                        "message": str(error),
-                    }
-                },
-                use_bin_type=True,
+            await _write_payload(
+                writer, msgpack.packb(normalize_result(result), use_bin_type=True)
             )
-            writer.write(result)
-            writer.write_eof()
-            await writer.drain()
-            writer.close()
-            await writer.wait_closed()
+        except Exception as error:
+            await _write_payload(writer, _pack_error(error))
 
     async def run(self):
         cleanup_unix_path = False

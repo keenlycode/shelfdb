@@ -12,6 +12,23 @@ import lmdb
 from shelfdb.storage.lmdb import LMDBStore
 
 Data = dict[str, Any]
+UNDEF = object()
+
+
+class Transaction:
+    def __init__(self, txn, write: bool):
+        self.txn = txn
+        self.write = write
+        self._result = UNDEF
+
+    @property
+    def result(self):
+        return None if self._result is UNDEF else self._result
+
+    @result.setter
+    def result(self, value):
+        assert self._result is UNDEF, "Transaction result already set."
+        self._result = value
 
 
 class DB:
@@ -23,33 +40,32 @@ class DB:
             os.makedirs(self.path)
         self._env = lmdb.open(self.path, create=True, subdir=True, max_dbs=1024)
         self._stores = {}
-        self._active_txn = None
-        self._active_write = None
+        self._active_tx = None
 
     def shelf(self, shelf_name: str) -> "Shelf":
         if shelf_name not in self._stores:
-            if self._active_txn is None:
+            if self._active_tx is None:
                 db_handle = self._env.open_db(shelf_name.encode())
             else:
-                db_handle = self._env.open_db(shelf_name.encode(), txn=self._active_txn)
+                db_handle = self._env.open_db(
+                    shelf_name.encode(), txn=self._active_tx.txn
+                )
             self._stores[shelf_name] = LMDBStore(self._env, db_handle, Item)
         return Shelf(
             self._stores[shelf_name],
-            txn=self._active_txn,
-            write=self._active_write,
+            txn=None if self._active_tx is None else self._active_tx.txn,
+            write=None if self._active_tx is None else self._active_tx.write,
         )
 
     @contextmanager
     def transaction(self, write: bool = False):
-        assert self._active_txn is None, "Nested DB transactions are not supported."
+        assert self._active_tx is None, "Nested DB transactions are not supported."
         with self._env.begin(write=write) as txn:
-            self._active_txn = txn
-            self._active_write = write
+            self._active_tx = Transaction(txn, write)
             try:
-                yield txn
+                yield self._active_tx
             finally:
-                self._active_txn = None
-                self._active_write = None
+                self._active_tx = None
                 self._stores.clear()
 
     def close(self):

@@ -146,6 +146,7 @@ def test_db_transaction_reads_with_consistent_snapshot(db):
 
     with db.transaction() as txn:
         assert txn is not None
+        assert txn.result is None
         filtered = db.shelf("note").filter(lambda item: item[0] in {"note-1", "note-3"})
 
         assert list(
@@ -221,6 +222,29 @@ def test_db_transaction_rejects_nested_transactions(db):
         with pytest.raises(AssertionError):
             with db.transaction(write=True):
                 pass
+
+
+def test_db_transaction_result_allows_explicit_value(db):
+    with db.transaction(write=True) as tx:
+        db.shelf("note").put("note-0", {"title": "note-0"})
+        tx.result = db.shelf("note").key("note-0").first()
+
+    assert tx.result == Item("note-0", {"title": "note-0"})
+
+
+def test_db_transaction_result_allows_explicit_none(db):
+    with db.transaction() as tx:
+        tx.result = None
+
+    assert tx.result is None
+
+
+def test_db_transaction_result_rejects_second_assignment(db):
+    with db.transaction() as tx:
+        tx.result = 1
+
+        with pytest.raises(AssertionError):
+            tx.result = 2
 
 
 def test_delete_returns_lmdb_results_inside_transaction(db):

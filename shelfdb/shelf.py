@@ -2,9 +2,10 @@
 
 from collections.abc import Callable, Iterator
 import os
+from functools import wraps
 from functools import reduce
 from itertools import islice
-from typing import Any
+from typing import Any, cast
 
 import lmdb
 
@@ -14,10 +15,13 @@ Data = dict[str, Any]
 
 
 def tx_step(method: Callable[..., Any]) -> Callable[..., Any]:
-    def wrapper(self, *args, **kwargs):
-        return self._clone((method, args, kwargs))
+    original_method = method
 
-    return wrapper
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        return self._clone((original_method, args, kwargs))
+
+    return cast(Callable[..., Any], wrapper)
 
 
 class DB:
@@ -57,11 +61,9 @@ class Shelf:
         self,
         store: LMDBStore,
         selection: Iterator[Item] | list[Item] | None = None,
-        target_keys: list[str] | None = None,
     ):
         self._store = store
         self._selection = selection
-        self._target_keys = target_keys
 
     def tx(self, write: bool = False) -> "Tx":
         return Tx(self, write=write)
@@ -81,12 +83,15 @@ class Shelf:
         assert isinstance(key, str), "Key should be ``str`` instance."
         if self._selection is None:
             item = self._store.fetch_item(key)
-            return Shelf(self._store, [] if item is None else [item], [key])
-        return Shelf(
-            self._store,
-            [item for item in self._selection if item[0] == key],
-            [key],
-        )
+            return Shelf(self._store, [] if item is None else [item])
+        return Shelf(self._store, [item for item in self._selection if item[0] == key])
+
+    def put(self, key: str, data: Data) -> "Shelf":
+        assert isinstance(key, str), "Key should be ``str`` instance."
+        assert isinstance(data, dict), "Data should be ``dict`` instance."
+        payload = data.copy()
+        self._store.replace_key(key, payload)
+        return Shelf(self._store, [Item(key, payload)])
 
     def filter(self, filter_=None) -> "Shelf":
         return Shelf(self._store, filter(filter_, self.items()))
@@ -96,7 +101,7 @@ class Shelf:
 
     def sort(self, key=None, reverse: bool = False) -> "Shelf":
         items = sorted(self.items(), key=key, reverse=reverse)
-        return Shelf(self._store, items, [item[0] for item in items])
+        return Shelf(self._store, items)
 
     def first(self, filter_=None) -> Item | None:
         items = self.items()
@@ -110,50 +115,42 @@ class Shelf:
             items = filter(filter_, items)
         return reduce(lambda total, _: total + 1, items, 0)
 
-    def patch(self, key: str, data: Data) -> "Shelf":
-        assert isinstance(key, str), "Key should be ``str`` instance."
-        assert isinstance(data, dict), "Data should be ``dict`` instance."
-        item = self._store.fetch_item(key)
-        current = {} if item is None else item[1].copy()
-        current.update(data)
-        self._store.replace_key(key, current)
-        return self.key(key)
-
     def replace(self, data: Data) -> "Shelf":
         assert isinstance(data, dict), "Data should be ``dict`` instance."
+        items = list(self.items())
+        assert items, "`replace()` requires existing selection."
         updated = []
-        keys = self._target_keys
-        if keys is None:
-            keys = [key for key, _ in self.items()]
-        for key in keys:
+        for key, _ in items:
             payload = data.copy()
             self._store.replace_key(key, payload)
             updated.append(Item(key, payload))
-        return Shelf(self._store, updated, [item[0] for item in updated])
+        return Shelf(self._store, updated)
 
     def update(self, data: Data) -> "Shelf":
         assert isinstance(data, dict), "Update data should be dict object."
+        items = list(self.items())
+        assert items, "`update()` requires existing selection."
         updated = []
-        for key, item_data in self.items():
+        for key, item_data in items:
             payload = item_data.copy()
             payload.update(data)
             self._store.replace_key(key, payload)
             updated.append(Item(key, payload))
-        return Shelf(self._store, updated, [item[0] for item in updated])
+        return Shelf(self._store, updated)
 
     def edit(self, func) -> "Shelf":
+        items = list(self.items())
+        assert items, "`edit()` requires existing selection."
         updated = []
-        for item in self.items():
+        for item in items:
             payload = func(Item(item[0], item[1].copy()))
             assert isinstance(payload, dict), "Edited data should be dict object."
             self._store.replace_key(item[0], payload)
             updated.append(Item(item[0], payload))
-        return Shelf(self._store, updated, [item[0] for item in updated])
+        return Shelf(self._store, updated)
 
-    def delete(self) -> "Shelf":
-        for key, _ in self.items():
-            self._store.delete_key(key)
-        return Shelf(self._store, [])
+    def delete(self) -> list[bool]:
+        return [self._store.delete_key(key) for key, _ in self.items()]
 
 
 class Tx:
@@ -173,6 +170,15 @@ class Tx:
         return self._require_shelf(selection, "key").key(key)
 
     @tx_step
+    def put(self, txn, selection, key: str, data: Data):
+        self._require_write("put")
+        assert isinstance(key, str), "Key should be ``str`` instance."
+        assert isinstance(data, dict), "Data should be ``dict`` instance."
+        payload = data.copy()
+        self._shelf._store.replace_key(key, payload, txn=txn)
+        return Shelf(self._shelf._store, [Item(key, payload)])
+
+    @tx_step
     def filter(self, txn, selection, filter_=None):
         shelf = self._require_shelf(selection, "filter")
         return Shelf(self._shelf._store, filter(filter_, shelf.items()))
@@ -186,7 +192,7 @@ class Tx:
     def sort(self, txn, selection, key=None, reverse: bool = False):
         shelf = self._require_shelf(selection, "sort")
         items = sorted(shelf.items(), key=key, reverse=reverse)
-        return Shelf(self._shelf._store, items, [item[0] for item in items])
+        return Shelf(self._shelf._store, items)
 
     @tx_step
     def first(self, txn, selection, filter_=None):
@@ -205,64 +211,53 @@ class Tx:
         return reduce(lambda total, _: total + 1, items, 0)
 
     @tx_step
-    def patch(self, txn, selection, key: str, data: Data):
-        self._require_write("patch")
-        assert isinstance(key, str), "Key should be ``str`` instance."
-        assert isinstance(data, dict), "Data should be ``dict`` instance."
-        item = self._shelf._store.fetch_item(key, txn=txn)
-        current = {} if item is None else item[1].copy()
-        current.update(data)
-        self._shelf._store.replace_key(key, current, txn=txn)
-        item = self._shelf._store.fetch_item(key, txn=txn)
-        return Shelf(self._shelf._store, [] if item is None else [item], [key])
-
-    @tx_step
     def replace(self, txn, selection, data: Data):
         self._require_write("replace")
         assert isinstance(data, dict), "Data should be ``dict`` instance."
         shelf = self._require_shelf(selection, "replace")
+        items = list(shelf.items())
+        assert items, "`replace()` requires existing selection."
         updated = []
-        keys = shelf._target_keys
-        if keys is None:
-            keys = [key for key, _ in shelf.items()]
-        for key in keys:
+        for key, _ in items:
             payload = data.copy()
             self._shelf._store.replace_key(key, payload, txn=txn)
             updated.append(Item(key, payload))
-        return Shelf(self._shelf._store, updated, [item[0] for item in updated])
+        return Shelf(self._shelf._store, updated)
 
     @tx_step
     def update(self, txn, selection, data: Data):
         self._require_write("update")
         assert isinstance(data, dict), "Update data should be dict object."
         shelf = self._require_shelf(selection, "update")
+        items = list(shelf.items())
+        assert items, "`update()` requires existing selection."
         updated = []
-        for key, item_data in shelf.items():
+        for key, item_data in items:
             payload = item_data.copy()
             payload.update(data)
             self._shelf._store.replace_key(key, payload, txn=txn)
             updated.append(Item(key, payload))
-        return Shelf(self._shelf._store, updated, [item[0] for item in updated])
+        return Shelf(self._shelf._store, updated)
 
     @tx_step
     def edit(self, txn, selection, func):
         self._require_write("edit")
         shelf = self._require_shelf(selection, "edit")
+        items = list(shelf.items())
+        assert items, "`edit()` requires existing selection."
         updated = []
-        for item in shelf.items():
+        for item in items:
             payload = func(Item(item[0], item[1].copy()))
             assert isinstance(payload, dict), "Edited data should be dict object."
             self._shelf._store.replace_key(item[0], payload, txn=txn)
             updated.append(Item(item[0], payload))
-        return Shelf(self._shelf._store, updated, [item[0] for item in updated])
+        return Shelf(self._shelf._store, updated)
 
     @tx_step
     def delete(self, txn, selection):
         self._require_write("delete")
         shelf = self._require_shelf(selection, "delete")
-        for key, _ in shelf.items():
-            self._shelf._store.delete_key(key, txn=txn)
-        return Shelf(self._shelf._store, [])
+        return [self._shelf._store.delete_key(key, txn=txn) for key, _ in shelf.items()]
 
     def _require_write(self, operation: str):
         assert self._write, f"`{operation}()` requires write=True transaction."

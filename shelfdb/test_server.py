@@ -61,13 +61,13 @@ def seed_server_notes(client, count=3):
     for index in range(count):
         key = f"note-{index}"
         data = dict(Note({"title": key}))
-        client.shelf("note").key(key).replace(data).run()
+        client.shelf("note").put(key, data).run()
         notes.append((key, data))
     return notes
 
 
-def test_server_key_replace_and_first(server_client):
-    server_client.shelf("note").key("note-1").replace({"title": "remote"}).run()
+def test_server_put_and_first(server_client):
+    server_client.shelf("note").put("note-1", {"title": "remote"}).run()
 
     assert server_client.shelf("note").key("note-1").first().run() == Item(
         "note-1", {"title": "remote"}
@@ -101,7 +101,7 @@ def test_server_filter_sort_slice_and_count(server_client):
     assert server_client.shelf("note").count().run() == 5
 
 
-def test_server_update_edit_patch_and_delete(server_client):
+def test_server_update_edit_put_and_delete(server_client):
     seed_server_notes(server_client, 1)
 
     server_client.shelf("note").key("note-0").update({"content": "updated"}).run()
@@ -116,18 +116,21 @@ def test_server_update_edit_patch_and_delete(server_client):
         "note-0", {"title": "note-0", "content": "edited"}
     )
 
-    server_client.shelf("note").patch("note-1", {"title": "patched"}).run()
+    server_client.shelf("note").put("note-1", {"title": "put"}).run()
     assert server_client.shelf("note").key("note-1").first().run() == Item(
-        "note-1", {"title": "patched"}
+        "note-1", {"title": "put"}
     )
 
-    server_client.shelf("note").key("note-0").delete().run()
+    assert server_client.shelf("note").key("note-0").delete().run() == [True]
     assert server_client.shelf("note").key("note-0").first().run() is None
 
 
 def test_server_validation_error(server_client):
     with pytest.raises(AssertionError):
         server_client.shelf("note").key("bad").replace(lambda: "nope").run()
+
+    with pytest.raises(AssertionError):
+        server_client.shelf("note").key("bad").replace({"title": "nope"}).run()
 
 
 def test_server_tx_read_and_write(server_client):
@@ -146,5 +149,16 @@ def test_server_tx_read_and_write(server_client):
     )
     assert updated == [Item("note-0", {"title": "note-0", "content": "updated"})]
 
+    put = (
+        server_client.shelf("note")
+        .tx(write=True)
+        .put("note-2", {"title": "note-2"})
+        .run()
+    )
+    assert put == [Item("note-2", {"title": "note-2"})]
+
     with pytest.raises(AssertionError):
         server_client.shelf("note").tx().key("note-0").delete().run()
+
+    deleted = server_client.shelf("note").tx(write=True).key("note-0").delete().run()
+    assert deleted == [True]

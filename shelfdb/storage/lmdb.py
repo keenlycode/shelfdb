@@ -59,6 +59,5 @@ class LMDBStore:
     def delete_key(self, key: str, txn=None):
         if txn is None:
             with self.begin(write=True) as txn:
-                txn.delete(key.encode())
-            return
-        txn.delete(key.encode())
+                return txn.delete(key.encode())
+        return txn.delete(key.encode())

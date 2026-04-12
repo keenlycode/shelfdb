@@ -28,16 +28,23 @@ def seed_notes(db, count=5):
     for index in range(count):
         key = f"note-{index}"
         data = dict(Note({"title": key}))
-        db.shelf("note").key(key).replace(data)
+        db.shelf("note").put(key, data)
         notes.append((key, data))
     return notes
 
 
-def test_key_replace_creates_item(db):
-    shelf = db.shelf("note").key("note-1").replace({"title": "hello"})
+def test_put_creates_item(db):
+    shelf = db.shelf("note").put("note-1", {"title": "hello"})
 
     assert isinstance(shelf, Shelf)
     assert shelf.first() == Item("note-1", {"title": "hello"})
+
+
+def test_put_replaces_existing_item(db):
+    db.shelf("note").put("note-1", {"title": "before"})
+    shelf = db.shelf("note").put("note-1", {"title": "after"})
+
+    assert shelf.first() == Item("note-1", {"title": "after"})
 
 
 def test_items_and_iteration(db):
@@ -91,19 +98,23 @@ def test_update_replace_edit_and_delete_apply_eagerly(db):
     )
     assert edited.first() == Item("note-1", {"title": "replaced", "content": "edited"})
 
-    shelf.key("note-1").delete()
+    assert shelf.key("note-1").delete() == [True]
     assert shelf.key("note-1").first() is None
 
 
-def test_patch_updates_or_creates_key(db):
+def test_strict_selection_mutators_raise_on_missing_key(db):
     shelf = db.shelf("note")
 
-    shelf.patch("note-1", {"title": "first"})
-    shelf.patch("note-1", {"content": "patched"})
+    with pytest.raises(AssertionError):
+        shelf.key("missing").replace({"title": "first"})
 
-    assert shelf.key("note-1").first() == Item(
-        "note-1", {"title": "first", "content": "patched"}
-    )
+    with pytest.raises(AssertionError):
+        shelf.key("missing").update({"content": "patched"})
+
+    with pytest.raises(AssertionError):
+        shelf.key("missing").edit(lambda item: item[1])
+
+    assert shelf.key("missing").delete() == []
 
 
 def test_item_is_plain_tuple():
@@ -115,7 +126,7 @@ def test_item_is_plain_tuple():
 
 def test_replace_rejects_unsupported_msgpack_values(db):
     with pytest.raises(TypeError):
-        db.shelf("note").key("dt").replace({"created_at": datetime.now()})
+        db.shelf("note").put("dt", {"created_at": datetime.now()})
 
 
 def test_filtered_shelf_is_one_shot(db):
@@ -161,9 +172,20 @@ def test_tx_write_chain_commits_changes(db):
         "note-0", {"title": "note-0", "content": "updated"}
     )
 
+    put = db.shelf("note").tx(write=True).put("note-2", {"title": "note-2"}).run()
+    assert put == [Item("note-2", {"title": "note-2"})]
+
 
 def test_tx_read_transaction_rejects_write_methods(db):
     seed_notes(db, 1)
 
     with pytest.raises(AssertionError):
         db.shelf("note").tx().key("note-0").replace({"title": "nope"}).run()
+
+
+def test_tx_delete_returns_lmdb_results(db):
+    seed_notes(db, 1)
+
+    deleted = db.shelf("note").tx(write=True).key("note-0").delete().run()
+
+    assert deleted == [True]

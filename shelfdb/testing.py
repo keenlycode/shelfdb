@@ -35,8 +35,8 @@ class ServerQuery:
     def key(self, key):
         return self._clone({"key": key})
 
-    def patch(self, key, data):
-        return self._clone({"patch": (key, data)})
+    def put(self, key, data):
+        return self._clone({"put": (key, data)})
 
     def replace(self, data):
         return self._clone({"replace": data})

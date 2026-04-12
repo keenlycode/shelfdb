@@ -41,7 +41,7 @@ class QueryHandler:
                 method = getattr(self.chain_query, q[0])
                 if q[0] == "tx":
                     self.chain_query = method(**q[1])
-                elif q[0] in {"patch", "slice"}:
+                elif q[0] in {"put", "slice"}:
                     self.chain_query = method(*q[1])
                 elif q[0] == "sort":
                     self.chain_query = method(**q[1])

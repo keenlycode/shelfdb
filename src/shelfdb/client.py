@@ -24,10 +24,16 @@ def _decode_response(data: bytes):
 
 async def connect_async(url: str) -> "Client":
     parsed = urlparse(url)
-    assert parsed.scheme == "tcp", "Client URL must use tcp:// scheme."
-    assert parsed.hostname is not None, "Client URL must include a hostname."
-    assert parsed.port is not None, "Client URL must include a port."
-    return Client(parsed.hostname, parsed.port)
+    if parsed.scheme == "tcp":
+        assert parsed.hostname is not None, "Client URL must include a hostname."
+        assert parsed.port is not None, "Client URL must include a port."
+        return Client(host=parsed.hostname, port=parsed.port)
+
+    if parsed.scheme == "unix":
+        assert parsed.path, "Client URL must include a Unix socket path."
+        return Client(unix_path=parsed.path)
+
+    raise AssertionError("Client URL must use tcp:// or unix:// scheme.")
 
 
 @dataclass(frozen=True)
@@ -160,9 +166,20 @@ class ClientTransaction:
 
 
 class Client:
-    def __init__(self, host: str, port: int):
+    def __init__(
+        self,
+        host: str | None = None,
+        port: int | None = None,
+        unix_path: str | None = None,
+    ):
+        if unix_path is None:
+            assert host is not None, "TCP client requires host."
+            assert port is not None, "TCP client requires port."
+        else:
+            assert host is None and port is None, "Unix client requires unix_path only."
         self.host = host
         self.port = port
+        self.unix_path = unix_path
 
     def shelf(self, shelf_name: str) -> ClientQuery:
         return ClientQuery(self, shelf_name)
@@ -171,7 +188,10 @@ class Client:
         return ClientTransaction(self, write=write)
 
     async def _request(self, payload):
-        reader, writer = await asyncio.open_connection(self.host, self.port)
+        if self.unix_path is None:
+            reader, writer = await asyncio.open_connection(self.host, self.port)
+        else:
+            reader, writer = await asyncio.open_unix_connection(self.unix_path)
         try:
             writer.write(dill.dumps(payload))
             writer.write_eof()

@@ -130,7 +130,7 @@ class Shelf:
         assert isinstance(data, dict), "Data should be ``dict`` instance."
         self._require_write("put")
         payload = data.copy()
-        self._store.replace(key, payload, txn=self._txn)
+        self._store.put(key, payload, txn=self._txn)
         return Shelf(
             self._store, [Item(key, payload)], txn=self._txn, write=self._write
         )
@@ -175,7 +175,7 @@ class Shelf:
         updated = []
         for key, _ in items:
             payload = data.copy()
-            self._store.replace(key, payload, txn=self._txn)
+            self._store.put(key, payload, txn=self._txn)
             updated.append(Item(key, payload))
         return Shelf(self._store, updated, txn=self._txn, write=self._write)
 
@@ -188,7 +188,7 @@ class Shelf:
         for key, item_data in items:
             payload = item_data.copy()
             payload.update(data)
-            self._store.replace(key, payload, txn=self._txn)
+            self._store.put(key, payload, txn=self._txn)
             updated.append(Item(key, payload))
         return Shelf(self._store, updated, txn=self._txn, write=self._write)
 
@@ -200,7 +200,7 @@ class Shelf:
         for item in items:
             payload = func(Item(item[0], item[1].copy()))
             assert isinstance(payload, dict), "Edited data should be dict object."
-            self._store.replace(item[0], payload, txn=self._txn)
+            self._store.put(item[0], payload, txn=self._txn)
             updated.append(Item(item[0], payload))
         return Shelf(self._store, updated, txn=self._txn, write=self._write)
 

@@ -49,7 +49,7 @@ class LMDBStore:
             return None
         return self._item_type(key, self._deserialize(data))
 
-    def replace(self, key: str, data: dict[str, Any], txn=None):
+    def put(self, key: str, data: dict[str, Any], txn=None):
         if txn is None:
             with self.begin(write=True) as txn:
                 txn.put(key.encode(), self._serialize(data))

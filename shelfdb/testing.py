@@ -41,7 +41,7 @@ class ServerQuery:
     def replace(self, data):
         return self._clone({"replace": data})
 
-    def slice(self, start: int, stop: int, step: int = None):
+    def slice(self, start: int, stop: int, step: int | None = None):
         return self._clone({"slice": (start, stop, step)})
 
     def sort(self, key=None, reverse=False):

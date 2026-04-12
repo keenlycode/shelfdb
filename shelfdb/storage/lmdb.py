@@ -1,5 +1,6 @@
 """LMDB-backed storage adapter for ShelfDB."""
 
+from collections.abc import Iterator
 from typing import Any
 
 import msgpack
@@ -22,7 +23,7 @@ class LMDBStore:
     def _deserialize(self, data: bytes) -> dict[str, Any]:
         return msgpack.unpackb(data, raw=False)
 
-    def all_items(self, txn=None):
+    def all_items(self, txn=None) -> Iterator:
         if txn is not None:
             cursor = txn.cursor()
             return (
@@ -30,7 +31,7 @@ class LMDBStore:
                 for key, value in cursor
             )
 
-        def iterator():
+        def iterator() -> Iterator:
             with self.begin() as txn:
                 cursor = txn.cursor()
                 for key, value in cursor:

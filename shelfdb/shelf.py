@@ -1,5 +1,6 @@
 """LMDB-backed eager Shelf API for key/value documents."""
 
+from collections.abc import Callable, Iterator
 import os
 from functools import reduce
 from itertools import islice
@@ -12,7 +13,7 @@ from shelfdb.storage.lmdb import LMDBStore
 Data = dict[str, Any]
 
 
-def tx_step(method):
+def tx_step(method: Callable[..., Any]) -> Callable[..., Any]:
     def wrapper(self, *args, **kwargs):
         return self._clone((method, args, kwargs))
 
@@ -55,7 +56,7 @@ class Shelf:
     def __init__(
         self,
         store: LMDBStore,
-        selection: list[Item] | None = None,
+        selection: Iterator[Item] | list[Item] | None = None,
         target_keys: list[str] | None = None,
     ):
         self._store = store
@@ -65,10 +66,10 @@ class Shelf:
     def tx(self, write: bool = False) -> "Tx":
         return Tx(self, write=write)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Item]:
         return self.items()
 
-    def items(self):
+    def items(self) -> Iterator[Item]:
         if self._selection is None:
             return self._store.all_items()
         return iter(self._selection)
@@ -90,7 +91,7 @@ class Shelf:
     def filter(self, filter_=None) -> "Shelf":
         return Shelf(self._store, filter(filter_, self.items()))
 
-    def slice(self, start: int, stop: int, step: int = None) -> "Shelf":
+    def slice(self, start: int, stop: int, step: int | None = None) -> "Shelf":
         return Shelf(self._store, islice(self.items(), start, stop, step))
 
     def sort(self, key=None, reverse: bool = False) -> "Shelf":
@@ -177,7 +178,7 @@ class Tx:
         return Shelf(self._shelf._store, filter(filter_, shelf.items()))
 
     @tx_step
-    def slice(self, txn, selection, start: int, stop: int, step: int = None):
+    def slice(self, txn, selection, start: int, stop: int, step: int | None = None):
         shelf = self._require_shelf(selection, "slice")
         return Shelf(self._shelf._store, islice(shelf.items(), start, stop, step))
 

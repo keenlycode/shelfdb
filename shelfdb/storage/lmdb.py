@@ -23,9 +23,9 @@ class LMDBStore:
     def _deserialize(self, data: bytes) -> dict[str, Any]:
         return msgpack.unpackb(data, raw=False)
 
-    def all_items(self, txn=None) -> Iterator:
+    def items(self, txn=None) -> Iterator:
         if txn is not None:
-            cursor = txn.cursor()
+            cursor = txn.cursor(db=self._db)
             return (
                 self._item_type(key.decode(), self._deserialize(value))
                 for key, value in cursor
@@ -39,25 +39,25 @@ class LMDBStore:
 
         return iterator()
 
-    def fetch_item(self, key: str, txn=None):
+    def key(self, key: str, txn=None):
         if txn is None:
             with self.begin() as txn:
                 data = txn.get(key.encode())
         else:
-            data = txn.get(key.encode())
+            data = txn.get(key.encode(), db=self._db)
         if data is None:
             return None
         return self._item_type(key, self._deserialize(data))
 
-    def replace_key(self, key: str, data: dict[str, Any], txn=None):
+    def replace(self, key: str, data: dict[str, Any], txn=None):
         if txn is None:
             with self.begin(write=True) as txn:
                 txn.put(key.encode(), self._serialize(data))
             return
-        txn.put(key.encode(), self._serialize(data))
+        txn.put(key.encode(), self._serialize(data), db=self._db)
 
-    def delete_key(self, key: str, txn=None):
+    def delete(self, key: str, txn=None):
         if txn is None:
             with self.begin(write=True) as txn:
                 return txn.delete(key.encode())
-        return txn.delete(key.encode())
+        return txn.delete(key.encode(), db=self._db)

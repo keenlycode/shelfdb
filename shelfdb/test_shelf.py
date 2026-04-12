@@ -6,7 +6,7 @@ import pytest
 from dictify import Field, Model
 
 import shelfdb
-from shelfdb.shelf import Item, Shelf, Tx
+from shelfdb.shelf import Item, Shelf
 
 
 class Note(Model):
@@ -141,51 +141,92 @@ def test_filtered_shelf_is_one_shot(db):
     assert list(filtered.items()) == []
 
 
-def test_tx_read_chain_uses_run(db):
+def test_db_transaction_reads_with_consistent_snapshot(db):
     seed_notes(db)
 
-    tx = db.shelf("note").tx().filter(lambda item: item[0] in {"note-1", "note-3"})
+    with db.transaction() as txn:
+        assert txn is not None
+        filtered = db.shelf("note").filter(lambda item: item[0] in {"note-1", "note-3"})
 
-    assert isinstance(tx, Tx)
-    assert tx.sort(lambda item: item[0], reverse=True).slice(0, 1).run() == [
-        Item("note-3", {"title": "note-3"})
-    ]
-    assert db.shelf("note").tx().key("note-2").first().run() == Item(
-        "note-2", {"title": "note-2"}
-    )
-    assert db.shelf("note").tx().count().run() == 5
+        assert list(
+            filtered.sort(lambda item: item[0], reverse=True).slice(0, 1).items()
+        ) == [Item("note-3", {"title": "note-3"})]
+        assert db.shelf("note").key("note-2").first() == Item(
+            "note-2", {"title": "note-2"}
+        )
+        assert db.shelf("note").count() == 5
 
 
-def test_tx_write_chain_commits_changes(db):
+def test_db_write_transaction_commits_changes(db):
     seed_notes(db, 2)
 
-    updated = (
-        db.shelf("note")
-        .tx(write=True)
-        .key("note-0")
-        .update({"content": "updated"})
-        .run()
-    )
+    with db.transaction(write=True):
+        updated = db.shelf("note").key("note-0").update({"content": "updated"})
+        put = db.shelf("note").put("note-2", {"title": "note-2"})
 
-    assert updated == [Item("note-0", {"title": "note-0", "content": "updated"})]
+    assert list(updated.items()) == [
+        Item("note-0", {"title": "note-0", "content": "updated"})
+    ]
+    assert list(put.items()) == [Item("note-2", {"title": "note-2"})]
     assert db.shelf("note").key("note-0").first() == Item(
         "note-0", {"title": "note-0", "content": "updated"}
     )
 
-    put = db.shelf("note").tx(write=True).put("note-2", {"title": "note-2"}).run()
-    assert put == [Item("note-2", {"title": "note-2"})]
 
-
-def test_tx_read_transaction_rejects_write_methods(db):
+def test_db_transaction_spans_multiple_shelves(db):
     seed_notes(db, 1)
 
-    with pytest.raises(AssertionError):
-        db.shelf("note").tx().key("note-0").replace({"title": "nope"}).run()
+    with db.transaction(write=True):
+        db.shelf("note").key("note-0").update({"content": "updated"})
+        db.shelf("user").put("user-0", {"name": "alice"})
+
+    assert db.shelf("note").key("note-0").first() == Item(
+        "note-0", {"title": "note-0", "content": "updated"}
+    )
+    assert db.shelf("user").key("user-0").first() == Item("user-0", {"name": "alice"})
 
 
-def test_tx_delete_returns_lmdb_results(db):
+def test_db_read_transaction_rejects_write_methods(db):
     seed_notes(db, 1)
 
-    deleted = db.shelf("note").tx(write=True).key("note-0").delete().run()
+    with db.transaction():
+        with pytest.raises(AssertionError):
+            db.shelf("note").key("note-0").replace({"title": "nope"})
+
+
+def test_db_transaction_rolls_back_on_error(db):
+    seed_notes(db, 1)
+
+    with pytest.raises(RuntimeError):
+        with db.transaction(write=True):
+            db.shelf("note").key("note-0").update({"content": "updated"})
+            db.shelf("user").put("user-0", {"name": "alice"})
+            raise RuntimeError("boom")
+
+    assert db.shelf("note").key("note-0").first() == Item("note-0", {"title": "note-0"})
+    assert db.shelf("user").key("user-0").first() is None
+
+
+def test_db_transaction_reads_its_own_writes(db):
+    with db.transaction(write=True):
+        db.shelf("note").put("note-0", {"title": "note-0"})
+
+        assert db.shelf("note").key("note-0").first() == Item(
+            "note-0", {"title": "note-0"}
+        )
+
+
+def test_db_transaction_rejects_nested_transactions(db):
+    with db.transaction(write=True):
+        with pytest.raises(AssertionError):
+            with db.transaction(write=True):
+                pass
+
+
+def test_delete_returns_lmdb_results_inside_transaction(db):
+    seed_notes(db, 1)
+
+    with db.transaction(write=True):
+        deleted = db.shelf("note").key("note-0").delete()
 
     assert deleted == [True]

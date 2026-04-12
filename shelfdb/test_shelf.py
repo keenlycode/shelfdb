@@ -6,7 +6,7 @@ import pytest
 from dictify import Field, Model
 
 import shelfdb
-from shelfdb.shelf import Item, Shelf
+from shelfdb.shelf import Item, Shelf, Tx
 
 
 class Note(Model):
@@ -116,3 +116,42 @@ def test_item_is_plain_tuple():
 def test_replace_rejects_unsupported_msgpack_values(db):
     with pytest.raises(TypeError):
         db.shelf("note").key("dt").replace({"created_at": datetime.now()})
+
+
+def test_tx_read_chain_uses_run(db):
+    seed_notes(db)
+
+    tx = db.shelf("note").tx().filter(lambda item: item[0] in {"note-1", "note-3"})
+
+    assert isinstance(tx, Tx)
+    assert tx.sort(lambda item: item[0], reverse=True).slice(0, 1).run() == [
+        Item("note-3", {"title": "note-3"})
+    ]
+    assert db.shelf("note").tx().key("note-2").first().run() == Item(
+        "note-2", {"title": "note-2"}
+    )
+    assert db.shelf("note").tx().count().run() == 5
+
+
+def test_tx_write_chain_commits_changes(db):
+    seed_notes(db, 2)
+
+    updated = (
+        db.shelf("note")
+        .tx(write=True)
+        .key("note-0")
+        .update({"content": "updated"})
+        .run()
+    )
+
+    assert updated == [Item("note-0", {"title": "note-0", "content": "updated"})]
+    assert db.shelf("note").key("note-0").first() == Item(
+        "note-0", {"title": "note-0", "content": "updated"}
+    )
+
+
+def test_tx_read_transaction_rejects_write_methods(db):
+    seed_notes(db, 1)
+
+    with pytest.raises(AssertionError):
+        db.shelf("note").tx().key("note-0").replace({"title": "nope"}).run()

@@ -39,7 +39,9 @@ class QueryHandler:
             if isinstance(query, dict):
                 q = query.popitem()
                 method = getattr(self.chain_query, q[0])
-                if q[0] in {"patch", "slice"}:
+                if q[0] == "tx":
+                    self.chain_query = method(**q[1])
+                elif q[0] in {"patch", "slice"}:
                     self.chain_query = method(*q[1])
                 elif q[0] == "sort":
                     self.chain_query = method(**q[1])
@@ -49,6 +51,8 @@ class QueryHandler:
                 self.chain_query = getattr(self.chain_query, query)()
         if isinstance(self.chain_query, shelfdb.shelf.Shelf):
             return self.chain_query.items()
+        if isinstance(self.chain_query, shelfdb.shelf.Tx):
+            return self.chain_query.run()
         return self.chain_query
 
 

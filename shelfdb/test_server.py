@@ -128,3 +128,23 @@ def test_server_update_edit_patch_and_delete(server_client):
 def test_server_validation_error(server_client):
     with pytest.raises(AssertionError):
         server_client.shelf("note").key("bad").replace(lambda: "nope").run()
+
+
+def test_server_tx_read_and_write(server_client):
+    seed_server_notes(server_client, 2)
+
+    assert server_client.shelf("note").tx().key("note-1").first().run() == Item(
+        "note-1", {"title": "note-1"}
+    )
+
+    updated = (
+        server_client.shelf("note")
+        .tx(write=True)
+        .key("note-0")
+        .update({"content": "updated"})
+        .run()
+    )
+    assert updated == [Item("note-0", {"title": "note-0", "content": "updated"})]
+
+    with pytest.raises(AssertionError):
+        server_client.shelf("note").tx().key("note-0").delete().run()

@@ -14,6 +14,9 @@ class ServerQuery:
     def _clone(self, query):
         return ServerQuery(self._client, self._shelf_name, [*self._queries, query])
 
+    def tx(self, write=False):
+        return self._clone({"tx": {"write": write}})
+
     def count(self):
         return self._clone("count")
 
@@ -31,9 +34,6 @@ class ServerQuery:
 
     def key(self, key):
         return self._clone({"key": key})
-
-    def map(self, func):
-        return self._clone({"map": func})
 
     def patch(self, key, data):
         return self._clone({"patch": (key, data)})

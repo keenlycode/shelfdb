@@ -4,6 +4,8 @@ import asyncio
 from multiprocessing import Process
 from time import sleep
 
+import dill
+import msgpack
 import pytest
 
 from shelfdb import server
@@ -96,6 +98,37 @@ def seed_server_notes(client, count=3):
     return notes
 
 
+class FakeReader:
+    def __init__(self, payload: bytes):
+        self.payload = payload
+
+    async def read(self, _size: int):
+        return self.payload
+
+
+class FakeWriter:
+    def __init__(self, fail_on_drain: bool = False):
+        self.fail_on_drain = fail_on_drain
+        self.payloads = []
+        self.closed = False
+
+    def write(self, payload: bytes):
+        self.payloads.append(payload)
+
+    def write_eof(self):
+        pass
+
+    async def drain(self):
+        if self.fail_on_drain:
+            raise ConnectionError("broken pipe")
+
+    def close(self):
+        self.closed = True
+
+    async def wait_closed(self):
+        pass
+
+
 def test_server_put_and_first(server_client):
     asyncio.run(server_client.shelf("note").put("note-1", {"title": "remote"}).run())
 
@@ -103,6 +136,53 @@ def test_server_put_and_first(server_client):
         "note-1",
         {"title": "remote"},
     ]
+
+
+def test_handler_returns_rpc_error_payload(tmp_path):
+    shelf_server = server.ShelfServer(db_name=str(tmp_path / "db"))
+    writer = FakeWriter()
+
+    try:
+        asyncio.run(
+            shelf_server.handler(FakeReader(dill.dumps({"type": "nope"})), writer)
+        )
+    finally:
+        shelf_server.shelfdb.close()
+
+    assert writer.closed is True
+    payload = msgpack.unpackb(writer.payloads[0], raw=False)
+    assert payload == {
+        "error": {
+            "type": "AssertionError",
+            "message": "Unsupported request type: nope",
+        }
+    }
+
+
+def test_handler_closes_writer_when_stream_write_fails(tmp_path):
+    shelf_server = server.ShelfServer(db_name=str(tmp_path / "db"))
+    writer = FakeWriter(fail_on_drain=True)
+
+    try:
+        with pytest.raises(ConnectionError, match="broken pipe"):
+            asyncio.run(
+                shelf_server.handler(
+                    FakeReader(
+                        dill.dumps(
+                            {
+                                "type": "query",
+                                "shelf": "note",
+                                "queries": ["count"],
+                            }
+                        )
+                    ),
+                    writer,
+                )
+            )
+    finally:
+        shelf_server.shelfdb.close()
+
+    assert writer.closed is True
 
 
 def test_server_filter_sort_slice_and_count(server_client):

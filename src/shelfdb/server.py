@@ -14,12 +14,19 @@ from .rpc import normalize_result, run_request
 
 
 async def _write_payload(writer, payload: bytes):
-    """Write one encoded response payload and close the stream."""
+    """Write one encoded response payload to the stream."""
     writer.write(payload)
     writer.write_eof()
     await writer.drain()
+
+
+async def _close_writer(writer):
+    """Close the stream writer and wait for shutdown."""
     writer.close()
-    await writer.wait_closed()
+    try:
+        await writer.wait_closed()
+    except Exception:
+        pass
 
 
 def _pack_error(error: Exception) -> bytes:
@@ -63,13 +70,16 @@ class ShelfServer:
     async def handler(self, reader, writer):
         payload = await reader.read(-1)
         try:
-            payload = dill.loads(payload)
-            result = run_request(self.shelfdb, payload)
-            await _write_payload(
-                writer, msgpack.packb(normalize_result(result), use_bin_type=True)
-            )
-        except Exception as error:
-            await _write_payload(writer, _pack_error(error))
+            try:
+                payload = dill.loads(payload)
+                result = run_request(self.shelfdb, payload)
+                response = msgpack.packb(normalize_result(result), use_bin_type=True)
+            except Exception as error:
+                response = _pack_error(error)
+
+            await _write_payload(writer, response)
+        finally:
+            await _close_writer(writer)
 
     async def run(self):
         cleanup_unix_path = False

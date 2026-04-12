@@ -1,19 +1,13 @@
-"""Pytest coverage for the eager Shelf API over RPC."""
+"""Pytest coverage for the ShelfDB RPC server and client."""
 
 import asyncio
 from multiprocessing import Process
 from time import sleep
 
 import pytest
-from dictify import Field, Model
 
 from shelfdb import server
 from shelfdb.client import connect_async
-
-
-class Note(Model):
-    title = Field(required=True).instance(str)
-    content = Field().instance(str)
 
 
 def _run_server(host: str, port: int, db_path: str):
@@ -51,15 +45,17 @@ def server_client(tmp_path_factory):
 @pytest.fixture(autouse=True)
 def clear_server_data(server_client):
     asyncio.run(server_client.shelf("note").delete().run())
+    asyncio.run(server_client.shelf("user").delete().run())
     yield
     asyncio.run(server_client.shelf("note").delete().run())
+    asyncio.run(server_client.shelf("user").delete().run())
 
 
 def seed_server_notes(client, count=3):
     notes = []
     for index in range(count):
         key = f"note-{index}"
-        data = dict(Note({"title": key}))
+        data = {"title": key}
         asyncio.run(client.shelf("note").put(key, data).run())
         notes.append((key, data))
     return notes

@@ -1,16 +1,17 @@
 """Async server that executes ShelfDB query pipelines over the network."""
 
-import asyncio
 import argparse
-import dill
-import msgpack
+import asyncio
+from datetime import datetime  # to be used by client
 import os
 import re  # to be used by client
 import sys
-from datetime import datetime  # to be used by client
 
-import shelfdb
-from shelfdb.shelf import Item, Shelf
+import dill
+import msgpack
+
+from . import open as open_db
+from .shelf import Item, Shelf
 
 
 def replay_queries(shelf, queries):
@@ -75,7 +76,7 @@ class ShelfServer:
         self.host = host
         self.port = port
         self.db_name = db_name
-        self.shelfdb = shelfdb.open(db_name)
+        self.shelfdb = open_db(db_name)
 
     async def handler(self, reader, writer):
         payload = await reader.read(-1)

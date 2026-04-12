@@ -2,14 +2,14 @@
 
 from collections.abc import Iterator
 from contextlib import contextmanager
-import os
 from functools import reduce
 from itertools import islice
+import os
 from typing import Any
 
 import lmdb
 
-from shelfdb.storage.lmdb import LMDBStore
+from .storage.lmdb import LMDBStore
 
 Data = dict[str, Any]
 UNDEF = object()

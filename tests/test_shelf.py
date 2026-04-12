@@ -1,17 +1,11 @@
-"""Pytest coverage for the eager local Shelf API."""
+"""Pytest coverage for the eager local ShelfDB API."""
 
 from datetime import datetime
 
 import pytest
-from dictify import Field, Model
 
 import shelfdb
 from shelfdb.shelf import Item, Shelf
-
-
-class Note(Model):
-    title = Field(required=True).instance(str)
-    content = Field().instance(str)
 
 
 @pytest.fixture
@@ -27,7 +21,7 @@ def seed_notes(db, count=5):
     notes = []
     for index in range(count):
         key = f"note-{index}"
-        data = dict(Note({"title": key}))
+        data = {"title": key}
         db.shelf("note").put(key, data)
         notes.append((key, data))
     return notes
@@ -144,9 +138,9 @@ def test_filtered_shelf_is_one_shot(db):
 def test_db_transaction_reads_with_consistent_snapshot(db):
     seed_notes(db)
 
-    with db.transaction() as txn:
-        assert txn is not None
-        assert txn.result is None
+    with db.transaction() as tx:
+        assert tx is not None
+        assert tx.result is None
         filtered = db.shelf("note").filter(lambda item: item[0] in {"note-1", "note-3"})
 
         assert list(

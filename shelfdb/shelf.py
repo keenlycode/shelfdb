@@ -67,9 +67,6 @@ class Shelf:
     ) -> "Shelf":
         return Shelf(self._env, self._shelf, selection, target_keys)
 
-    def _lmdb(self, write: bool = False):
-        return self._env.begin(write=write, db=self._shelf)
-
     def _serialize(self, data: Data) -> bytes:
         return msgpack.packb(data, use_bin_type=True)
 
@@ -82,7 +79,7 @@ class Shelf:
             return [
                 Item(key.decode(), self._deserialize(value)) for key, value in cursor
             ]
-        with self._lmdb() as txn:
+        with self._env.begin(db=self._shelf) as txn:
             cursor = txn.cursor()
             return [
                 Item(key.decode(), self._deserialize(value)) for key, value in cursor
@@ -95,7 +92,7 @@ class Shelf:
 
     def _fetch_item(self, key: str, txn=None) -> Item | None:
         if txn is None:
-            with self._lmdb() as txn:
+            with self._env.begin(db=self._shelf) as txn:
                 data = txn.get(key.encode())
         else:
             data = txn.get(key.encode())
@@ -105,14 +102,14 @@ class Shelf:
 
     def _replace_key(self, key: str, data: Data, txn=None):
         if txn is None:
-            with self._lmdb(write=True) as txn:
+            with self._env.begin(write=True, db=self._shelf) as txn:
                 txn.put(key.encode(), self._serialize(data))
             return
         txn.put(key.encode(), self._serialize(data))
 
     def _delete_key(self, key: str, txn=None):
         if txn is None:
-            with self._lmdb(write=True) as txn:
+            with self._env.begin(write=True, db=self._shelf) as txn:
                 txn.delete(key.encode())
             return
         txn.delete(key.encode())
@@ -335,7 +332,7 @@ class Tx:
         return current
 
     def run(self):
-        with self._shelf._lmdb(write=self._write) as txn:
+        with self._shelf._env.begin(write=self._write, db=self._shelf._shelf) as txn:
             selection = self._shelf._clone(self._shelf._all_items(txn=txn))
             for func, args, kwargs in self._operations:
                 selection = func(self, txn, selection, *args, **kwargs)

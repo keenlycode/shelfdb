@@ -4,10 +4,10 @@ build-backend = "uv_build"
 
 [project]
 name = "shelfdb"
-version = "1.1.2.dev0"
+version = "2.0.0.dev0"
 description = "A tiny documents database for Python"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [
@@ -20,8 +20,10 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "dill>=0.3.3",
-    "uvloop>=0.16.0; platform_system == 'Linux'",
+    "dill>=0.4.0,<0.5",
+    "lmdb>=1.7.3,<2",
+    "msgpack>=1.1.2,<2",
+    "uvloop>=0.22.0,<0.23; platform_system == 'Linux'",
 ]
 
 [project.scripts]
@@ -30,7 +32,7 @@ shelfdb = "shelfdb.server:main"
 [dependency-groups]
 dev = [
     "dictify",
-    "shelfquery",
+    "pytest>=8.4.2,<9",
 ]
 
 [tool.uv.build-backend]

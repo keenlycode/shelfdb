@@ -1,282 +1,179 @@
-import shelve
+"""LMDB-backed eager Shelf API for key/value documents."""
+
 import os
-from typing import Any, Iterator
-import uuid
-from datetime import datetime
-from itertools import islice
 from functools import reduce
-from warnings import warn
+from itertools import islice
+from typing import Any
+
+import lmdb
+import msgpack
+
+Data = dict[str, Any]
 
 
 class DB:
-    """Database class to manage `shelves.open()`"""
+    """Database class to manage an LMDB environment."""
 
     def __init__(self, path: str):
-        """
-        1. Create database object.
-        2. Create database directory.
-
-        Parameters
-        ----------
-        path: str
-            Path to database (directory)
-        """
-
         self.path = path
         if not os.path.exists(self.path):
             os.makedirs(self.path)
+        self._env = lmdb.open(self.path, create=True, subdir=True, max_dbs=1024)
         self._shelf = {}
 
-    def shelf(self, shelf_name: str) -> 'Shelf':
-        """
-        Create shelf file to store entries.
-
-        Parameters
-        ----------
-        shelf_name: str
-        """
-        if (shelf_name not in self._shelf
-                or isinstance(
-                    self._shelf[shelf_name]._shelf.dict,
-                    shelve._ClosedDict)):
-            shelf = shelve.open(os.path.join(self.path, shelf_name))
-            self._shelf[shelf_name] = Shelf(
-                shelf,
-                lambda: (Item(item[0], item[1]) for item in shelf.items()))
-        return self._shelf[shelf_name]
+    def shelf(self, shelf_name: str) -> "Shelf":
+        if shelf_name not in self._shelf:
+            self._shelf[shelf_name] = self._env.open_db(shelf_name.encode())
+        return Shelf(self._env, self._shelf[shelf_name])
 
     def close(self):
-        """Close all shelf files."""
-        for k in self._shelf:
-            self._shelf[k]._shelf.close()
+        self._env.close()
+
+
+class Item(tuple):
+    """Tuple-like `(key, data)` result."""
+
+    def __new__(cls, key: str, data: Data):
+        return super().__new__(cls, (key, data))
+
+    def __getnewargs__(self):
+        return self[0], self[1]
 
 
 class Shelf:
-    def __init__(self, shelf: shelve.DbfilenameShelf, items_iterator_function):
-        """
-        Parameters
-        ----------
-        shelf: shelve.DbfilenameShelf
-            `shelve.DbfilenameShelf` instace from shelve.open()
-        """
+    """Eager chainable selection over one LMDB named database."""
 
+    def __init__(
+        self,
+        env: lmdb.Environment,
+        shelf,
+        selection: list[Item] | None = None,
+        target_keys: list[str] | None = None,
+    ):
+        self._env = env
         self._shelf = shelf
-        self._items_iterator_function = items_iterator_function
+        self._selection = selection
+        self._target_keys = target_keys
+
+    def _clone(
+        self, selection: list[Item], target_keys: list[str] | None = None
+    ) -> "Shelf":
+        return Shelf(self._env, self._shelf, selection, target_keys)
+
+    def _serialize(self, data: Data) -> bytes:
+        return msgpack.packb(data, use_bin_type=True)
+
+    def _deserialize(self, data: bytes) -> Data:
+        return msgpack.unpackb(data, raw=False)
+
+    def _all_items(self) -> list[Item]:
+        with self._env.begin(db=self._shelf) as txn:
+            cursor = txn.cursor()
+            return [
+                Item(key.decode(), self._deserialize(value)) for key, value in cursor
+            ]
+
+    def _selected_items(self) -> list[Item]:
+        if self._selection is None:
+            return self._all_items()
+        return list(self._selection)
+
+    def _fetch_item(self, key: str) -> Item | None:
+        with self._env.begin(db=self._shelf) as txn:
+            data = txn.get(key.encode())
+        if data is None:
+            return None
+        return Item(key, self._deserialize(data))
+
+    def _replace_key(self, key: str, data: Data):
+        with self._env.begin(write=True, db=self._shelf) as txn:
+            txn.put(key.encode(), self._serialize(data))
+
+    def _delete_key(self, key: str):
+        with self._env.begin(write=True, db=self._shelf) as txn:
+            txn.delete(key.encode())
 
     def __iter__(self):
-        """Items iterator"""
-        return iter(self._items_iterator_function())
+        return iter(self._selected_items())
 
-    def add(self, item: dict) -> uuid.UUID:
-        """Add item to database. Use UUID1 string as ID"""
-        
-        uuid1 = str(uuid.uuid1())
-        assert isinstance(item, dict)
-        self._shelf[uuid1] = item
-        return uuid1
+    def items(self) -> list[Item]:
+        return self._selected_items()
 
+    def query(self) -> "Shelf":
+        return self
+
+    def key(self, key: str) -> "Shelf":
+        assert isinstance(key, str), "Key should be ``str`` instance."
+        if self._selection is None:
+            item = self._fetch_item(key)
+            return self._clone([] if item is None else [item], [key])
+        return self._clone([item for item in self._selection if item[0] == key], [key])
+
+    def filter(self, filter_=None) -> "Shelf":
+        items = list(filter(filter_, self._selected_items()))
+        return self._clone(items, [item[0] for item in items])
+
+    def slice(self, start: int, stop: int, step: int = None) -> "Shelf":
+        items = list(islice(self._selected_items(), start, stop, step))
+        return self._clone(items, [item[0] for item in items])
+
+    def sort(self, key=None, reverse: bool = False) -> "Shelf":
+        items = sorted(self._selected_items(), key=key, reverse=reverse)
+        return self._clone(items, [item[0] for item in items])
+
+    def first(self, filter_=None) -> Item | None:
+        items = self._selected_items()
+        if filter_ is not None:
+            items = list(filter(filter_, items))
+        return items[0] if items else None
 
     def count(self, filter_=None) -> int:
-        """Count items using filter function"""
+        items = self._selected_items()
+        if filter_ is not None:
+            items = list(filter(filter_, items))
+        return reduce(lambda total, _: total + 1, items, 0)
 
-        return reduce(lambda x, y: x + 1, filter(filter_, self), 0)
+    def patch(self, key: str, data: Data) -> "Shelf":
+        assert isinstance(key, str), "Key should be ``str`` instance."
+        assert isinstance(data, dict), "Data should be ``dict`` instance."
+        item = self._fetch_item(key)
+        current = {} if item is None else item[1].copy()
+        current.update(data)
+        self._replace_key(key, current)
+        return self.key(key)
 
-    def delete(self):
-        """Delete entries in chain query"""
-        for item in self:
-            del self._shelf[item.id]
+    def replace(self, data: Data) -> "Shelf":
+        assert isinstance(data, dict), "Data should be ``dict`` instance."
+        updated = []
+        keys = self._target_keys
+        if keys is None:
+            keys = [key for key, _ in self._selected_items()]
+        for key in keys:
+            payload = data.copy()
+            self._replace_key(key, payload)
+            updated.append(Item(key, payload))
+        return self._clone(updated, [item[0] for item in updated])
 
-    def edit(self, func):
-        """Edit item using funcion
-        
-        Parameters
-        ----------
-        func: function(item: Item) -> dict
-            Returned ``dict`` instance will be saved to database
-        """
+    def update(self, data: Data) -> "Shelf":
+        assert isinstance(data, dict), "Update data should be dict object."
+        updated = []
+        for key, item_data in self._selected_items():
+            payload = item_data.copy()
+            payload.update(data)
+            self._replace_key(key, payload)
+            updated.append(Item(key, payload))
+        return self._clone(updated, [item[0] for item in updated])
 
-        for item in self:
-            data = func(item.copy())
-            assert isinstance(data, dict)
-            self._shelf[item.id] = data
+    def edit(self, func) -> "Shelf":
+        updated = []
+        for item in self._selected_items():
+            payload = func(Item(item[0], item[1].copy()))
+            assert isinstance(payload, dict), "Edited data should be dict object."
+            self._replace_key(item[0], payload)
+            updated.append(Item(item[0], payload))
+        return self._clone(updated, [item[0] for item in updated])
 
-    def filter(self, filter_=None) -> 'Shelf':
-        """Filter items using filter function.
-
-        Parameters
-        ----------
-        filter_: funciton(item: Item) -> bool
-        """
-
-        return Shelf(self._shelf, lambda: filter(filter_, self))
-
-    def first(self, filter_=None) -> 'Item':
-        """Get first item matched with filter function.
-
-        Parameters
-        ----------
-        filter_: function(item: Item) -> bool
-        """
-
-        try:
-            item = next(filter(filter_, self))
-        except StopIteration:
-            return None
-        return Entry(self._shelf, item.id, self._shelf[item.id])
-
-    def get(self, id: str) -> 'Item':
-        """Get item by id"""
-
-        try:
-            return Entry(self._shelf, id, self._shelf[id])
-        except KeyError:
-            return None
-
-    def insert(self, item: dict) -> uuid.UUID:
-        """Insert item to database. Use UUID1 string as ID"""
-        
-        warn('`insert()` is deprecated. Please use `add()`', DeprecationWarning, stacklevel=2)
-        uuid1 = str(uuid.uuid1())
-        assert isinstance(item, dict)
-        self._shelf[uuid1] = item
-        return uuid1
-
-    def items(self) -> 'Iterator':
-        """Return Iterator instance of the Shelf"""
-
-        return iter(self)
-
-    def map(self, func) -> 'Shelf':
-        """Apply ``map()`` on items
-
-        Parameters
-        ----------
-        func: function(item: Item) -> Any
-            Mapping function which can return any instance
-            to keep in chain query.
-        """
-
-        return Shelf(self._shelf, lambda: map(func, self))
-
-    def patch(self, id_: str, data: dict):
-        """Patch entry"""
-        assert isinstance(id_, str), 'ID should be ``str`` instance.'
-        assert isinstance(data, dict), 'Data should be ``dict`` instance.'
-        entry = dict()
-        try:
-            entry = self._shelf[id_]
-        except KeyError:
-            pass
-        entry.update(data)
-        self._shelf[id_] = entry
-
-    def put(self, id_: str, item: dict):
-        """Put entry"""
-
-        assert isinstance(id_, str), 'ID should be ``str`` instance.'
-        assert isinstance(item, dict), 'Item should be ``dict`` instance.'
-        self._shelf[id_] = item
-
-    def reduce(self, func, initializer=None) -> Any:
-        """Apply ``reduce()`` on items"""
-
-        if initializer is None:
-            return reduce(func, self)
-        return reduce(func, self, initializer)
-
-    def replace(self, data: dict):
-        """Replace entry with data"""
-
-        assert isinstance(data, dict)
-        for item in self:
-            self._shelf[item.id] = data
-
-    def slice(self, start: int, stop: int, step: int = None) -> 'Shelf':
-        """Slice items"""
-
-        return Shelf(self._shelf, lambda: islice(self, start, stop, step))
-
-    def sort(self, key=lambda item: item.timestamp, reverse=False) -> 'Shelf':
-        """Sort items"""
-
-        return Shelf(
-            self._shelf,
-            lambda: sorted(self, key=lambda item: key(item), reverse=reverse))
-
-    def update(self, data: dict):
-        """Update entry with data"""
-
-        assert isinstance(data, dict), 'Update data should be dict object'
-        for item in self:
-            item.update(data)
-            self._shelf[item.id] = item
-
-
-class Item(dict):
-    """Item class to read entry from database"""
-
-    def __init__(self, id_, data):
-        self.id = id_
-        super().__init__(data)
-
-    @property
-    def timestamp(self):
-        """Entry's timestamp from uuid1. Use formular from stack overflow.
-        See in stackoverflow.com : https://bit.ly/2EtH05b
-        """
-        try:
-            return self._timestamp
-        except AttributeError:
-            self._timestamp = datetime.fromtimestamp(
-                (uuid.UUID(self.id).time - 0x01b21dd213814000) * 100 / 1e9)
-            return self._timestamp
-
-
-class Entry(Item):
-    """Entry class to write entry to database"""
-
-    def __init__(self, shelf, id, data):
-        self._shelf = shelf
-        self.id = id
-        super().__init__(id, data)
-
-    def delete(self):
-        """Delete this entry"""
-
-        del self._shelf[self.id]
-
-    def edit(self, func) -> dict:
-        """Edit entry using provided function
-
-        Parameters
-        ----------
-        func: function(entry) -> dict
-            Returned ``dict`` instance will replace the entry.
-        """
-
-        data = func(self.copy())
-        assert isinstance(data, dict)
-        self.replace(data)
-
-    def map(self, func) -> Any:
-        """map ``func()`` on the entry.
-
-        Parameters
-        ----------
-        func: function(item: Item) -> Any
-            Mapping function which can return any instance as result.
-        """
-
-        return func(self)
-
-    def replace(self, data: dict):
-        """Replace entry with data"""
-
-        assert isinstance(data, dict)
-        self._shelf[self.id] = data
-
-    def update(self, data: dict):
-        """Update entry with data"""
-
-        super().update(data)
-        self._shelf[self.id] = self.copy()
+    def delete(self) -> "Shelf":
+        for key, _ in self._selected_items():
+            self._delete_key(key)
+        return self._clone([])

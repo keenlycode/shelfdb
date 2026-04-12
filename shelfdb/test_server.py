@@ -1,132 +1,130 @@
-import shutil
-import unittest
+"""Pytest coverage for the eager Shelf API over RPC."""
+
+import asyncio
 from multiprocessing import Process
-from pathlib import Path
 from time import sleep
-from datetime import datetime
+
+import pytest
+from dictify import Field, Model
+
 from shelfdb import server
-import shelfquery
-from dictify import Model, Field
-
-
-shelfdb_process = None
-db = None
+from shelfdb.shelf import Item
+from shelfdb.testing import ServerClient
 
 
 class Note(Model):
     title = Field(required=True).instance(str)
-    note = Field().instance(str)
-    datetime = Field(default=datetime.utcnow)
+    content = Field().instance(str)
 
 
-def setUpModule():
-    global shelfdb_process
-    global db
-    shelfdb_process = Process(target=server.main, daemon=True)
-    shelfdb_process.start()
-    db = shelfquery.db()
-    i = 0
-    while True:
-        sleep(0.1)
+def _run_server(host: str, port: int, db_path: str):
+    shelf_server = server.ShelfServer(host=host, port=port, db_name=db_path)
+    asyncio.run(shelf_server.run())
+
+
+@pytest.fixture(scope="module")
+def server_client(tmp_path_factory):
+    db_path = tmp_path_factory.mktemp("server-db") / "db"
+    process = Process(
+        target=_run_server, args=("127.0.0.1", 17001, str(db_path)), daemon=True
+    )
+    process.start()
+    client = ServerClient(port=17001)
+
+    for _ in range(20):
         try:
-            db.shelf('note').first().run()
+            client.shelf("note").count().run()
             break
-        except ConnectionRefusedError:
-            if i >= 10:
-                raise TimeoutError
-            i += 1
+        except OSError:
+            sleep(0.1)
+    else:
+        process.terminate()
+        process.join(timeout=1)
+        raise TimeoutError("ShelfDB server did not start in time")
+
+    try:
+        yield client
+    finally:
+        process.terminate()
+        process.join(timeout=1)
 
 
-def tearDownModule():
-    global shelfdb_process
-    shelfdb_process.terminate()
-    shutil.rmtree(Path('db'))
+@pytest.fixture(autouse=True)
+def clear_server_data(server_client):
+    server_client.shelf("note").delete().run()
+    yield
+    server_client.shelf("note").delete().run()
 
 
-class TestRetrieveData(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        cls.notes = []
-        for i in range(5):
-            cls.notes.append(Note({'title': 'note-' + str(i)}))
-        for note in cls.notes:
-            id = db.shelf('note').add(note.copy()).run()
-            note.id = id
-
-    @classmethod
-    def tearDownClass(cls):
-        db.shelf('note').delete().run()
-
-    def test_exception(self):
-        with self.assertRaises(Exception):
-            db.shelf('note').update(lambda: 'hi').run()
-
-    def test_iterator(self):
-        notes = db.shelf('note').run()
-        self.assertEqual(len(notes), len(self.notes))
-
-    def test_get(self):
-        note = db.shelf('note').get(self.notes[0].id).run()
-        self.assertDictEqual(self.notes[0], note)
-        self.assertIsInstance(note, shelfquery.Item)
-
-    def test_count(self):
-        count = db.shelf('note').count().run()
-        self.assertEqual(count, 5)
-
-    def test_first(self):
-        note = db.shelf('note').first().run()
-        self.assertIsInstance(note, dict)
-        self.assertIsInstance(note, shelfquery.Item)
-
-    def test_filter(self):
-        notes = db.shelf('note')\
-            .filter(lambda note: note['title'] == 'note-1')\
-            .run()
-        self.assertIsInstance(notes, list)
-        self.assertEqual(len(notes), 1)
-        self.assertEqual(notes[0]['title'], 'note-1')
-        self.assertIsInstance(notes[0], shelfquery.Item)
+def seed_server_notes(client, count=3):
+    notes = []
+    for index in range(count):
+        key = f"note-{index}"
+        data = dict(Note({"title": key}))
+        client.shelf("note").key(key).replace(data).run()
+        notes.append((key, data))
+    return notes
 
 
-class TestModifyData(unittest.TestCase):
+def test_server_key_replace_and_first(server_client):
+    server_client.shelf("note").key("note-1").replace({"title": "remote"}).run()
 
-    @classmethod
-    def setUpClass(cls):
-        cls.notes = []
-        for i in range(5):
-            cls.notes.append(Note({'title': 'note-' + str(i)}))
-        for note in cls.notes:
-            id = db.shelf('note').insert(note.copy()).run()
-            note.id = id
+    assert server_client.shelf("note").key("note-1").first().run() == Item(
+        "note-1", {"title": "remote"}
+    )
 
-    @classmethod
-    def tearDownClass(cls):
-        db.shelf('note').delete().run()
 
-    def test_map(self):
-        def get_title(note):
-            return note['title']
+def test_server_filter_sort_slice_and_count(server_client):
+    seed_server_notes(server_client, 5)
 
-        title = db.shelf('note').first().map(get_title).run()
-        self.assertIsInstance(title, str)
+    filtered = (
+        server_client.shelf("note")
+        .filter(lambda item: item[0] in {"note-1", "note-3"})
+        .run()
+    )
+    assert filtered == [
+        Item("note-1", {"title": "note-1"}),
+        Item("note-3", {"title": "note-3"}),
+    ]
 
-    def test_entry_edit(self):
-        def _edit(note):
-            note['title'] = 'test_edit'
-            return note
-        note = db.shelf('note').first().run()
-        db.shelf('note').get(note.id).edit(_edit).run()
-        note = db.shelf('note').get(note.id).run()
-        self.assertEqual(note['title'], 'test_edit')
+    sliced = (
+        server_client.shelf("note")
+        .sort(lambda item: item[0], reverse=True)
+        .slice(0, 2)
+        .run()
+    )
+    assert sliced == [
+        Item("note-4", {"title": "note-4"}),
+        Item("note-3", {"title": "note-3"}),
+    ]
 
-    def test_entry_update(self):
-        db.shelf('note').first().update({'title': 'test_update'}).run()
-        note = db.shelf('note').first().run()
-        self.assertEqual(note['title'], 'test_update')
+    assert server_client.shelf("note").count().run() == 5
 
-    def test_shelf_update(self):
-        db.shelf('note').update({'note': 'test-update'}).run()
-        for note in db.shelf('note').run():
-            self.assertEqual(note['note'], 'test-update')
+
+def test_server_update_edit_patch_and_delete(server_client):
+    seed_server_notes(server_client, 1)
+
+    server_client.shelf("note").key("note-0").update({"content": "updated"}).run()
+    assert server_client.shelf("note").key("note-0").first().run() == Item(
+        "note-0", {"title": "note-0", "content": "updated"}
+    )
+
+    server_client.shelf("note").key("note-0").edit(
+        lambda item: {"title": item[1]["title"], "content": "edited"}
+    ).run()
+    assert server_client.shelf("note").key("note-0").first().run() == Item(
+        "note-0", {"title": "note-0", "content": "edited"}
+    )
+
+    server_client.shelf("note").patch("note-1", {"title": "patched"}).run()
+    assert server_client.shelf("note").key("note-1").first().run() == Item(
+        "note-1", {"title": "patched"}
+    )
+
+    server_client.shelf("note").key("note-0").delete().run()
+    assert server_client.shelf("note").key("note-0").first().run() is None
+
+
+def test_server_validation_error(server_client):
+    with pytest.raises(AssertionError):
+        server_client.shelf("note").key("bad").replace(lambda: "nope").run()

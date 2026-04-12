@@ -1,59 +1,67 @@
 """Async server that executes ShelfDB query pipelines over the network."""
 
 import asyncio
-import dill
-import re  # to be used by client
-from datetime import datetime  # to be used by client
 import argparse
+import dill
+import msgpack
 import os
+import re  # to be used by client
 import sys
+from datetime import datetime  # to be used by client
+
 import shelfdb
+from shelfdb.shelf import Item, Shelf
 
 
-class QueryHandler:
-    """Class to handle incoming query requests from shelfquery client.
-    It will extract python pickle dict queries (by dill), run process on
-    server side, then return result back to client.
-
-    Format of incoming chain queries (Python ``list`` instance)
-        [
-            '<shelf name>',
-            {'<method>': <arg>},
-            '<method_with_no_arg>',
-            ...
-        ]
-    methods `<arg>` can be anything which can be pickle by dill.
-    See `QueryHandler.run()` to learn how it extracts chain query
-    into method call.
-
-    Methods in QueryHandler are used to map arguments sent from client
-    to methods in ``shelfdb.shelf.Shelf``.
-    """
-
-    def __init__(self, db, shelf, queries):
-        self.chain_query = db.shelf(shelf)
-        self.queries = queries
-
-    def run(self):
-        for query in self.queries:
-            if isinstance(query, dict):
-                q = query.popitem()
-                method = getattr(self.chain_query, q[0])
-                if q[0] == "tx":
-                    self.chain_query = method(**q[1])
-                elif q[0] in {"put", "slice"}:
-                    self.chain_query = method(*q[1])
-                elif q[0] == "sort":
-                    self.chain_query = method(**q[1])
-                else:
-                    self.chain_query = method(q[1])
+def replay_queries(shelf, queries):
+    current = shelf
+    for query in queries:
+        if isinstance(query, dict):
+            name, value = next(iter(query.items()))
+            method = getattr(current, name)
+            if name in {"put", "slice"}:
+                current = method(*value)
+            elif name == "sort":
+                current = method(**value)
             else:
-                self.chain_query = getattr(self.chain_query, query)()
-        if isinstance(self.chain_query, shelfdb.shelf.Shelf):
-            return list(self.chain_query.items())
-        if isinstance(self.chain_query, shelfdb.shelf.Tx):
-            return self.chain_query.run()
-        return self.chain_query
+                current = method(value)
+        else:
+            current = getattr(current, query)()
+    return current
+
+
+def normalize_result(result):
+    if isinstance(result, Shelf):
+        return [normalize_result(item) for item in result.items()]
+    if isinstance(result, Item):
+        return [result[0], normalize_result(result[1])]
+    if isinstance(result, tuple):
+        return [normalize_result(value) for value in result]
+    if isinstance(result, list):
+        return [normalize_result(value) for value in result]
+    if isinstance(result, dict):
+        return {key: normalize_result(value) for key, value in result.items()}
+    return result
+
+
+def run_query_request(db, payload):
+    return replay_queries(db.shelf(payload["shelf"]), payload["queries"])
+
+
+def run_transaction_request(db, payload):
+    last_result = None
+    with db.transaction(write=payload["write"]):
+        for tx in payload["txs"]:
+            last_result = replay_queries(db.shelf(tx["shelf"]), tx["queries"])
+    return last_result
+
+
+def run_request(db, payload):
+    if payload["type"] == "query":
+        return run_query_request(db, payload)
+    if payload["type"] == "transaction":
+        return run_transaction_request(db, payload)
+    raise AssertionError(f"Unsupported request type: {payload['type']}")
 
 
 class ShelfServer:
@@ -70,19 +78,26 @@ class ShelfServer:
         self.shelfdb = shelfdb.open(db_name)
 
     async def handler(self, reader, writer):
-        queries = await reader.read(-1)  # Read until EOF
+        payload = await reader.read(-1)
         try:
-            queries = dill.loads(queries)
-            shelf = queries.pop(0)
-            result = QueryHandler(self.shelfdb, shelf, queries).run()
-            result = dill.dumps(result)
+            payload = dill.loads(payload)
+            result = run_request(self.shelfdb, payload)
+            result = msgpack.packb(normalize_result(result), use_bin_type=True)
             writer.write(result)
             writer.write_eof()
             await writer.drain()
             writer.close()
             await writer.wait_closed()
         except Exception as error:
-            result = dill.dumps(error)
+            result = msgpack.packb(
+                {
+                    "error": {
+                        "type": type(error).__name__,
+                        "message": str(error),
+                    }
+                },
+                use_bin_type=True,
+            )
             writer.write(result)
             writer.write_eof()
             await writer.drain()

@@ -1,4 +1,5 @@
 from .shelf import DB
+from .client import connect_async
 
 
 def open(path: str) -> DB:

@@ -8,8 +8,7 @@ import pytest
 from dictify import Field, Model
 
 from shelfdb import server
-from shelfdb.shelf import Item
-from shelfdb.testing import ServerClient
+from shelfdb.client import connect_async
 
 
 class Note(Model):
@@ -29,11 +28,11 @@ def server_client(tmp_path_factory):
         target=_run_server, args=("127.0.0.1", 17001, str(db_path)), daemon=True
     )
     process.start()
-    client = ServerClient(port=17001)
+    client = asyncio.run(connect_async("tcp://127.0.0.1:17001"))
 
     for _ in range(20):
         try:
-            client.shelf("note").count().run()
+            asyncio.run(client.shelf("note").count().run())
             break
         except OSError:
             sleep(0.1)
@@ -51,9 +50,9 @@ def server_client(tmp_path_factory):
 
 @pytest.fixture(autouse=True)
 def clear_server_data(server_client):
-    server_client.shelf("note").delete().run()
+    asyncio.run(server_client.shelf("note").delete().run())
     yield
-    server_client.shelf("note").delete().run()
+    asyncio.run(server_client.shelf("note").delete().run())
 
 
 def seed_server_notes(client, count=3):
@@ -61,104 +60,140 @@ def seed_server_notes(client, count=3):
     for index in range(count):
         key = f"note-{index}"
         data = dict(Note({"title": key}))
-        client.shelf("note").put(key, data).run()
+        asyncio.run(client.shelf("note").put(key, data).run())
         notes.append((key, data))
     return notes
 
 
 def test_server_put_and_first(server_client):
-    server_client.shelf("note").put("note-1", {"title": "remote"}).run()
+    asyncio.run(server_client.shelf("note").put("note-1", {"title": "remote"}).run())
 
-    assert server_client.shelf("note").key("note-1").first().run() == Item(
-        "note-1", {"title": "remote"}
-    )
+    assert asyncio.run(server_client.shelf("note").key("note-1").first().run()) == [
+        "note-1",
+        {"title": "remote"},
+    ]
 
 
 def test_server_filter_sort_slice_and_count(server_client):
     seed_server_notes(server_client, 5)
 
-    filtered = (
+    filtered = asyncio.run(
         server_client.shelf("note")
         .filter(lambda item: item[0] in {"note-1", "note-3"})
         .run()
     )
     assert filtered == [
-        Item("note-1", {"title": "note-1"}),
-        Item("note-3", {"title": "note-3"}),
+        ["note-1", {"title": "note-1"}],
+        ["note-3", {"title": "note-3"}],
     ]
 
-    sliced = (
+    sliced = asyncio.run(
         server_client.shelf("note")
         .sort(lambda item: item[0], reverse=True)
         .slice(0, 2)
         .run()
     )
     assert sliced == [
-        Item("note-4", {"title": "note-4"}),
-        Item("note-3", {"title": "note-3"}),
+        ["note-4", {"title": "note-4"}],
+        ["note-3", {"title": "note-3"}],
     ]
 
-    assert server_client.shelf("note").count().run() == 5
+    assert asyncio.run(server_client.shelf("note").count().run()) == 5
 
 
 def test_server_update_edit_put_and_delete(server_client):
     seed_server_notes(server_client, 1)
 
-    server_client.shelf("note").key("note-0").update({"content": "updated"}).run()
-    assert server_client.shelf("note").key("note-0").first().run() == Item(
-        "note-0", {"title": "note-0", "content": "updated"}
+    asyncio.run(
+        server_client.shelf("note").key("note-0").update({"content": "updated"}).run()
     )
+    assert asyncio.run(server_client.shelf("note").key("note-0").first().run()) == [
+        "note-0",
+        {"title": "note-0", "content": "updated"},
+    ]
 
-    server_client.shelf("note").key("note-0").edit(
-        lambda item: {"title": item[1]["title"], "content": "edited"}
-    ).run()
-    assert server_client.shelf("note").key("note-0").first().run() == Item(
-        "note-0", {"title": "note-0", "content": "edited"}
+    asyncio.run(
+        server_client.shelf("note")
+        .key("note-0")
+        .edit(lambda item: {"title": item[1]["title"], "content": "edited"})
+        .run()
     )
+    assert asyncio.run(server_client.shelf("note").key("note-0").first().run()) == [
+        "note-0",
+        {"title": "note-0", "content": "edited"},
+    ]
 
-    server_client.shelf("note").put("note-1", {"title": "put"}).run()
-    assert server_client.shelf("note").key("note-1").first().run() == Item(
-        "note-1", {"title": "put"}
-    )
+    asyncio.run(server_client.shelf("note").put("note-1", {"title": "put"}).run())
+    assert asyncio.run(server_client.shelf("note").key("note-1").first().run()) == [
+        "note-1",
+        {"title": "put"},
+    ]
 
-    assert server_client.shelf("note").key("note-0").delete().run() == [True]
-    assert server_client.shelf("note").key("note-0").first().run() is None
+    assert asyncio.run(server_client.shelf("note").key("note-0").delete().run()) == [
+        True
+    ]
+    assert asyncio.run(server_client.shelf("note").key("note-0").first().run()) is None
 
 
 def test_server_validation_error(server_client):
     with pytest.raises(AssertionError):
-        server_client.shelf("note").key("bad").replace(lambda: "nope").run()
+        asyncio.run(
+            server_client.shelf("note").key("bad").replace(lambda: "nope").run()
+        )
 
     with pytest.raises(AssertionError):
-        server_client.shelf("note").key("bad").replace({"title": "nope"}).run()
+        asyncio.run(
+            server_client.shelf("note").key("bad").replace({"title": "nope"}).run()
+        )
 
 
-def test_server_tx_read_and_write(server_client):
+def test_server_transaction_returns_last_result(server_client):
     seed_server_notes(server_client, 2)
 
-    assert server_client.shelf("note").tx().key("note-1").first().run() == Item(
-        "note-1", {"title": "note-1"}
-    )
+    tx = server_client.transaction(write=True)
+    tx.add(tx.shelf("note").key("note-0").update({"content": "updated"}))
+    tx.add(tx.shelf("note").key("note-0").first())
 
-    updated = (
-        server_client.shelf("note")
-        .tx(write=True)
-        .key("note-0")
-        .update({"content": "updated"})
-        .run()
-    )
-    assert updated == [Item("note-0", {"title": "note-0", "content": "updated"})]
+    assert asyncio.run(tx.run()) == [
+        "note-0",
+        {"title": "note-0", "content": "updated"},
+    ]
+    assert tx.result == ["note-0", {"title": "note-0", "content": "updated"}]
 
-    put = (
-        server_client.shelf("note")
-        .tx(write=True)
-        .put("note-2", {"title": "note-2"})
-        .run()
-    )
-    assert put == [Item("note-2", {"title": "note-2"})]
+
+def test_server_transaction_spans_multiple_shelves(server_client):
+    tx = server_client.transaction(write=True)
+    tx.add(tx.shelf("note").put("note-1", {"title": "note-1"}))
+    tx.add(tx.shelf("user").put("user-1", {"name": "alice"}))
+
+    assert asyncio.run(tx.run()) == [["user-1", {"name": "alice"}]]
+    assert asyncio.run(server_client.shelf("note").key("note-1").first().run()) == [
+        "note-1",
+        {"title": "note-1"},
+    ]
+
+
+def test_server_transaction_rejects_readonly_writes(server_client):
+    seed_server_notes(server_client, 1)
+
+    tx = server_client.transaction()
+    tx.add(tx.shelf("note").key("note-0").delete())
 
     with pytest.raises(AssertionError):
-        server_client.shelf("note").tx().key("note-0").delete().run()
+        asyncio.run(tx.run())
 
-    deleted = server_client.shelf("note").tx(write=True).key("note-0").delete().run()
-    assert deleted == [True]
+
+def test_server_transaction_empty_returns_none(server_client):
+    tx = server_client.transaction(write=True)
+
+    assert asyncio.run(tx.run()) is None
+
+
+def test_server_transaction_run_is_single_use(server_client):
+    tx = server_client.transaction(write=True)
+    tx.add(tx.shelf("note").put("note-1", {"title": "note-1"}))
+
+    asyncio.run(tx.run())
+
+    with pytest.raises(AssertionError):
+        asyncio.run(tx.run())

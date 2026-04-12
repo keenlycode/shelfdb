@@ -20,6 +20,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
+    "cyclopts>=4.10.2",
     "dill>=0.4.0,<0.5",
     "lmdb>=1.7.3,<2",
     "msgpack>=1.1.2,<2",
@@ -27,11 +28,11 @@ dependencies = [
 ]
 
 [project.scripts]
-shelfdb = "shelfdb.server:main"
+shelfdb = "shelfdb.cli:main"
 
 [dependency-groups]
 dev = [
-    "dictify",
+    "dictify>=4.0.0,<4.1",
     "pytest>=8.4.2,<9",
 ]
 

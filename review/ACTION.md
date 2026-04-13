@@ -5,6 +5,7 @@
 - 2026-04-13: Keep the work log in `review/ACTION.md`.
 - 2026-04-13: For the RPC security finding, keep the current protocol for now and document it as trusted-local only.
 - 2026-04-13: Do not enforce loopback-only TCP in code right now; warn in docs instead.
+- 2026-04-13: Finding 1 is accepted as a trusted-local-only deployment constraint for now.
 - 2026-04-13: Fix finding 2 by making the local `DB.shelf()` API lazy.
 - 2026-04-13: Local queries execute only on `.run()`.
 - 2026-04-13: Iteration on a local query requires `.run()` first.

@@ -1,16 +1,35 @@
 """Async server that executes ShelfDB query pipelines over the network."""
 
 import asyncio
-from datetime import datetime  # to be used by client
+from datetime import datetime as datetime  # noqa: F401 - exposed for client callables
 import os
-import re  # to be used by client
+import re as re  # noqa: F401 - exposed for client callables
 import stat
 
 import dill
 import msgpack
+import structlog
 
 from . import open as open_db
 from .rpc import normalize_result, run_request
+
+
+log = structlog.get_logger(__name__)
+
+
+def _payload_log_kwargs(payload: object) -> dict[str, object]:
+    if not isinstance(payload, dict):
+        return {"payload_type": type(payload).__name__}
+
+    request_type = payload.get("type")
+    metadata: dict[str, object] = {"request_type": request_type}
+    if request_type == "query":
+        metadata["shelf"] = payload.get("shelf")
+        metadata["query_count"] = len(payload.get("queries", []))
+    elif request_type == "transaction":
+        metadata["tx_count"] = len(payload.get("txs", []))
+        metadata["write"] = payload.get("write")
+    return metadata
 
 
 async def _write_payload(writer, payload: bytes):
@@ -74,9 +93,16 @@ class ShelfServer:
         try:
             try:
                 payload = dill.loads(payload)
+                log.debug("rpc_request_received", **_payload_log_kwargs(payload))
                 result = run_request(self.shelfdb, payload)
                 response = msgpack.packb(normalize_result(result), use_bin_type=True)
+                log.debug("rpc_request_succeeded", **_payload_log_kwargs(payload))
             except Exception as error:
+                log.exception(
+                    "rpc_request_failed",
+                    error_type=type(error).__name__,
+                    **_payload_log_kwargs(payload),
+                )
                 response = _pack_error(error)
 
             await _write_payload(writer, response)
@@ -94,12 +120,16 @@ class ShelfServer:
                     self.handler, path=self.unix_path
                 )
 
-            print("Serving on {}".format(server.sockets[0].getsockname()))
-            print("Database :", self.db_name)
-            print("pid :", os.getpid())
+            log.info(
+                "server_started",
+                address=server.sockets[0].getsockname(),
+                database=self.db_name,
+                pid=os.getpid(),
+            )
             async with server:
                 await server.serve_forever()
         finally:
+            log.info("server_stopped", database=self.db_name)
             self.shelfdb.close()
             if cleanup_unix_path:
                 self._cleanup_unix_socket()
@@ -111,9 +141,11 @@ class ShelfServer:
         try:
             metadata = os.stat(self.unix_path)
         except FileNotFoundError:
+            log.debug("unix_socket_ready", path=self.unix_path)
             return True
 
         if stat.S_ISSOCK(metadata.st_mode):
+            log.debug("unix_socket_replaced", path=self.unix_path)
             os.unlink(self.unix_path)
             return True
 
@@ -125,5 +157,6 @@ class ShelfServer:
 
         try:
             os.unlink(self.unix_path)
+            log.debug("unix_socket_removed", path=self.unix_path)
         except FileNotFoundError:
             pass

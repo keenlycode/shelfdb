@@ -1,6 +1,7 @@
 """Pytest coverage for the ShelfDB RPC server and client."""
 
 import asyncio
+import logging
 from multiprocessing import Process
 from time import sleep
 
@@ -10,6 +11,13 @@ import pytest
 
 from shelfdb import server
 from shelfdb.client import connect_async
+from shelfdb.log import configure_logging
+
+
+def _event_names(caplog):
+    return [
+        record.msg["event"] for record in caplog.records if isinstance(record.msg, dict)
+    ]
 
 
 def _run_server(host: str, port: int, db_path: str):
@@ -225,6 +233,46 @@ def test_server_run_closes_db_on_serve_forever_error(monkeypatch, tmp_path):
     assert fake_db.closed is True
 
 
+def test_server_run_logs_lifecycle(monkeypatch, tmp_path, caplog):
+    class FakeDB:
+        def close(self):
+            pass
+
+    class FakeSocket:
+        def getsockname(self):
+            return ("127.0.0.1", 17001)
+
+    class FakeServer:
+        def __init__(self):
+            self.sockets = [FakeSocket()]
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def serve_forever(self):
+            raise RuntimeError("boom")
+
+    async def fake_start_server(handler, host, port):
+        return FakeServer()
+
+    configure_logging("debug")
+    caplog.set_level(logging.INFO, logger="shelfdb")
+    monkeypatch.setattr(server, "open_db", lambda db_name: FakeDB())
+    monkeypatch.setattr(server.asyncio, "start_server", fake_start_server)
+
+    shelf_server = server.ShelfServer(db_name=str(tmp_path / "db"))
+
+    with pytest.raises(RuntimeError, match="boom"):
+        asyncio.run(shelf_server.run())
+
+    events = _event_names(caplog)
+    assert "server_started" in events
+    assert "server_stopped" in events
+
+
 def test_handler_rejects_legacy_query_step_format(tmp_path):
     shelf_server = server.ShelfServer(db_name=str(tmp_path / "db"))
     writer = FakeWriter()
@@ -285,6 +333,23 @@ def test_handler_rejects_malformed_query_step_payload(tmp_path):
             "message": "Query step `args` must be a list.",
         }
     }
+
+
+def test_handler_logs_request_failure(tmp_path, caplog):
+    configure_logging("debug")
+    caplog.set_level(logging.DEBUG, logger="shelfdb")
+
+    shelf_server = server.ShelfServer(db_name=str(tmp_path / "db"))
+    writer = FakeWriter()
+
+    try:
+        asyncio.run(
+            shelf_server.handler(FakeReader(dill.dumps({"type": "nope"})), writer)
+        )
+    finally:
+        shelf_server.shelfdb.close()
+
+    assert "rpc_request_failed" in _event_names(caplog)
 
 
 def test_server_filter_sort_slice_and_count(server_client):

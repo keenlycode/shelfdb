@@ -63,6 +63,16 @@ shelfdb --url tcp://127.0.0.1:17000
 shelfdb --url unix:///tmp/shelfdb.sock
 ```
 
+Control server logging with stdlib-integrated structlog:
+
+```shell
+shelfdb --log-level info
+shelfdb --log-level debug
+```
+
+If you use the Python client directly, call `shelfdb.log.configure_logging(...)` first to
+see client-side debug logs as well.
+
 ## Network Client
 
 RPC queries are also lazy and execute on `.run()`.

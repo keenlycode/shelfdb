@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 
 from cyclopts import App
 
+from .log import configure_logging
 from .server import ShelfServer
 
 
@@ -15,6 +16,7 @@ from .server import ShelfServer
 class ServerConfig:
     url: str = "tcp://127.0.0.1:17000"
     db: str = "db"
+    log_level: str = "info"
 
     def __post_init__(self):
         if not self.db.strip():
@@ -44,8 +46,9 @@ app = App(help="ShelfDB Asyncio Server")
 
 
 @app.default
-def serve(url: str = "tcp://127.0.0.1:17000", db: str = "db"):
-    config = ServerConfig(url=url, db=db)
+def serve(url: str = "tcp://127.0.0.1:17000", db: str = "db", log_level: str = "info"):
+    config = ServerConfig(url=url, db=db, log_level=log_level)
+    configure_logging(config.log_level)
     transport, value = parse_server_url(config.url)
     if transport == "unix":
         shelf_server = ShelfServer(

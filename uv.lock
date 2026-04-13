@@ -258,6 +258,7 @@ dependencies = [
     { name = "dill" },
     { name = "lmdb" },
     { name = "msgpack" },
+    { name = "structlog" },
     { name = "uvloop", marker = "sys_platform == 'linux'" },
 ]
 
@@ -273,6 +274,7 @@ requires-dist = [
     { name = "dill", specifier = ">=0.4.0,<0.5" },
     { name = "lmdb", specifier = ">=1.7.3,<2" },
     { name = "msgpack", specifier = ">=1.1.2,<2" },
+    { name = "structlog", specifier = ">=25.1.0,<26" },
     { name = "uvloop", marker = "sys_platform == 'linux'", specifier = ">=0.22.0,<0.23" },
 ]
 
@@ -280,6 +282,15 @@ requires-dist = [
 dev = [
     { name = "dictify", specifier = ">=4.0.0,<4.1" },
     { name = "pytest", specifier = ">=8.4.2,<9" },
+]
+
+[[package]]
+name = "structlog"
+version = "25.5.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ef/52/9ba0f43b686e7f3ddfeaa78ac3af750292662284b3661e91ad5494f21dbc/structlog-25.5.0.tar.gz", hash = "sha256:098522a3bebed9153d4570c6d0288abf80a031dfdb2048d59a49e9dc2190fc98", size = 1460830, upload-time = "2025-10-27T08:28:23.028Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a8/45/a132b9074aa18e799b891b91ad72133c98d8042c70f6240e4c5f9dabee2f/structlog-25.5.0-py3-none-any.whl", hash = "sha256:a8453e9b9e636ec59bd9e79bbd4a72f025981b3ba0f5837aebf48f02f37a7f9f", size = 72510, upload-time = "2025-10-27T08:28:21.535Z" },
 ]
 
 [[package]]

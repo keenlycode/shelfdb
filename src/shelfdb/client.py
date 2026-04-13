@@ -3,22 +3,42 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import suppress
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
 import dill
 import msgpack
+import structlog
 
 from .query import QueryBuilderMixin, QueryStep
 
 
+log = structlog.get_logger(__name__)
+
+
+def _payload_log_kwargs(payload: object) -> dict[str, object]:
+    if not isinstance(payload, dict):
+        return {"payload_type": type(payload).__name__}
+
+    request_type = payload.get("type")
+    metadata: dict[str, object] = {"request_type": request_type}
+    if request_type == "query":
+        metadata["shelf"] = payload.get("shelf")
+        metadata["query_count"] = len(payload.get("queries", []))
+    elif request_type == "transaction":
+        metadata["tx_count"] = len(payload.get("txs", []))
+        metadata["write"] = payload.get("write")
+    return metadata
+
+
 def _decode_response(data: bytes):
     payload = msgpack.unpackb(data, raw=False)
+    log.debug("rpc_response_decoded", response_bytes=len(data))
     if isinstance(payload, dict) and "error" in payload:
         error = payload["error"]
         error_type = error["type"]
         message = error["message"]
+        log.debug("rpc_response_error", error_type=error_type)
         if error_type == "AssertionError":
             raise AssertionError(message)
         raise RuntimeError(f"{error_type}: {message}")
@@ -33,12 +53,19 @@ async def connect_async(url: str) -> "Client":
         if parsed.port is None:
             raise ValueError("Client URL must include a port.")
 
+        log.debug(
+            "client_connect_parsed",
+            transport="tcp",
+            host=parsed.hostname,
+            port=parsed.port,
+        )
         return Client(host=parsed.hostname, port=parsed.port)
 
     if parsed.scheme == "unix":
         if not parsed.path:
             raise ValueError("Client URL must include a Unix socket path.")
 
+        log.debug("client_connect_parsed", transport="unix", unix_path=parsed.path)
         return Client(unix_path=parsed.path)
 
     raise ValueError("Client URL must use tcp:// or unix:// scheme.")
@@ -139,10 +166,20 @@ class Client:
 
     async def _request(self, payload):
         if self.unix_path is None:
+            log.debug(
+                "client_connection_opening",
+                transport="tcp",
+                host=self.host,
+                port=self.port,
+            )
             reader, writer = await asyncio.open_connection(self.host, self.port)
         else:
+            log.debug(
+                "client_connection_opening", transport="unix", unix_path=self.unix_path
+            )
             reader, writer = await asyncio.open_unix_connection(self.unix_path)
         try:
+            log.debug("client_request_sending", **_payload_log_kwargs(payload))
             writer.write(dill.dumps(payload))
             writer.write_eof()
             await writer.drain()
@@ -152,8 +189,15 @@ class Client:
                 if not chunk:
                     break
                 chunks.append(chunk)
+            response = b"".join(chunks)
+            log.debug("client_response_received", response_bytes=len(response))
         finally:
             writer.close()
-            with suppress(Exception):
+            try:
                 await writer.wait_closed()
-        return _decode_response(b"".join(chunks))
+            except Exception as error:
+                log.debug(
+                    "client_connection_close_failed",
+                    error_type=type(error).__name__,
+                )
+        return _decode_response(response)

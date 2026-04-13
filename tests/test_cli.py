@@ -3,10 +3,13 @@
 import pytest
 
 from shelfdb.cli import ServerConfig, parse_server_url
+from shelfdb.log import configure_logging, normalize_log_level
 
 
 def test_server_config_defaults_are_valid():
-    assert ServerConfig() == ServerConfig(url="tcp://127.0.0.1:17000", db="db")
+    assert ServerConfig() == ServerConfig(
+        url="tcp://127.0.0.1:17000", db="db", log_level="info"
+    )
 
 
 @pytest.mark.parametrize(
@@ -30,3 +33,12 @@ def test_parse_server_url_returns_tcp_values():
 
 def test_parse_server_url_returns_unix_values():
     assert parse_server_url("unix:///tmp/shelfdb.sock") == ("unix", "/tmp/shelfdb.sock")
+
+
+def test_normalize_log_level_is_case_insensitive():
+    assert normalize_log_level("DeBuG") == 10
+
+
+def test_configure_logging_rejects_invalid_log_level():
+    with pytest.raises(ValueError, match="Invalid log level"):
+        configure_logging("verbose")

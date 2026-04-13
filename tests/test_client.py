@@ -1,12 +1,20 @@
 """Pytest coverage for ShelfDB client transport parsing."""
 
 import asyncio
+import logging
 
 import msgpack
 import pytest
 
 from shelfdb import client
 from shelfdb.client import connect_async
+from shelfdb.log import configure_logging
+
+
+def _event_names(caplog):
+    return [
+        record.msg["event"] for record in caplog.records if isinstance(record.msg, dict)
+    ]
 
 
 def test_connect_async_parses_tcp_url():
@@ -79,3 +87,60 @@ def test_request_returns_response_when_wait_closed_raises(monkeypatch):
     )
 
     assert result == {"ok": True}
+
+
+def test_connect_async_emits_debug_log(caplog):
+    configure_logging("debug")
+    caplog.set_level(logging.DEBUG, logger="shelfdb")
+
+    asyncio.run(connect_async("tcp://127.0.0.1:17000"))
+
+    assert "client_connect_parsed" in _event_names(caplog)
+
+
+def test_request_emits_debug_logs(monkeypatch, caplog):
+    class FakeReader:
+        def __init__(self, payload: bytes):
+            self.payload = payload
+            self.calls = 0
+
+        async def read(self, _size: int):
+            self.calls += 1
+            if self.calls == 1:
+                return self.payload
+            return b""
+
+    class FakeWriter:
+        def write(self, payload: bytes):
+            self.payload = payload
+
+        def write_eof(self):
+            pass
+
+        async def drain(self):
+            pass
+
+        def close(self):
+            pass
+
+        async def wait_closed(self):
+            pass
+
+    async def fake_open_connection(host, port):
+        return FakeReader(msgpack.packb({"ok": True}, use_bin_type=True)), FakeWriter()
+
+    configure_logging("debug")
+    caplog.set_level(logging.DEBUG, logger="shelfdb")
+    monkeypatch.setattr(client.asyncio, "open_connection", fake_open_connection)
+
+    asyncio.run(
+        client.Client(host="127.0.0.1", port=17000)._request(
+            {"type": "query", "shelf": "note", "queries": []}
+        )
+    )
+
+    events = _event_names(caplog)
+    assert "client_connection_opening" in events
+    assert "client_request_sending" in events
+    assert "client_response_received" in events
+    assert "rpc_response_decoded" in events

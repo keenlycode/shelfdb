@@ -15,9 +15,7 @@ from shelfdb.log import configure_logging
 
 
 def _event_names(caplog):
-    return [
-        record.msg["event"] for record in caplog.records if isinstance(record.msg, dict)
-    ]
+    return [record.getMessage() for record in caplog.records]
 
 
 def _run_server(host: str, port: int, db_path: str):
@@ -269,8 +267,8 @@ def test_server_run_logs_lifecycle(monkeypatch, tmp_path, caplog):
         asyncio.run(shelf_server.run())
 
     events = _event_names(caplog)
-    assert "server_started" in events
-    assert "server_stopped" in events
+    assert any("server_started" in message for message in events)
+    assert any("server_stopped" in message for message in events)
 
 
 def test_handler_rejects_legacy_query_step_format(tmp_path):
@@ -349,7 +347,7 @@ def test_handler_logs_request_failure(tmp_path, caplog):
     finally:
         shelf_server.shelfdb.close()
 
-    assert "rpc_request_failed" in _event_names(caplog)
+    assert any("rpc_request_failed" in message for message in _event_names(caplog))
 
 
 def test_server_filter_sort_slice_and_count(server_client):

@@ -30,43 +30,7 @@ def normalize_log_level(log_level: str) -> int:
 def configure_logging(log_level: str = "info"):
     """Configure ShelfDB logging using stdlib logging and structlog."""
     level = normalize_log_level(log_level)
-    shared_processors = [
-        structlog.stdlib.add_logger_name,
-        structlog.stdlib.add_log_level,
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.StackInfoRenderer(),
-    ]
-
-    formatter = structlog.stdlib.ProcessorFormatter(
-        foreign_pre_chain=shared_processors,
-        processors=[
-            structlog.stdlib.ProcessorFormatter.remove_processors_meta,
-            structlog.dev.ConsoleRenderer(),
-        ],
-    )
-
-    handler = logging.StreamHandler()
-    handler.setLevel(level)
-    handler.setFormatter(formatter)
-    handler._shelfdb_handler = True
-
-    logger = logging.getLogger("shelfdb")
-    logger.setLevel(level)
-    logger.propagate = True
-
-    for existing in list(logger.handlers):
-        if getattr(existing, "_shelfdb_handler", False):
-            logger.removeHandler(existing)
-
-    logger.addHandler(handler)
-
-    structlog.configure(
-        processors=[
-            structlog.stdlib.filter_by_level,
-            *shared_processors,
-            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
-        ],
-        wrapper_class=structlog.stdlib.BoundLogger,
-        logger_factory=structlog.stdlib.LoggerFactory(),
-        cache_logger_on_first_use=True,
-    )
+    if not logging.getLogger().handlers:
+        logging.basicConfig(format="%(message)s", level=level)
+    logging.getLogger("shelfdb").setLevel(level)
+    structlog.stdlib.recreate_defaults(log_level=None)

@@ -12,9 +12,7 @@ from shelfdb.log import configure_logging
 
 
 def _event_names(caplog):
-    return [
-        record.msg["event"] for record in caplog.records if isinstance(record.msg, dict)
-    ]
+    return [record.getMessage() for record in caplog.records]
 
 
 def test_connect_async_parses_tcp_url():
@@ -95,7 +93,7 @@ def test_connect_async_emits_debug_log(caplog):
 
     asyncio.run(connect_async("tcp://127.0.0.1:17000"))
 
-    assert "client_connect_parsed" in _event_names(caplog)
+    assert any("client_connect_parsed" in message for message in _event_names(caplog))
 
 
 def test_request_emits_debug_logs(monkeypatch, caplog):
@@ -140,7 +138,7 @@ def test_request_emits_debug_logs(monkeypatch, caplog):
     )
 
     events = _event_names(caplog)
-    assert "client_connection_opening" in events
-    assert "client_request_sending" in events
-    assert "client_response_received" in events
-    assert "rpc_response_decoded" in events
+    assert any("client_connection_opening" in message for message in events)
+    assert any("client_request_sending" in message for message in events)
+    assert any("client_response_received" in message for message in events)
+    assert any("rpc_response_decoded" in message for message in events)

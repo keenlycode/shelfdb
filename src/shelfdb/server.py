@@ -5,6 +5,7 @@ from datetime import datetime as datetime  # noqa: F401 - exposed for client cal
 import os
 import re as re  # noqa: F401 - exposed for client callables
 import stat
+from typing import Any, cast
 
 import dill
 import msgpack
@@ -22,14 +23,15 @@ def _payload_log_kwargs(payload: object) -> dict[str, object]:
     if not isinstance(payload, dict):
         return {"payload_type": type(payload).__name__}
 
-    request_type = payload.get("type")
+    payload_dict = cast(dict[str, Any], payload)
+    request_type = payload_dict.get("type")
     metadata: dict[str, object] = {"request_type": request_type}
     if request_type == "query":
-        metadata["shelf"] = payload.get("shelf")
-        metadata["query_count"] = len(payload.get("queries", []))
+        metadata["shelf"] = payload_dict.get("shelf")
+        metadata["query_count"] = len(payload_dict.get("queries", []))
     elif request_type == "transaction":
-        metadata["tx_count"] = len(payload.get("txs", []))
-        metadata["write"] = payload.get("write")
+        metadata["tx_count"] = len(payload_dict.get("txs", []))
+        metadata["write"] = payload_dict.get("write")
     return metadata
 
 

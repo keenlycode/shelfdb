@@ -368,10 +368,3 @@ def _read_all(sock: socket.socket) -> bytes:
             break
         chunks.append(chunk)
     return b"".join(chunks)
-
-
-# Backwards-compatible aliases.
-Client = AsyncClient
-ClientQuery = AsyncClientQuery
-TransactionQuery = AsyncTransactionQuery
-ClientTransaction = AsyncClientTransaction

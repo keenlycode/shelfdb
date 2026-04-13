@@ -81,7 +81,7 @@ def test_request_returns_response_when_wait_closed_raises(monkeypatch):
     monkeypatch.setattr(client.asyncio, "open_connection", fake_open_connection)
 
     result = asyncio.run(
-        client.Client(host="127.0.0.1", port=17000)._request({"type": "query"})
+        client.AsyncClient(host="127.0.0.1", port=17000)._request({"type": "query"})
     )
 
     assert result == {"ok": True}
@@ -132,7 +132,7 @@ def test_request_emits_debug_logs(monkeypatch, caplog):
     monkeypatch.setattr(client.asyncio, "open_connection", fake_open_connection)
 
     asyncio.run(
-        client.Client(host="127.0.0.1", port=17000)._request(
+        client.AsyncClient(host="127.0.0.1", port=17000)._request(
             {"type": "query", "shelf": "note", "queries": []}
         )
     )

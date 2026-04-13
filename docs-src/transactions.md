@@ -85,12 +85,15 @@ If you use `db.transaction()` without `write=True`, mutating operations such as 
 
 ## Remote transactions
 
-The async client also has transactions:
+Server mode also has transactions. The idea is the same, but remote transactions are built
+explicitly and then sent as one request.
 
 ```python
 tx = client.transaction(write=True)
 tx.add(tx.shelf("note").put("note-1", {"title": "hello"}))
-await tx.run()
+tx.run()
 ```
 
-See **Async Client** for remote usage details.
+For async code, use `await tx.run()` instead.
+
+See [Server Mode](server-mode.md) for connection setup and the shared remote query model.

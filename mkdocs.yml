@@ -4,13 +4,12 @@ docs_dir: docs-src
 site_dir: docs
 
 nav:
-  - ShelfDB: index.md
+  - Overview: index.md
   - Getting Started: getting-started.md
-  - Query Model: query-model.md
   - Local API: local-api.md
+  - Server Mode: server-mode.md
+  - Query Model: query-model.md
   - Transactions: transactions.md
-  - Remote Clients: async-client.md
-  - Server & CLI: server-cli.md
   - Security: security.md
   - API Reference: api-reference.md
 
@@ -30,6 +29,10 @@ plugins:
           paths:
             - src
           options:
+            annotations_path: brief
+            modernize_annotations: true
+            separate_signature: true
+            show_signature_annotations: true
             show_root_heading: true
             show_source: false
 

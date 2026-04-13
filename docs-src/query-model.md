@@ -2,8 +2,10 @@
 
 ShelfDB is built around lazy query pipelines.
 
-Instead of immediately reading or mutating data, you build a query step by step and execute it
+Instead of reading or mutating data immediately, you build a query step by step and execute it
 only when you call `.run()`.
+
+This model is shared across local mode and server mode.
 
 ## Mental model
 
@@ -13,7 +15,13 @@ Start with a shelf:
 query = db.shelf("note")
 ```
 
-At this point, nothing has run yet. `query` is a `ShelfQuery` that describes work to do.
+Or, in server mode:
+
+```python
+query = client.shelf("note")
+```
+
+At this point, nothing has run yet. The query object only describes work to do.
 
 Each method appends another step:
 
@@ -30,6 +38,12 @@ Execution happens here:
 
 ```python
 results = query.run()
+```
+
+For async server mode, execution is the same idea with `await`:
+
+```python
+results = await query.run()
 ```
 
 ## Read operations
@@ -76,7 +90,7 @@ updated = (
 )
 ```
 
-## Local result shape
+## Result shapes
 
 Local query results are tuple-like items in the form:
 
@@ -84,10 +98,18 @@ Local query results are tuple-like items in the form:
 (key, data)
 ```
 
-That means a filter often looks like this:
+That is why local filters often look like this:
 
 ```python
 lambda item: item[1]["title"] == "First note"
+```
+
+Remote results are normalized into plain Python values so they can travel over the wire safely.
+
+For example, a remote `first()` result looks like this:
+
+```python
+["note-1", {"title": "First note"}]
 ```
 
 ## Queries are reusable
@@ -103,19 +125,6 @@ count_after = published.count().run()
 ```
 
 Because the query is lazy, each `.run()` uses the current database state.
-
-## Local vs remote execution
-
-ShelfDB tries to keep the query-building experience similar in both modes:
-
-- **local mode** returns `Shelf` and `Item` objects
-- **remote mode** returns normalized Python values such as lists and dicts
-
-For example, a remote `first()` result looks like:
-
-```python
-["note-1", {"title": "First note"}]
-```
 
 ## Common mistakes
 
@@ -134,9 +143,13 @@ Run first instead:
 list(query.run())
 ```
 
-### Expecting remote results to be `Item` objects
+### Expecting remote results to look like local `Item` objects
 
-The async client returns plain Python data so it can travel over the wire safely.
+Remote execution returns normalized lists and dicts, not local tuple-like result objects.
+
+### Forgetting to `await` async remote execution
+
+Async server mode uses the same query chain, but you must `await query.run()`.
 
 ### Using strict mutators on an empty selection
 

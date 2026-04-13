@@ -3,7 +3,7 @@
 This page is the generated reference for the public Python modules.
 
 Use the narrative pages first if you are learning ShelfDB. Come back here when you want exact
-function signatures, class members, or module-level details.
+signatures, annotations, class members, or module-level details.
 
 ## Package
 
@@ -17,11 +17,17 @@ Local database, query, and result classes.
 
 ::: shelfdb.shelf
 
-## Async client
+## Client
 
-Async client and remote transaction types.
+Sync and async remote client types.
 
 ::: shelfdb.client
+
+## Server
+
+Programmatic server type for running ShelfDB over TCP or a Unix socket.
+
+::: shelfdb.server
 
 ## CLI
 

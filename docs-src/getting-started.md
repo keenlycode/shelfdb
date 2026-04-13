@@ -1,17 +1,15 @@
 # Getting Started
 
-This page walks through the smallest complete ShelfDB workflow: install it, open a database,
-write documents, query them back, and understand the result shape.
+This page shows the smallest useful local ShelfDB workflow: install it, open a database, write a
+document, query it back, and understand what `.run()` returns.
 
 ## Install
-
-Install ShelfDB into your project:
 
 ```shell
 uv add shelfdb
 ```
 
-Or with pip:
+Or:
 
 ```shell
 pip install shelfdb
@@ -25,14 +23,9 @@ import shelfdb
 db = shelfdb.open("db")
 ```
 
-If the database directory does not exist yet, ShelfDB creates it for you.
+If the directory does not exist yet, ShelfDB creates it.
 
-## Write a document
-
-Documents live in named shelves. Each document has:
-
-- a string key
-- a dictionary payload
+## Write your first document
 
 ```python
 db.shelf("note").put(
@@ -45,7 +38,7 @@ db.shelf("note").put(
 ).run()
 ```
 
-`put()` replaces an existing item with the same key.
+Documents live in named shelves. Each document has a string key and a dictionary payload.
 
 ## Read documents back
 
@@ -56,11 +49,7 @@ for key, data in notes:
     print(key, data["title"])
 ```
 
-When you run a local query, you get iterable results made of tuple-like items:
-
-```python
-(key, data)
-```
+Local query results are iterable tuple-like items in the form `(key, data)`.
 
 That means:
 
@@ -74,12 +63,12 @@ note = db.shelf("note").key("note-1").first().run()
 print(note)
 ```
 
-If the key does not exist, `first().run()` returns `None`.
+If nothing matches, `first().run()` returns `None`.
 
 ## Filter and sort
 
 ```python
-python_notes = (
+published_notes = (
     db.shelf("note")
     .filter(lambda item: item[1].get("published") is True)
     .sort(key=lambda item: item[1]["title"])
@@ -87,36 +76,28 @@ python_notes = (
 )
 ```
 
-The query only executes when `.run()` is called.
+The query is lazy. Nothing runs until you call `.run()`.
 
-## Update or delete
+## Update and delete
 
 ```python
 db.shelf("note").key("note-1").update({"views": 1}).run()
 db.shelf("note").key("note-1").delete().run()
 ```
 
-Use:
+Other useful write methods:
 
-- `update()` to merge fields into an existing document
-- `replace()` to replace the whole document
-- `edit()` to transform a document with a function
-- `delete()` to remove matching items
+- `put()` inserts or replaces one document.
+- `replace()` replaces the full document.
+- `edit()` transforms a document with a function.
+- `delete()` removes matching items.
 
-## Data format expectations
+## Data format
 
-ShelfDB stores dictionary data and is designed for msgpack-friendly values.
+ShelfDB is designed for msgpack-friendly values such as strings, numbers, booleans, lists,
+nested dicts, and `None`.
 
-Good examples:
-
-- strings
-- numbers
-- booleans
-- lists
-- nested dicts
-- `None`
-
-If you want to store datetimes, convert them first:
+If you need datetimes, convert them before storing them:
 
 ```python
 from datetime import datetime
@@ -127,9 +108,9 @@ db.shelf("note").put(
 ).run()
 ```
 
-## Your next steps
+## Next steps
 
-- Read **Query Model** to understand lazy execution
-- Read **Local API** for CRUD examples in more detail
-- Read **Transactions** if you need consistent reads or atomic writes
-- Read **Async Client** if you want to run ShelfDB over TCP or Unix sockets
+1. Read [Local API](local-api.md) for more local CRUD patterns.
+2. Read [Query Model](query-model.md) to understand lazy pipelines.
+3. Read [Transactions](transactions.md) for consistent reads and atomic writes.
+4. Read [Server Mode](server-mode.md) if you need a separate ShelfDB process.

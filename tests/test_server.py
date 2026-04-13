@@ -172,7 +172,7 @@ def test_handler_closes_writer_when_stream_write_fails(tmp_path):
                             {
                                 "type": "query",
                                 "shelf": "note",
-                                "queries": ["count"],
+                                "queries": [{"op": "count", "args": [], "kwargs": {}}],
                             }
                         )
                     ),
@@ -183,6 +183,68 @@ def test_handler_closes_writer_when_stream_write_fails(tmp_path):
         shelf_server.shelfdb.close()
 
     assert writer.closed is True
+
+
+def test_handler_rejects_legacy_query_step_format(tmp_path):
+    shelf_server = server.ShelfServer(db_name=str(tmp_path / "db"))
+    writer = FakeWriter()
+
+    try:
+        asyncio.run(
+            shelf_server.handler(
+                FakeReader(
+                    dill.dumps(
+                        {
+                            "type": "query",
+                            "shelf": "note",
+                            "queries": ["count"],
+                        }
+                    )
+                ),
+                writer,
+            )
+        )
+    finally:
+        shelf_server.shelfdb.close()
+
+    payload = msgpack.unpackb(writer.payloads[0], raw=False)
+    assert payload == {
+        "error": {
+            "type": "AssertionError",
+            "message": "Query step must be a dict.",
+        }
+    }
+
+
+def test_handler_rejects_malformed_query_step_payload(tmp_path):
+    shelf_server = server.ShelfServer(db_name=str(tmp_path / "db"))
+    writer = FakeWriter()
+
+    try:
+        asyncio.run(
+            shelf_server.handler(
+                FakeReader(
+                    dill.dumps(
+                        {
+                            "type": "query",
+                            "shelf": "note",
+                            "queries": [{"op": "count", "args": (), "kwargs": {}}],
+                        }
+                    )
+                ),
+                writer,
+            )
+        )
+    finally:
+        shelf_server.shelfdb.close()
+
+    payload = msgpack.unpackb(writer.payloads[0], raw=False)
+    assert payload == {
+        "error": {
+            "type": "AssertionError",
+            "message": "Query step `args` must be a list.",
+        }
+    }
 
 
 def test_server_filter_sort_slice_and_count(server_client):

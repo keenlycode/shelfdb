@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 import dill
 import msgpack
 
-from .query import QueryBuilderMixin
+from .query import QueryBuilderMixin, QueryStep
 
 
 def _decode_response(data: bytes):
@@ -42,9 +42,9 @@ async def connect_async(url: str) -> "Client":
 class ClientQuery(QueryBuilderMixin):
     client: "Client"
     shelf_name: str
-    queries: tuple = ()
+    queries: tuple[QueryStep, ...] = ()
 
-    def _clone(self, query):
+    def _clone(self, query: QueryStep):
         return ClientQuery(self.client, self.shelf_name, (*self.queries, query))
 
     async def run(self):
@@ -60,9 +60,9 @@ class ClientQuery(QueryBuilderMixin):
 class TransactionQuery(QueryBuilderMixin):
     transaction: "ClientTransaction"
     shelf_name: str
-    queries: tuple = ()
+    queries: tuple[QueryStep, ...] = ()
 
-    def _clone(self, query):
+    def _clone(self, query: QueryStep):
         return TransactionQuery(
             self.transaction, self.shelf_name, (*self.queries, query)
         )

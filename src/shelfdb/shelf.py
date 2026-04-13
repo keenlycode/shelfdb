@@ -104,9 +104,9 @@ class Shelf:
         self._write = write
 
     def __iter__(self) -> Iterator[Item]:
-        return self.items()
+        return self._items()
 
-    def items(self) -> Iterator[Item]:
+    def _items(self) -> Iterator[Item]:
         if self._selection is None:
             return self._store.items(txn=self._txn)
         return iter(self._selection)
@@ -144,7 +144,7 @@ class Shelf:
     def filter(self, filter_=None) -> "Shelf":
         return Shelf(
             self._store,
-            filter(filter_, self.items()),
+            filter(filter_, self._items()),
             txn=self._txn,
             write=self._write,
         )
@@ -152,23 +152,23 @@ class Shelf:
     def slice(self, start: int, stop: int, step: int | None = None) -> "Shelf":
         return Shelf(
             self._store,
-            islice(self.items(), start, stop, step),
+            islice(self._items(), start, stop, step),
             txn=self._txn,
             write=self._write,
         )
 
     def sort(self, key=None, reverse: bool = False) -> "Shelf":
-        items = sorted(self.items(), key=key, reverse=reverse)
+        items = sorted(self._items(), key=key, reverse=reverse)
         return Shelf(self._store, items, txn=self._txn, write=self._write)
 
     def first(self, filter_=None) -> Item | None:
-        items = self.items()
+        items = self._items()
         if filter_ is not None:
             items = filter(filter_, items)
         return next(items, None)
 
     def count(self, filter_=None) -> int:
-        items = self.items()
+        items = self._items()
         if filter_ is not None:
             items = filter(filter_, items)
         return reduce(lambda total, _: total + 1, items, 0)
@@ -176,7 +176,7 @@ class Shelf:
     def replace(self, data: Data) -> "Shelf":
         assert isinstance(data, dict), "Data should be ``dict`` instance."
         self._require_write("replace")
-        items = list(self.items())
+        items = list(self._items())
         assert items, "`replace()` requires existing selection."
         updated = []
         for key, _ in items:
@@ -188,7 +188,7 @@ class Shelf:
     def update(self, data: Data) -> "Shelf":
         assert isinstance(data, dict), "Update data should be dict object."
         self._require_write("update")
-        items = list(self.items())
+        items = list(self._items())
         assert items, "`update()` requires existing selection."
         updated = []
         for key, item_data in items:
@@ -200,7 +200,7 @@ class Shelf:
 
     def edit(self, func) -> "Shelf":
         self._require_write("edit")
-        items = list(self.items())
+        items = list(self._items())
         assert items, "`edit()` requires existing selection."
         updated = []
         for item in items:
@@ -212,7 +212,7 @@ class Shelf:
 
     def delete(self) -> list[bool]:
         self._require_write("delete")
-        return [self._store.delete(key, txn=self._txn) for key, _ in self.items()]
+        return [self._store.delete(key, txn=self._txn) for key, _ in self._items()]
 
     def _require_write(self, operation: str):
         if self._txn is not None:
@@ -244,9 +244,6 @@ class ShelfQuery(QueryBuilderMixin):
             (*self.queries, query),
             tx_context=self._tx_context,
         )
-
-    def items(self) -> Iterator[Item]:
-        raise RuntimeError("Call `.run()` before iterating a local ShelfQuery.")
 
     def query(self) -> "ShelfQuery":
         return self

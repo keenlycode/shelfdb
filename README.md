@@ -43,7 +43,7 @@ notes = (
     .run()
 )
 
-print(list(notes.items()))
+print(list(notes))
 ```
 
 `item` values are `(key, data)` tuples, so use `item[0]` for the key and `item[1]` for the stored document.

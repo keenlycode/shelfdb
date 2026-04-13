@@ -7,7 +7,7 @@ from .shelf import Item, Shelf
 def normalize_result(result):
     """Convert ShelfDB results into msgpack-friendly Python data."""
     if isinstance(result, Shelf):
-        return [normalize_result(item) for item in result.items()]
+        return [normalize_result(item) for item in result]
     if isinstance(result, Item):
         return [result[0], normalize_result(result[1])]
     if isinstance(result, tuple):

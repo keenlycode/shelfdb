@@ -37,9 +37,6 @@ def test_query_requires_run_before_iteration(db):
     with pytest.raises(RuntimeError, match=r"Call `\.run\(\)` before iterating"):
         list(query)
 
-    with pytest.raises(RuntimeError, match=r"Call `\.run\(\)` before iterating"):
-        list(query.items())
-
 
 def test_put_creates_item(db):
     shelf = db.shelf("note").put("note-1", {"title": "hello"}).run()
@@ -55,11 +52,10 @@ def test_put_replaces_existing_item(db):
     assert shelf.first() == Item("note-1", {"title": "after"})
 
 
-def test_items_and_iteration(db):
+def test_shelf_is_iterable(db):
     notes = seed_notes(db)
     shelf = db.shelf("note").run()
 
-    assert list(shelf.items()) == [Item(key, data) for key, data in notes]
     assert list(shelf) == [Item(key, data) for key, data in notes]
 
 
@@ -74,13 +70,13 @@ def test_key_filter_slice_sort_first_and_count(db):
     filtered = db.shelf("note").filter(
         lambda item: item[1]["title"] in {"note-1", "note-3"}
     )
-    assert list(filtered.run().items()) == [
+    assert list(filtered.run()) == [
         Item("note-1", {"title": "note-1"}),
         Item("note-3", {"title": "note-3"}),
     ]
 
     sliced = db.shelf("note").sort(lambda item: item[0], reverse=True).slice(0, 2)
-    assert list(sliced.run().items()) == [
+    assert list(sliced.run()) == [
         Item("note-4", {"title": "note-4"}),
         Item("note-3", {"title": "note-3"}),
     ]
@@ -151,11 +147,11 @@ def test_query_is_rerunnable(db):
     seed_notes(db, 3)
     filtered = db.shelf("note").filter(lambda item: item[0] != "note-1")
 
-    assert list(filtered.run().items()) == [
+    assert list(filtered.run()) == [
         Item("note-0", {"title": "note-0"}),
         Item("note-2", {"title": "note-2"}),
     ]
-    assert list(filtered.run().items()) == [
+    assert list(filtered.run()) == [
         Item("note-0", {"title": "note-0"}),
         Item("note-2", {"title": "note-2"}),
     ]
@@ -181,7 +177,7 @@ def test_db_transaction_reads_with_consistent_snapshot(db):
         filtered = db.shelf("note").filter(lambda item: item[0] in {"note-1", "note-3"})
 
         assert list(
-            filtered.sort(lambda item: item[0], reverse=True).slice(0, 1).run().items()
+            filtered.sort(lambda item: item[0], reverse=True).slice(0, 1).run()
         ) == [Item("note-3", {"title": "note-3"})]
         assert db.shelf("note").key("note-2").first().run() == Item(
             "note-2", {"title": "note-2"}
@@ -196,10 +192,8 @@ def test_db_write_transaction_commits_changes(db):
         updated = db.shelf("note").key("note-0").update({"content": "updated"}).run()
         put = db.shelf("note").put("note-2", {"title": "note-2"}).run()
 
-    assert list(updated.items()) == [
-        Item("note-0", {"title": "note-0", "content": "updated"})
-    ]
-    assert list(put.items()) == [Item("note-2", {"title": "note-2"})]
+    assert list(updated) == [Item("note-0", {"title": "note-0", "content": "updated"})]
+    assert list(put) == [Item("note-2", {"title": "note-2"})]
     assert db.shelf("note").key("note-0").first().run() == Item(
         "note-0", {"title": "note-0", "content": "updated"}
     )

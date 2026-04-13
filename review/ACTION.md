@@ -10,6 +10,7 @@
 - 2026-04-13: Iteration on a local query requires `.run()` first.
 - 2026-04-13: Reusable local queries are rerun against current database state, not frozen snapshots.
 - 2026-04-13: Queries created inside a transaction must run inside that same transaction.
+- 2026-04-13: Internal query steps use the explicit `{"op": ..., "args": [...], "kwargs": {...}}` format.
 
 ## Done
 
@@ -20,6 +21,9 @@
 - [x] Rewrote `tests/test_shelf.py` for explicit `.run()` and reusable-query behavior.
 - [x] Updated `README.md` examples to match the lazy local API and added the trusted-local security note.
 - [x] Verified the redesign with `uv run pytest`.
+- [x] Refactored query serialization to the explicit `op/args/kwargs` step format.
+- [x] Added validation and tests for malformed RPC query steps.
+- [x] Removed public `items()` from local query/results in favor of explicit `.run()` and iteration on `Shelf`.
 
 ## Current
 
@@ -29,5 +33,4 @@
 
 - [ ] Finding 3: close LMDB cleanly on normal server shutdown paths.
 - [ ] Finding 5: preserve client responses if `wait_closed()` raises during teardown.
-- [ ] Finding 6: reject malformed RPC query dict payloads.
 - [ ] Finding 4: replace public `assert` validation with explicit exceptions.

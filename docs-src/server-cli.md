@@ -75,16 +75,15 @@ shelfdb --url tcp://127.0.0.1:17000
 Then connect from Python:
 
 ```python
-import asyncio
 import shelfdb
 
 
-async def main():
-    client = await shelfdb.connect_async("tcp://127.0.0.1:17000")
-    await client.shelf("note").put("note-1", {"title": "remote"}).run()
+def main():
+    client = shelfdb.connect("tcp://127.0.0.1:17000")
+    client.shelf("note").put("note-1", {"title": "remote"}).run()
 
 
-asyncio.run(main())
+main()
 ```
 
 ## Lower-level server API

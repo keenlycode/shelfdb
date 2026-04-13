@@ -79,8 +79,8 @@ or `count()` add steps to the pipeline. Nothing executes until `.run()`.
 
 ### 3. Local and remote usage feel similar
 
-The embedded database and the async client share the same query-building style. That makes it
-easy to start local and move to a trusted local server later.
+The embedded database and the remote clients share the same query-building style. That makes
+it easy to start local and move to a trusted local server later.
 
 ## Architecture at a glance
 
@@ -92,9 +92,10 @@ Use `shelfdb.open(path)` and talk directly to LMDB in-process.
 
 Run `shelfdb` as an asyncio server over TCP or a Unix socket.
 
-### Async client mode
+### Remote client modes
 
-Use `await shelfdb.connect_async(url)` and run the same style of query pipeline remotely.
+Use `shelfdb.connect(url)` for sync remote scripts, or `await shelfdb.connect_async(url)`
+when you want the client creation step to stay async.
 
 ## Read next
 

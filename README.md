@@ -80,18 +80,16 @@ see client-side debug logs as well.
 RPC queries are also lazy and execute on `.run()`.
 
 ```python
-import asyncio
-
 import shelfdb
 
 
-async def main():
-    db = await shelfdb.connect_async("tcp://127.0.0.1:17000")
-    note = await db.shelf("note").key("note-1").first().run()
+def main():
+    db = shelfdb.connect("tcp://127.0.0.1:17000")
+    note = db.shelf("note").key("note-1").first().run()
     print(note)
 
 
-asyncio.run(main())
+main()
 ```
 
 ## Security

@@ -1,4 +1,4 @@
-"""Async RPC client for ShelfDB."""
+"""Async RPC client and reusable network query builders for ShelfDB."""
 
 from __future__ import annotations
 
@@ -8,6 +8,8 @@ from urllib.parse import urlparse
 
 import dill
 import msgpack
+
+from .query import QueryBuilderMixin
 
 
 def _decode_response(data: bytes):
@@ -37,46 +39,13 @@ async def connect_async(url: str) -> "Client":
 
 
 @dataclass(frozen=True)
-class ClientQuery:
+class ClientQuery(QueryBuilderMixin):
     client: "Client"
     shelf_name: str
     queries: tuple = ()
 
     def _clone(self, query):
         return ClientQuery(self.client, self.shelf_name, (*self.queries, query))
-
-    def count(self):
-        return self._clone("count")
-
-    def delete(self):
-        return self._clone("delete")
-
-    def edit(self, func):
-        return self._clone({"edit": func})
-
-    def first(self, filter_=None):
-        return self._clone({"first": filter_})
-
-    def filter(self, filter_=None):
-        return self._clone({"filter": filter_})
-
-    def key(self, key):
-        return self._clone({"key": key})
-
-    def put(self, key, data):
-        return self._clone({"put": (key, data)})
-
-    def replace(self, data):
-        return self._clone({"replace": data})
-
-    def slice(self, start: int, stop: int, step: int | None = None):
-        return self._clone({"slice": (start, stop, step)})
-
-    def sort(self, key=None, reverse=False):
-        return self._clone({"sort": {"key": key, "reverse": reverse}})
-
-    def update(self, data):
-        return self._clone({"update": data})
 
     async def run(self):
         payload = {
@@ -88,7 +57,7 @@ class ClientQuery:
 
 
 @dataclass(frozen=True)
-class TransactionQuery:
+class TransactionQuery(QueryBuilderMixin):
     transaction: "ClientTransaction"
     shelf_name: str
     queries: tuple = ()
@@ -97,39 +66,6 @@ class TransactionQuery:
         return TransactionQuery(
             self.transaction, self.shelf_name, (*self.queries, query)
         )
-
-    def count(self):
-        return self._clone("count")
-
-    def delete(self):
-        return self._clone("delete")
-
-    def edit(self, func):
-        return self._clone({"edit": func})
-
-    def first(self, filter_=None):
-        return self._clone({"first": filter_})
-
-    def filter(self, filter_=None):
-        return self._clone({"filter": filter_})
-
-    def key(self, key):
-        return self._clone({"key": key})
-
-    def put(self, key, data):
-        return self._clone({"put": (key, data)})
-
-    def replace(self, data):
-        return self._clone({"replace": data})
-
-    def slice(self, start: int, stop: int, step: int | None = None):
-        return self._clone({"slice": (start, stop, step)})
-
-    def sort(self, key=None, reverse=False):
-        return self._clone({"sort": {"key": key, "reverse": reverse}})
-
-    def update(self, data):
-        return self._clone({"update": data})
 
 
 class ClientTransaction:

@@ -1,30 +1,7 @@
-"""RPC query execution and result normalization for ShelfDB."""
+"""RPC request execution and result normalization for ShelfDB."""
 
-from typing import cast
-
+from .query import replay_queries
 from .shelf import Item, Shelf
-
-
-def replay_queries(shelf, queries):
-    """Apply a serialized query pipeline to a shelf-like object."""
-    current = shelf
-    for query in queries:
-        if isinstance(query, dict):
-            name, value = next(iter(query.items()))
-            assert isinstance(name, str), "Query name must be a string."
-            method = getattr(current, name)
-            if name in {"put", "slice"}:
-                assert isinstance(value, tuple), f"`{name}` expects tuple arguments."
-                current = method(*value)
-            elif name == "sort":
-                assert isinstance(value, dict), "`sort` expects keyword arguments."
-                current = method(**cast(dict[str, object], value))
-            else:
-                current = method(value)
-        else:
-            assert isinstance(query, str), "Query name must be a string."
-            current = getattr(current, query)()
-    return current
 
 
 def normalize_result(result):
@@ -44,7 +21,7 @@ def normalize_result(result):
 
 def run_query_request(db, payload):
     """Execute one query request against a database."""
-    return replay_queries(db.shelf(payload["shelf"]), payload["queries"])
+    return replay_queries(db.shelf(payload["shelf"]), payload["queries"]).run()
 
 
 def run_transaction_request(db, payload):
@@ -52,7 +29,7 @@ def run_transaction_request(db, payload):
     last_result = None
     with db.transaction(write=payload["write"]):
         for tx in payload["txs"]:
-            last_result = replay_queries(db.shelf(tx["shelf"]), tx["queries"])
+            last_result = replay_queries(db.shelf(tx["shelf"]), tx["queries"]).run()
     return last_result
 
 

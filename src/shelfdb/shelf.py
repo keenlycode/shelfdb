@@ -1,4 +1,6 @@
-"""LMDB-backed eager Shelf API for key/value documents."""
+"""Lazy local query builders and eager LMDB-backed Shelf results."""
+
+from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -9,6 +11,7 @@ from typing import Any
 
 import lmdb
 
+from .query import QueryBuilderMixin, QueryStep, replay_queries
 from .storage.lmdb import LMDBStore
 
 Data = dict[str, Any]
@@ -32,7 +35,7 @@ class Transaction:
 
 
 class DB:
-    """Database class to manage an LMDB environment."""
+    """Database class to manage an LMDB environment and local query execution."""
 
     def __init__(self, path: str):
         self.path = path
@@ -42,7 +45,7 @@ class DB:
         self._stores = {}
         self._active_tx = None
 
-    def shelf(self, shelf_name: str) -> "Shelf":
+    def _open_shelf(self, shelf_name: str) -> "Shelf":
         if shelf_name not in self._stores:
             if self._active_tx is None:
                 db_handle = self._env.open_db(shelf_name.encode())
@@ -56,6 +59,9 @@ class DB:
             txn=None if self._active_tx is None else self._active_tx.txn,
             write=None if self._active_tx is None else self._active_tx.write,
         )
+
+    def shelf(self, shelf_name: str) -> "ShelfQuery":
+        return ShelfQuery(self, shelf_name, tx_context=self._active_tx)
 
     @contextmanager
     def transaction(self, write: bool = False):
@@ -83,7 +89,7 @@ class Item(tuple):
 
 
 class Shelf:
-    """Eager chainable selection over one LMDB named database."""
+    """Executed chainable selection over one LMDB named database."""
 
     def __init__(
         self,
@@ -211,3 +217,49 @@ class Shelf:
     def _require_write(self, operation: str):
         if self._txn is not None:
             assert self._write, f"`{operation}()` requires write=True transaction."
+
+
+class ShelfQuery(QueryBuilderMixin):
+    """Lazy chainable query over one LMDB named database."""
+
+    def __init__(
+        self,
+        db: DB,
+        shelf_name: str,
+        queries: tuple[QueryStep, ...] = (),
+        tx_context: Transaction | None = None,
+    ):
+        self._db = db
+        self.shelf_name = shelf_name
+        self.queries = queries
+        self._tx_context = tx_context
+
+    def __iter__(self) -> Iterator[Item]:
+        raise RuntimeError("Call `.run()` before iterating a local ShelfQuery.")
+
+    def _clone(self, query: QueryStep):
+        return ShelfQuery(
+            self._db,
+            self.shelf_name,
+            (*self.queries, query),
+            tx_context=self._tx_context,
+        )
+
+    def items(self) -> Iterator[Item]:
+        raise RuntimeError("Call `.run()` before iterating a local ShelfQuery.")
+
+    def query(self) -> "ShelfQuery":
+        return self
+
+    def run(self):
+        self._validate_transaction_context()
+        return replay_queries(self._db._open_shelf(self.shelf_name), self.queries)
+
+    def _validate_transaction_context(self):
+        if self._tx_context is None:
+            return
+        if self._db._active_tx is self._tx_context:
+            return
+        raise RuntimeError(
+            "Query created inside a transaction must run inside that same transaction."
+        )

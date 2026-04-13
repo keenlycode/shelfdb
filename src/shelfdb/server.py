@@ -46,7 +46,7 @@ class ShelfServer:
     """ShelfDB asyncio server
 
     Follow and modify code from:
-    https://docs.python.org/3.8/library/asyncio-stream.html
+        https://docs.python.org/3/library/asyncio-stream.html
     """
 
     def __init__(

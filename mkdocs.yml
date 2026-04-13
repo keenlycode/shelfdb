@@ -9,7 +9,7 @@ nav:
   - Query Model: query-model.md
   - Local API: local-api.md
   - Transactions: transactions.md
-  - Async Client: async-client.md
+  - Remote Clients: async-client.md
   - Server & CLI: server-cli.md
   - Security: security.md
   - API Reference: api-reference.md

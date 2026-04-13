@@ -7,7 +7,7 @@ function signatures, class members, or module-level details.
 
 ## Package
 
-Top-level package exports such as `open()` and `connect_async()`.
+Top-level package exports such as `open()`, `connect()`, and `connect_async()`.
 
 ::: shelfdb
 

@@ -1,24 +1,36 @@
-# Async Client
+# Remote Clients
 
-ShelfDB can run as a small asyncio server, with an async Python client for remote access.
+ShelfDB can run as a small asyncio server, with both sync and async Python clients for remote
+access.
 
 This is useful when you want the same query style as the local API but need a separate process
 or transport boundary.
 
+## Client modes
+
+- `shelfdb.connect(url)` returns a sync client
+- `await shelfdb.connect_async(url)` returns the async client
+
 ## Connect to a server
 
-### TCP
+### Sync TCP
 
 ```python
 import shelfdb
 
+client = shelfdb.connect("tcp://127.0.0.1:17000")
+```
+
+### Async TCP
+
+```python
 client = await shelfdb.connect_async("tcp://127.0.0.1:17000")
 ```
 
 ### Unix socket
 
 ```python
-client = await shelfdb.connect_async("unix:///tmp/shelfdb.sock")
+client = shelfdb.connect("unix:///tmp/shelfdb.sock")
 ```
 
 Valid client URLs use either:
@@ -29,9 +41,9 @@ Valid client URLs use either:
 ## Remote CRUD example
 
 ```python
-await client.shelf("note").put("note-1", {"title": "remote"}).run()
+client.shelf("note").put("note-1", {"title": "remote"}).run()
 
-note = await client.shelf("note").key("note-1").first().run()
+note = client.shelf("note").key("note-1").first().run()
 print(note)
 ```
 
@@ -47,6 +59,8 @@ For example, a remote item looks like this:
 
 That is different from local mode, where you get a tuple-like `Item` object.
 
+When using the async client, remember to `await` the `.run()` call.
+
 ## Remote transactions
 
 Use `client.transaction(write=True)` to group multiple writes together.
@@ -55,17 +69,19 @@ Use `client.transaction(write=True)` to group multiple writes together.
 tx = client.transaction(write=True)
 tx.add(tx.shelf("note").put("note-1", {"title": "ShelfDB"}))
 tx.add(tx.shelf("user").put("user-1", {"name": "alice"}))
-await tx.run()
+tx.run()
 ```
+
+For the async client, use `await tx.run()` instead.
 
 Transaction queries must belong to the transaction they are added to.
 
 ## Typical flow
 
 1. Start the server with `shelfdb`
-2. Connect with `await shelfdb.connect_async(...)`
+2. Connect with `shelfdb.connect(...)` or `await shelfdb.connect_async(...)`
 3. Build a query with `client.shelf("name")...`
-4. `await ...run()` to execute it
+4. Call `.run()` to execute it
 
 ## Logging
 

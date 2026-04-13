@@ -2,6 +2,8 @@
 
 ShelfDB is a tiny document database for Python that stores JSON-like dictionaries in LMDB.
 
+Docs: build and browse the MkDocs site from `docs-src/`.
+
 ## Install
 
 ```shell

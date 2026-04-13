@@ -1,0 +1,45 @@
+site_name: ShelfDB
+site_description: Tiny document database for Python
+docs_dir: docs-src
+site_dir: docs
+
+nav:
+  - ShelfDB: index.md
+  - Getting Started: getting-started.md
+  - Query Model: query-model.md
+  - Local API: local-api.md
+  - Transactions: transactions.md
+  - Async Client: async-client.md
+  - Server & CLI: server-cli.md
+  - Security: security.md
+  - API Reference: api-reference.md
+
+theme:
+  name: shadcn
+  icon: null
+  topbar_sections: false
+  pygments_style:
+    light: shadcn-light
+    dark: github-dark
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths:
+            - src
+          options:
+            show_root_heading: true
+            show_source: false
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - fenced_code
+  - footnotes
+  - pymdownx.blocks.details
+  - pymdownx.tabbed
+  - pymdownx.blocks.tab:
+      combine_header_slug: true
+      separator: ___

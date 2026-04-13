@@ -105,7 +105,8 @@ For example, a remote item looks like this:
 ["note-1", {"title": "remote"}]
 ```
 
-That is different from local mode, which returns tuple-like `Item` objects.
+Local mode uses the same item shape, but multi-item local `run()` calls return one-shot iterators
+instead of materialized lists.
 
 ## Transactions
 

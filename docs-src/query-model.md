@@ -37,7 +37,7 @@ query = (
 Execution happens here:
 
 ```python
-results = query.run()
+results = list(query.run())
 ```
 
 For async server mode, execution is the same idea with `await`:
@@ -60,7 +60,7 @@ These methods narrow or inspect a selection:
 Example:
 
 ```python
-top_two = (
+top_two = list(
     db.shelf("note")
     .filter(lambda item: item[1]["title"].startswith("note-"))
     .sort(key=lambda item: item[0], reverse=True)
@@ -82,7 +82,7 @@ These methods change stored documents:
 Example:
 
 ```python
-updated = (
+updated = list(
     db.shelf("note")
     .key("note-1")
     .update({"published": True})
@@ -92,17 +92,19 @@ updated = (
 
 ## Result shapes
 
-Local query results are tuple-like items in the form:
+Local query results are one-shot iterators that yield server-style items in the form:
 
 ```python
-(key, data)
+["key", data]
 ```
 
-That is why local filters often look like this:
+That is why local filters still look like this:
 
 ```python
 lambda item: item[1]["title"] == "First note"
 ```
+
+If you want to keep the full local result, wrap it in `list(...)`.
 
 Remote results are normalized into plain Python values so they can travel over the wire safely.
 
@@ -143,9 +145,10 @@ Run first instead:
 list(query.run())
 ```
 
-### Expecting remote results to look like local `Item` objects
+### Expecting local `run()` to be reusable
 
-Remote execution returns normalized lists and dicts, not local tuple-like result objects.
+Local multi-item `run()` results are one-shot iterators. Materialize them with `list(...)` if you
+need to iterate more than once.
 
 ### Forgetting to `await` async remote execution
 

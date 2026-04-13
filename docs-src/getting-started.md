@@ -49,12 +49,13 @@ for key, data in notes:
     print(key, data["title"])
 ```
 
-Local query results are iterable tuple-like items in the form `(key, data)`.
+Local query results are one-shot iterators that yield `["key", data]` items.
 
 That means:
 
 - `item[0]` is the key
 - `item[1]` is the stored document
+- call `list(...)` if you want to materialize the whole result
 
 ## Fetch one document
 

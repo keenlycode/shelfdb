@@ -32,6 +32,7 @@ Read everything in a shelf:
 
 ```python
 all_notes = db.shelf("note").run()
+print(list(all_notes))
 ```
 
 Read one item by key:
@@ -43,13 +44,13 @@ note = db.shelf("note").key("note-1").first().run()
 Filter matching items:
 
 ```python
-matching = db.shelf("note").filter(lambda item: item[1]["title"] == "updated").run()
+matching = list(db.shelf("note").filter(lambda item: item[1]["title"] == "updated").run())
 ```
 
 Sort and slice:
 
 ```python
-latest = (
+latest = list(
     db.shelf("note")
     .sort(key=lambda item: item[0], reverse=True)
     .slice(0, 5)
@@ -102,14 +103,17 @@ db.shelf("note").key("note-1").delete().run()
 raise an error instead of silently creating a new document. `delete()` is safe on a missing key
 and returns an empty result.
 
+Local multi-item `run()` results are one-shot iterators.
+
 ## Result types
 
 Local execution uses these main types:
 
 - `shelfdb.DB` for the database
 - `shelfdb.shelf.ShelfQuery` for lazy local query builders
-- `shelfdb.shelf.Shelf` for executed local selections
-- `shelfdb.shelf.Item` for tuple-like `(key, data)` results
+- one-shot iterators from `run()` for executed selections
+
+Each yielded item uses the server-style shape `["key", {"title": "example"}]`.
 
 ## Close the database
 

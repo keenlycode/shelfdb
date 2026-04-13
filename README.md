@@ -48,7 +48,8 @@ notes = (
 print(list(notes))
 ```
 
-`item` values are `(key, data)` tuples, so use `item[0]` for the key and `item[1]` for the stored document.
+`run()` returns a one-shot iterator for local multi-item queries. Each item has the server-style
+shape `["key", data]`, so use `item[0]` for the key and `item[1]` for the stored document.
 
 ## Server
 

@@ -11,7 +11,8 @@ import msgpack
 import structlog
 
 from . import open as open_db
-from .rpc import normalize_result, run_request
+from ._normalize import normalize_result
+from .rpc import run_request
 
 
 log = structlog.get_logger(__name__)

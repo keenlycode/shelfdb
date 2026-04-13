@@ -62,7 +62,7 @@ Queries created inside a transaction must run inside that same transaction.
 ```python
 with db.transaction():
     query = db.shelf("note").filter(lambda item: item[0].startswith("note-"))
-    results = query.run()
+    results = list(query.run())
 ```
 
 Do not create a query inside a transaction and then try to run it later, outside the block.

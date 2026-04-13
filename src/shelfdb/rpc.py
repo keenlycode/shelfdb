@@ -1,22 +1,6 @@
-"""RPC request execution and result normalization for ShelfDB."""
+"""RPC request execution helpers for ShelfDB."""
 
 from .query import replay_queries
-from .shelf import Item, Shelf
-
-
-def normalize_result(result):
-    """Convert ShelfDB results into msgpack-friendly Python data."""
-    if isinstance(result, Shelf):
-        return [normalize_result(item) for item in result]
-    if isinstance(result, Item):
-        return [result[0], normalize_result(result[1])]
-    if isinstance(result, tuple):
-        return [normalize_result(value) for value in result]
-    if isinstance(result, list):
-        return [normalize_result(value) for value in result]
-    if isinstance(result, dict):
-        return {key: normalize_result(value) for key, value in result.items()}
-    return result
 
 
 def run_query_request(db, payload):

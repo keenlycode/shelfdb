@@ -29,7 +29,7 @@ notes = (
 print(list(notes))
 ```
 
-Local results are iterable `(key, data)` items.
+Local results are one-shot iterators that yield `["key", data]` items.
 
 ## Two ways to use ShelfDB
 

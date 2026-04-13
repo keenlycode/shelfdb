@@ -1,4 +1,4 @@
-"""Lazy local query builders and eager LMDB-backed Shelf results."""
+"""Lazy local query builders and internal LMDB-backed execution primitives."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from typing import Any
 import lmdb
 
 from .query import QueryBuilderMixin, QueryStep, replay_queries
+from ._normalize import normalize_result
 from .storage.lmdb import LMDBStore
 
 Data = dict[str, Any]
@@ -83,7 +84,7 @@ class DB:
 
 
 class Item(tuple):
-    """Tuple-like `(key, data)` result."""
+    """Internal tuple-like `(key, data)` result used by local execution."""
 
     def __new__(cls, key: str, data: Data):
         return super().__new__(cls, (key, data))
@@ -272,7 +273,10 @@ class ShelfQuery(QueryBuilderMixin):
 
     def run(self):
         self._validate_transaction_context()
-        return replay_queries(self._db._open_shelf(self.shelf_name), self.queries)
+        result = replay_queries(self._db._open_shelf(self.shelf_name), self.queries)
+        if isinstance(result, Shelf):
+            return (normalize_result(item) for item in result)
+        return normalize_result(result)
 
     def _validate_transaction_context(self):
         if self._tx_context is None:

@@ -25,8 +25,9 @@
 - [x] Added validation and tests for malformed RPC query steps.
 - [x] Removed public `items()` from local query/results in favor of explicit `.run()` and iteration on `Shelf`.
 - [x] Closed LMDB from `ShelfServer.run()` on normal shutdown and error paths.
+- [x] Suppressed client teardown errors from `wait_closed()` after a full response is read.
+- [x] Replaced assert-based validation with explicit exceptions.
 
 ## Next
 
-- [ ] Finding 5: preserve client responses if `wait_closed()` raises during teardown.
-- [ ] Finding 4: replace public `assert` validation with explicit exceptions.
+- [ ] None.

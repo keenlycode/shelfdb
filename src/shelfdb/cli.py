@@ -3,6 +3,7 @@
 import asyncio
 from dataclasses import dataclass
 import sys
+from typing import cast
 from urllib.parse import urlparse
 
 from cyclopts import App
@@ -47,13 +48,11 @@ def serve(url: str = "tcp://127.0.0.1:17000", db: str = "db"):
     config = ServerConfig(url=url, db=db)
     transport, value = parse_server_url(config.url)
     if transport == "unix":
-        assert isinstance(value, str)
         shelf_server = ShelfServer(
-            host=None, port=None, db_name=config.db, unix_path=value
+            host=None, port=None, db_name=config.db, unix_path=cast(str, value)
         )
     else:
-        assert isinstance(value, int)
-        shelf_server = ShelfServer(transport, value, config.db)
+        shelf_server = ShelfServer(cast(str, transport), cast(int, value), config.db)
 
     if sys.platform.startswith("linux"):
         import uvloop

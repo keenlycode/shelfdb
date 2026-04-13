@@ -153,7 +153,7 @@ def test_handler_returns_rpc_error_payload(tmp_path):
     payload = msgpack.unpackb(writer.payloads[0], raw=False)
     assert payload == {
         "error": {
-            "type": "AssertionError",
+            "type": "ValueError",
             "message": "Unsupported request type: nope",
         }
     }
@@ -250,7 +250,7 @@ def test_handler_rejects_legacy_query_step_format(tmp_path):
     payload = msgpack.unpackb(writer.payloads[0], raw=False)
     assert payload == {
         "error": {
-            "type": "AssertionError",
+            "type": "ValueError",
             "message": "Query step must be a dict.",
         }
     }
@@ -281,7 +281,7 @@ def test_handler_rejects_malformed_query_step_payload(tmp_path):
     payload = msgpack.unpackb(writer.payloads[0], raw=False)
     assert payload == {
         "error": {
-            "type": "AssertionError",
+            "type": "ValueError",
             "message": "Query step `args` must be a list.",
         }
     }
@@ -349,12 +349,12 @@ def test_server_update_edit_put_and_delete(server_client):
 
 
 def test_server_validation_error(server_client):
-    with pytest.raises(AssertionError):
+    with pytest.raises(RuntimeError):
         asyncio.run(
             server_client.shelf("note").key("bad").replace(lambda: "nope").run()
         )
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(RuntimeError):
         asyncio.run(
             server_client.shelf("note").key("bad").replace({"title": "nope"}).run()
         )
@@ -392,7 +392,7 @@ def test_server_transaction_rejects_readonly_writes(server_client):
     tx = server_client.transaction()
     tx.add(tx.shelf("note").key("note-0").delete())
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(RuntimeError):
         asyncio.run(tx.run())
 
 
@@ -408,7 +408,7 @@ def test_server_transaction_run_is_single_use(server_client):
 
     asyncio.run(tx.run())
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(RuntimeError):
         asyncio.run(tx.run())
 
 

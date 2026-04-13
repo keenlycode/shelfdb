@@ -39,4 +39,5 @@ def run_request(db, payload):
         return run_query_request(db, payload)
     if payload["type"] == "transaction":
         return run_transaction_request(db, payload)
-    raise AssertionError(f"Unsupported request type: {payload['type']}")
+
+    raise ValueError(f"Unsupported request type: {payload['type']}")

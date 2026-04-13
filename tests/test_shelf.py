@@ -119,13 +119,13 @@ def test_update_replace_edit_and_delete_apply_on_run(db):
 
 
 def test_strict_selection_mutators_raise_on_missing_key(db):
-    with pytest.raises(AssertionError):
+    with pytest.raises(RuntimeError):
         db.shelf("note").key("missing").replace({"title": "first"}).run()
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(RuntimeError):
         db.shelf("note").key("missing").update({"content": "patched"}).run()
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(RuntimeError):
         db.shelf("note").key("missing").edit(lambda item: item[1]).run()
 
     assert db.shelf("note").key("missing").delete().run() == []
@@ -218,7 +218,7 @@ def test_db_read_transaction_rejects_write_methods(db):
     seed_notes(db, 1)
 
     with db.transaction():
-        with pytest.raises(AssertionError):
+        with pytest.raises(RuntimeError):
             db.shelf("note").key("note-0").replace({"title": "nope"}).run()
 
 
@@ -248,7 +248,7 @@ def test_db_transaction_reads_its_own_writes(db):
 
 def test_db_transaction_rejects_nested_transactions(db):
     with db.transaction(write=True):
-        with pytest.raises(AssertionError):
+        with pytest.raises(RuntimeError):
             with db.transaction(write=True):
                 pass
 
@@ -272,7 +272,7 @@ def test_db_transaction_result_rejects_second_assignment(db):
     with db.transaction() as tx:
         tx.result = 1
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(RuntimeError):
             tx.result = 2
 
 

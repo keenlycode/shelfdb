@@ -30,7 +30,9 @@ class Transaction:
 
     @result.setter
     def result(self, value):
-        assert self._result is UNDEF, "Transaction result already set."
+        if self._result is not UNDEF:
+            raise RuntimeError("Transaction result already set.")
+
         self._result = value
 
 
@@ -65,7 +67,9 @@ class DB:
 
     @contextmanager
     def transaction(self, write: bool = False):
-        assert self._active_tx is None, "Nested DB transactions are not supported."
+        if self._active_tx is not None:
+            raise RuntimeError("Nested DB transactions are not supported.")
+
         with self._env.begin(write=write) as txn:
             self._active_tx = Transaction(txn, write)
             try:
@@ -115,7 +119,9 @@ class Shelf:
         return self
 
     def key(self, key: str) -> "Shelf":
-        assert isinstance(key, str), "Key should be ``str`` instance."
+        if not isinstance(key, str):
+            raise TypeError("Key must be a str instance.")
+
         if self._selection is None:
             item = self._store.key(key, txn=self._txn)
             return Shelf(
@@ -132,8 +138,11 @@ class Shelf:
         )
 
     def put(self, key: str, data: Data) -> "Shelf":
-        assert isinstance(key, str), "Key should be ``str`` instance."
-        assert isinstance(data, dict), "Data should be ``dict`` instance."
+        if not isinstance(key, str):
+            raise TypeError("Key must be a str instance.")
+        if not isinstance(data, dict):
+            raise TypeError("Data must be a dict instance.")
+
         self._require_write("put")
         payload = data.copy()
         self._store.put(key, payload, txn=self._txn)
@@ -174,10 +183,14 @@ class Shelf:
         return reduce(lambda total, _: total + 1, items, 0)
 
     def replace(self, data: Data) -> "Shelf":
-        assert isinstance(data, dict), "Data should be ``dict`` instance."
+        if not isinstance(data, dict):
+            raise TypeError("Data must be a dict instance.")
+
         self._require_write("replace")
         items = list(self._items())
-        assert items, "`replace()` requires existing selection."
+        if not items:
+            raise RuntimeError("`replace()` requires existing selection.")
+
         updated = []
         for key, _ in items:
             payload = data.copy()
@@ -186,10 +199,14 @@ class Shelf:
         return Shelf(self._store, updated, txn=self._txn, write=self._write)
 
     def update(self, data: Data) -> "Shelf":
-        assert isinstance(data, dict), "Update data should be dict object."
+        if not isinstance(data, dict):
+            raise TypeError("Data must be a dict instance.")
+
         self._require_write("update")
         items = list(self._items())
-        assert items, "`update()` requires existing selection."
+        if not items:
+            raise RuntimeError("`update()` requires existing selection.")
+
         updated = []
         for key, item_data in items:
             payload = item_data.copy()
@@ -201,11 +218,15 @@ class Shelf:
     def edit(self, func) -> "Shelf":
         self._require_write("edit")
         items = list(self._items())
-        assert items, "`edit()` requires existing selection."
+        if not items:
+            raise RuntimeError("`edit()` requires existing selection.")
+
         updated = []
         for item in items:
             payload = func(Item(item[0], item[1].copy()))
-            assert isinstance(payload, dict), "Edited data should be dict object."
+            if not isinstance(payload, dict):
+                raise TypeError("Edited data must be a dict instance.")
+
             self._store.put(item[0], payload, txn=self._txn)
             updated.append(Item(item[0], payload))
         return Shelf(self._store, updated, txn=self._txn, write=self._write)
@@ -216,7 +237,8 @@ class Shelf:
 
     def _require_write(self, operation: str):
         if self._txn is not None:
-            assert self._write, f"`{operation}()` requires write=True transaction."
+            if not self._write:
+                raise RuntimeError(f"`{operation}()` requires write=True transaction.")
 
 
 class ShelfQuery(QueryBuilderMixin):

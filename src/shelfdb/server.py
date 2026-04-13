@@ -57,10 +57,12 @@ class ShelfServer:
         unix_path: str | None = None,
     ):
         if unix_path is None:
-            assert host is not None, "TCP server requires host."
-            assert port is not None, "TCP server requires port."
+            if host is None or port is None:
+                raise ValueError("TCP server requires host and port.")
         else:
-            assert host is None and port is None, "Unix server requires unix_path only."
+            if host is not None or port is not None:
+                raise ValueError("Unix server requires unix_path only.")
+
         self.host = host
         self.port = port
         self.db_name = db_name
@@ -103,7 +105,9 @@ class ShelfServer:
                 self._cleanup_unix_socket()
 
     def _prepare_unix_socket(self) -> bool:
-        assert self.unix_path is not None, "Unix socket path is required."
+        if self.unix_path is None:
+            raise RuntimeError("Unix socket path is required.")
+
         try:
             metadata = os.stat(self.unix_path)
         except FileNotFoundError:
@@ -113,10 +117,12 @@ class ShelfServer:
             os.unlink(self.unix_path)
             return True
 
-        raise AssertionError(f"Unix socket path already exists: {self.unix_path}")
+        raise FileExistsError(f"Unix socket path already exists: {self.unix_path}")
 
     def _cleanup_unix_socket(self):
-        assert self.unix_path is not None, "Unix socket path is required."
+        if self.unix_path is None:
+            raise RuntimeError("Unix socket path is required.")
+
         try:
             os.unlink(self.unix_path)
         except FileNotFoundError:

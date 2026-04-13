@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import suppress
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
@@ -27,15 +28,20 @@ def _decode_response(data: bytes):
 async def connect_async(url: str) -> "Client":
     parsed = urlparse(url)
     if parsed.scheme == "tcp":
-        assert parsed.hostname is not None, "Client URL must include a hostname."
-        assert parsed.port is not None, "Client URL must include a port."
+        if parsed.hostname is None:
+            raise ValueError("Client URL must include a hostname.")
+        if parsed.port is None:
+            raise ValueError("Client URL must include a port.")
+
         return Client(host=parsed.hostname, port=parsed.port)
 
     if parsed.scheme == "unix":
-        assert parsed.path, "Client URL must include a Unix socket path."
+        if not parsed.path:
+            raise ValueError("Client URL must include a Unix socket path.")
+
         return Client(unix_path=parsed.path)
 
-    raise AssertionError("Client URL must use tcp:// or unix:// scheme.")
+    raise ValueError("Client URL must use tcp:// or unix:// scheme.")
 
 
 @dataclass(frozen=True)
@@ -77,20 +83,26 @@ class ClientTransaction:
         self.result = None
 
     def shelf(self, shelf_name: str) -> TransactionQuery:
-        assert not self._ran, "Transaction already ran."
+        if self._ran:
+            raise RuntimeError("Transaction already ran.")
+
         return TransactionQuery(self, shelf_name)
 
     def add(self, query: TransactionQuery):
-        assert not self._ran, "Transaction already ran."
-        assert isinstance(query, TransactionQuery), (
-            "Transaction accepts transaction queries only."
-        )
-        assert query.transaction is self, "Query belongs to a different transaction."
+        if self._ran:
+            raise RuntimeError("Transaction already ran.")
+        if not isinstance(query, TransactionQuery):
+            raise TypeError("Transaction accepts transaction queries only.")
+        if query.transaction is not self:
+            raise RuntimeError("Query belongs to a different transaction.")
+
         self._txs.append({"shelf": query.shelf_name, "queries": list(query.queries)})
         return query
 
     async def run(self):
-        assert not self._ran, "Transaction already ran."
+        if self._ran:
+            raise RuntimeError("Transaction already ran.")
+
         self._ran = True
         payload = {
             "type": "transaction",
@@ -109,10 +121,12 @@ class Client:
         unix_path: str | None = None,
     ):
         if unix_path is None:
-            assert host is not None, "TCP client requires host."
-            assert port is not None, "TCP client requires port."
+            if host is None or port is None:
+                raise ValueError("TCP client requires host and port.")
         else:
-            assert host is None and port is None, "Unix client requires unix_path only."
+            if host is not None or port is not None:
+                raise ValueError("Unix client requires unix_path only.")
+
         self.host = host
         self.port = port
         self.unix_path = unix_path
@@ -140,5 +154,6 @@ class Client:
                 chunks.append(chunk)
         finally:
             writer.close()
-            await writer.wait_closed()
+            with suppress(Exception):
+                await writer.wait_closed()
         return _decode_response(b"".join(chunks))

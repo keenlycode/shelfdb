@@ -22,23 +22,21 @@ def _read_query_step(query: QueryStep) -> tuple[str, list[Any], dict[str, Any]]:
     """Validate and unpack one serialized query step."""
 
     if not isinstance(query, dict):
-        raise AssertionError("Query step must be a dict.")
+        raise ValueError("Query step must be a dict.")
 
     if set(query) != {"op", "args", "kwargs"}:
-        raise AssertionError(
-            "Query step must contain exactly `op`, `args`, and `kwargs`."
-        )
+        raise ValueError("Query step must contain exactly `op`, `args`, and `kwargs`.")
 
     op = query["op"]
     args = query["args"]
     kwargs = query["kwargs"]
 
     if not isinstance(op, str):
-        raise AssertionError("Query step `op` must be a string.")
+        raise ValueError("Query step `op` must be a string.")
     if not isinstance(args, list):
-        raise AssertionError("Query step `args` must be a list.")
+        raise ValueError("Query step `args` must be a list.")
     if not isinstance(kwargs, dict):
-        raise AssertionError("Query step `kwargs` must be a dict.")
+        raise ValueError("Query step `kwargs` must be a dict.")
 
     return op, args, kwargs
 
@@ -90,6 +88,10 @@ def replay_queries(current, queries: Iterable[QueryStep]):
 
     for query in queries:
         op, args, kwargs = _read_query_step(query)
-        current = getattr(current, op)(*args, **kwargs)
+        method = getattr(current, op, None)
+        if not callable(method):
+            raise ValueError(f"Unsupported query op: {op}")
+
+        current = method(*args, **kwargs)
 
     return current

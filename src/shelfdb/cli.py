@@ -63,7 +63,7 @@ def serve(url: str = "tcp://127.0.0.1:17000", db: str = "db"):
     try:
         asyncio.run(shelf_server.run())
     except KeyboardInterrupt:
-        shelf_server.shelfdb.close()
+        pass
 
 
 def main(tokens: list[str] | None = None):

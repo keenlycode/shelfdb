@@ -83,19 +83,22 @@ class ShelfServer:
 
     async def run(self):
         cleanup_unix_path = False
-        if self.unix_path is None:
-            server = await asyncio.start_server(self.handler, self.host, self.port)
-        else:
-            cleanup_unix_path = self._prepare_unix_socket()
-            server = await asyncio.start_unix_server(self.handler, path=self.unix_path)
-
-        print("Serving on {}".format(server.sockets[0].getsockname()))
-        print("Database :", self.db_name)
-        print("pid :", os.getpid())
         try:
+            if self.unix_path is None:
+                server = await asyncio.start_server(self.handler, self.host, self.port)
+            else:
+                cleanup_unix_path = self._prepare_unix_socket()
+                server = await asyncio.start_unix_server(
+                    self.handler, path=self.unix_path
+                )
+
+            print("Serving on {}".format(server.sockets[0].getsockname()))
+            print("Database :", self.db_name)
+            print("pid :", os.getpid())
             async with server:
                 await server.serve_forever()
         finally:
+            self.shelfdb.close()
             if cleanup_unix_path:
                 self._cleanup_unix_socket()
 

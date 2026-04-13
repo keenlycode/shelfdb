@@ -24,13 +24,9 @@
 - [x] Refactored query serialization to the explicit `op/args/kwargs` step format.
 - [x] Added validation and tests for malformed RPC query steps.
 - [x] Removed public `items()` from local query/results in favor of explicit `.run()` and iteration on `Shelf`.
-
-## Current
-
-- [ ] None.
+- [x] Closed LMDB from `ShelfServer.run()` on normal shutdown and error paths.
 
 ## Next
 
-- [ ] Finding 3: close LMDB cleanly on normal server shutdown paths.
 - [ ] Finding 5: preserve client responses if `wait_closed()` raises during teardown.
 - [ ] Finding 4: replace public `assert` validation with explicit exceptions.

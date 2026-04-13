@@ -185,6 +185,46 @@ def test_handler_closes_writer_when_stream_write_fails(tmp_path):
     assert writer.closed is True
 
 
+def test_server_run_closes_db_on_serve_forever_error(monkeypatch, tmp_path):
+    class FakeDB:
+        def __init__(self):
+            self.closed = False
+
+        def close(self):
+            self.closed = True
+
+    class FakeSocket:
+        def getsockname(self):
+            return ("127.0.0.1", 17001)
+
+    class FakeServer:
+        def __init__(self):
+            self.sockets = [FakeSocket()]
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def serve_forever(self):
+            raise RuntimeError("boom")
+
+    async def fake_start_server(handler, host, port):
+        return FakeServer()
+
+    fake_db = FakeDB()
+    monkeypatch.setattr(server, "open_db", lambda db_name: fake_db)
+    monkeypatch.setattr(server.asyncio, "start_server", fake_start_server)
+
+    shelf_server = server.ShelfServer(db_name=str(tmp_path / "db"))
+
+    with pytest.raises(RuntimeError, match="boom"):
+        asyncio.run(shelf_server.run())
+
+    assert fake_db.closed is True
+
+
 def test_handler_rejects_legacy_query_step_format(tmp_path):
     shelf_server = server.ShelfServer(db_name=str(tmp_path / "db"))
     writer = FakeWriter()

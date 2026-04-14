@@ -29,7 +29,6 @@ Each method appends another step:
 query = (
     db.shelf("note")
     .filter(lambda item: item[1].get("published"))
-    .sort(key=lambda item: item[1]["title"])
     .slice(0, 20)
 )
 ```
@@ -51,8 +50,9 @@ results = await query.run()
 These methods narrow or inspect a selection:
 
 - `key(key)` selects a single key
+- `key_range(start, end)` selects keys in the half-open range `[start, end)`
+- `keys_in(keys)` fetches exact keys in the order you requested them; call it directly on a shelf
 - `filter(func)` filters matching items
-- `sort(key=..., reverse=False)` sorts the current selection
 - `slice(start, stop, step=None)` slices the current selection
 - `first(filter_=None)` returns the first matching item or `None`
 - `count()` returns the number of matching items
@@ -63,10 +63,15 @@ Example:
 top_two = list(
     db.shelf("note")
     .filter(lambda item: item[1]["title"].startswith("note-"))
-    .sort(key=lambda item: item[0], reverse=True)
     .slice(0, 2)
     .run()
 )
+```
+
+Exact-key lookups keep the input order:
+
+```python
+batch = list(db.shelf("note").keys_in(["note-3", "note-1"]).run())
 ```
 
 ## Write operations
@@ -74,6 +79,7 @@ top_two = list(
 These methods change stored documents:
 
 - `put(key, data)` inserts or replaces one document
+- `put_many(items)` inserts or replaces many documents and returns `None`
 - `update(data)` merges fields into each selected document
 - `replace(data)` replaces each selected document completely
 - `edit(func)` transforms each selected document using a function
@@ -89,6 +95,20 @@ updated = list(
     .run()
 )
 ```
+
+Write many documents at once:
+
+```python
+db.shelf("note").put_many(
+    [
+        ("note-1", {"title": "One"}),
+        ("note-2", {"title": "Two"}),
+    ]
+).run()
+```
+
+`put_many()` and `keys_in()` consume iterable inputs when the query runs. If you need to reuse
+the same data across runs, pass a list or tuple.
 
 ## Result shapes
 
@@ -106,6 +126,8 @@ lambda item: item[1]["title"] == "First note"
 
 If you want to keep the full local result, wrap it in `list(...)`.
 
+Terminal write operations such as `put_many()` return `None`.
+
 Remote results are normalized into plain Python values so they can travel over the wire safely.
 
 For example, a remote `first()` result looks like this:
@@ -113,6 +135,9 @@ For example, a remote `first()` result looks like this:
 ```python
 ["note-1", {"title": "First note"}]
 ```
+
+ShelfDB does not sort inside query chains. If you need a custom order, sort the returned Python
+values yourself with `sorted(...)`.
 
 ## Queries are reusable
 

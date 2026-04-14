@@ -44,11 +44,10 @@ db.shelf("note").put(
 notes = (
     db.shelf("note")
     .filter(lambda item: "python" in item[1]["tags"])
-    .sort(key=lambda item: item[0])
     .run()
 )
 
-print(list(notes))
+print(sorted(notes, key=lambda item: item[0]))
 ```
 
 Embedded multi-item results are one-shot iterators that yield `["key", data]` items.

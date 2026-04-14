@@ -94,6 +94,14 @@ client.shelf("note").put("note-1", {"title": "remote"}).run()
 
 note = client.shelf("note").key("note-1").first().run()
 count = client.shelf("note").count().run()
+client.shelf("note").put_many(
+    [
+        ("note-2", {"title": "batch"}),
+        ("note-3", {"title": "batch"}),
+    ]
+).run()
+
+notes = client.shelf("note").keys_in(["note-3", "note-2"]).run()
 ```
 
 Async uses the same query chain with `await` on execution:
@@ -103,7 +111,17 @@ await client.shelf("note").put("note-1", {"title": "remote"}).run()
 
 note = await client.shelf("note").key("note-1").first().run()
 count = await client.shelf("note").count().run()
+await client.shelf("note").put_many(
+    [
+        ("note-2", {"title": "batch"}),
+        ("note-3", {"title": "batch"}),
+    ]
+).run()
+
+notes = await client.shelf("note").keys_in(["note-3", "note-2"]).run()
 ```
+
+`put_many()` returns `None`. `keys_in()` keeps the key order you requested.
 
 ## Result shape
 

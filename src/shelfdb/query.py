@@ -5,17 +5,15 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
+from .protocol import prepare_query_step
+
 QueryStep = dict[str, Any]
 
 
 def build_query_step(op: str, *args, **kwargs) -> QueryStep:
     """Build one serialized query step using an explicit call shape."""
 
-    return {
-        "op": op,
-        "args": list(args),
-        "kwargs": kwargs,
-    }
+    return prepare_query_step(op, args, kwargs)
 
 
 def _read_query_step(query: QueryStep) -> tuple[str, list[Any], dict[str, Any]]:
@@ -67,17 +65,23 @@ class QueryBuilderMixin:
     def key(self, key):
         return self._clone(build_query_step("key", key))
 
+    def key_range(self, start, end):
+        return self._clone(build_query_step("key_range", start, end))
+
+    def keys_in(self, keys):
+        return self._clone(build_query_step("keys_in", keys))
+
     def put(self, key, data):
         return self._clone(build_query_step("put", key, data))
+
+    def put_many(self, items):
+        return self._clone(build_query_step("put_many", items))
 
     def replace(self, data):
         return self._clone(build_query_step("replace", data))
 
     def slice(self, start: int, stop: int, step: int | None = None):
         return self._clone(build_query_step("slice", start, stop, step))
-
-    def sort(self, key=None, reverse: bool = False):
-        return self._clone(build_query_step("sort", key=key, reverse=reverse))
 
     def update(self, data):
         return self._clone(build_query_step("update", data))

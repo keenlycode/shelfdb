@@ -26,6 +26,12 @@ Use `write=True` for mutations:
 with db.transaction(write=True) as tx:
     tx.shelf("note").key("note-0").update({"content": "updated"}).run()
     tx.shelf("user").put("user-0", {"name": "alice"}).run()
+    tx.shelf("note").put_many(
+        [
+            ("note-1", {"title": "one"}),
+            ("note-2", {"title": "two"}),
+        ]
+    ).run()
 ```
 
 When the block exits successfully, the changes commit together.
@@ -81,7 +87,7 @@ Starting another `db.transaction(...)` inside that block raises an error.
 ## Read-only transactions reject writes
 
 If you use `db.transaction()` without `write=True`, mutating operations such as `put()`,
-`replace()`, or `update()` are rejected.
+`put_many()`, `replace()`, or `update()` are rejected.
 
 Inside a local transaction, use `tx.shelf(...)` for all queries. `db.shelf(...)` is rejected
 while the transaction is active.

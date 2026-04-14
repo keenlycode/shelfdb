@@ -66,18 +66,19 @@ print(note)
 
 If nothing matches, `first().run()` returns `None`.
 
-## Filter and sort
+## Filter and sort in Python
 
 ```python
-published_notes = (
+published_notes = sorted(
     db.shelf("note")
     .filter(lambda item: item[1].get("published") is True)
-    .sort(key=lambda item: item[1]["title"])
-    .run()
+    .run(),
+    key=lambda item: item[1]["title"],
 )
 ```
 
-The query is lazy. Nothing runs until you call `.run()`.
+The query is lazy. Nothing runs until you call `.run()`, and you can sort the returned Python
+values however you like.
 
 ## Update and delete
 

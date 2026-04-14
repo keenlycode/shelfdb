@@ -8,11 +8,10 @@ import socket
 from urllib.parse import urlparse
 from typing import Any, cast
 
-import dill
-import msgpack
 import structlog
 
 from .query import QueryBuilderMixin, QueryStep
+from .protocol import dumps_request, loads_response
 
 
 log = structlog.get_logger(__name__)
@@ -37,7 +36,7 @@ def _payload_log_kwargs(payload: object) -> dict[str, object]:
 
 
 def _decode_response(data: bytes):
-    payload = msgpack.unpackb(data, raw=False)
+    payload = loads_response(data)
     log.debug("rpc_response_decoded", response_bytes=len(data))
     if isinstance(payload, dict) and "error" in payload:
         error = payload["error"]
@@ -68,7 +67,7 @@ def _parse_client_url(url: str) -> tuple[str, str | int]:
 
 
 def _request_over_socket(sock: socket.socket, payload) -> bytes:
-    sock.sendall(dill.dumps(payload))
+    sock.sendall(dumps_request(payload))
     try:
         sock.shutdown(socket.SHUT_WR)
     except OSError:
@@ -211,7 +210,7 @@ class AsyncClient:
             reader, writer = await asyncio.open_unix_connection(self.unix_path)
         try:
             log.debug("client_request_sending", **_payload_log_kwargs(payload))
-            writer.write(dill.dumps(payload))
+            writer.write(dumps_request(payload))
             writer.write_eof()
             await writer.drain()
             chunks = []

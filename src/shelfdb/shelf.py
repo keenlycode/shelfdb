@@ -1,8 +1,8 @@
-"""Lazy local query builders and internal LMDB-backed execution primitives."""
+"""Lazy local query builders and LMDB-backed execution primitives."""
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from functools import reduce
 from itertools import islice
@@ -156,6 +156,39 @@ class Shelf:
             write=self._write,
         )
 
+    def key_range(self, start: str, end: str) -> "Shelf":
+        if self._selection is None:
+            return Shelf(
+                self._store,
+                self._store.key_range(start, end, txn=self._txn),
+                txn=self._txn,
+                write=self._write,
+            )
+
+        start_bytes = start.encode()
+        end_bytes = end.encode()
+        return Shelf(
+            self._store,
+            [
+                item
+                for item in self._selection
+                if start_bytes <= item[0].encode() < end_bytes
+            ],
+            txn=self._txn,
+            write=self._write,
+        )
+
+    def keys_in(self, keys: Iterable[str]) -> "Shelf":
+        if self._selection is not None:
+            raise RuntimeError("`keys_in()` requires the base shelf.")
+
+        return Shelf(
+            self._store,
+            self._store.keys_in(keys, txn=self._txn),
+            txn=self._txn,
+            write=self._write,
+        )
+
     def put(self, key: str, data: Data) -> "Shelf":
         if not isinstance(key, str):
             raise TypeError("Key must be a str instance.")
@@ -168,6 +201,11 @@ class Shelf:
         return Shelf(
             self._store, [Item(key, payload)], txn=self._txn, write=self._write
         )
+
+    def put_many(self, items: Iterable[tuple[str, Data]]):
+        self._require_write("put_many")
+        self._store.put_many(items, txn=self._txn)
+        return None
 
     def filter(self, filter_=None) -> "Shelf":
         return Shelf(
@@ -184,10 +222,6 @@ class Shelf:
             txn=self._txn,
             write=self._write,
         )
-
-    def sort(self, key=None, reverse: bool = False) -> "Shelf":
-        items = sorted(self._items(), key=key, reverse=reverse)
-        return Shelf(self._store, items, txn=self._txn, write=self._write)
 
     def first(self, filter_=None) -> Item | None:
         items = self._items()

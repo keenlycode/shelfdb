@@ -144,6 +144,26 @@ def test_server_put_and_first(server_client):
     ]
 
 
+def test_server_put_many_and_keys_in(server_client):
+    def items():
+        yield ("note-1", {"title": "before"})
+        yield ("note-1", {"title": "after"})
+        yield ("note-2", {"title": "note-2"})
+
+    def keys():
+        yield "note-2"
+        yield "missing"
+        yield "note-1"
+        yield "note-2"
+
+    assert asyncio.run(server_client.shelf("note").put_many(items()).run()) is None
+    assert asyncio.run(server_client.shelf("note").keys_in(keys()).run()) == [
+        ["note-2", {"title": "note-2"}],
+        ["note-1", {"title": "after"}],
+        ["note-2", {"title": "note-2"}],
+    ]
+
+
 def test_handler_returns_rpc_error_payload(tmp_path):
     shelf_server = server.ShelfServer(db_name=str(tmp_path / "db"))
     writer = FakeWriter()
@@ -350,7 +370,7 @@ def test_handler_logs_request_failure(tmp_path, caplog):
     assert any("rpc_request_failed" in message for message in _event_names(caplog))
 
 
-def test_server_filter_sort_slice_and_count(server_client):
+def test_server_filter_key_range_slice_and_count(server_client):
     seed_server_notes(server_client, 5)
 
     filtered = asyncio.run(
@@ -364,14 +384,11 @@ def test_server_filter_sort_slice_and_count(server_client):
     ]
 
     sliced = asyncio.run(
-        server_client.shelf("note")
-        .sort(lambda item: item[0], reverse=True)
-        .slice(0, 2)
-        .run()
+        server_client.shelf("note").key_range("note-1", "note-5").slice(0, 2).run()
     )
     assert sliced == [
-        ["note-4", {"title": "note-4"}],
-        ["note-3", {"title": "note-3"}],
+        ["note-1", {"title": "note-1"}],
+        ["note-2", {"title": "note-2"}],
     ]
 
     assert asyncio.run(server_client.shelf("note").count().run()) == 5
@@ -423,6 +440,14 @@ def test_server_validation_error(server_client):
         )
 
 
+def test_server_rejects_readonly_put_many(server_client):
+    tx = server_client.transaction()
+    tx.add(tx.shelf("note").put_many([("note-0", {"title": "nope"})]))
+
+    with pytest.raises(RuntimeError):
+        asyncio.run(tx.run())
+
+
 def test_server_transaction_returns_last_result(server_client):
     seed_server_notes(server_client, 2)
 
@@ -446,6 +471,21 @@ def test_server_transaction_spans_multiple_shelves(server_client):
     assert asyncio.run(server_client.shelf("note").key("note-1").first().run()) == [
         "note-1",
         {"title": "note-1"},
+    ]
+
+
+def test_server_transaction_returns_none_for_put_many(server_client):
+    def items():
+        yield ("note-0", {"title": "note-0"})
+        yield ("note-0", {"title": "updated"})
+
+    tx = server_client.transaction(write=True)
+    tx.add(tx.shelf("note").put_many(items()))
+
+    assert asyncio.run(tx.run()) is None
+    assert asyncio.run(server_client.shelf("note").key("note-0").first().run()) == [
+        "note-0",
+        {"title": "updated"},
     ]
 
 

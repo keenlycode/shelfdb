@@ -31,6 +31,11 @@ def test_db_shelf_returns_lazy_query(db):
     assert isinstance(db.shelf("note"), ShelfQuery)
 
 
+def test_sort_is_removed_from_query_api(db):
+    with pytest.raises(AttributeError):
+        db.shelf("note").sort(lambda item: item[0])
+
+
 def test_query_requires_run_before_iteration(db):
     query = db.shelf("note")
 
@@ -69,7 +74,7 @@ def test_run_returns_one_shot_iterator(db):
     assert list(shelf) == []
 
 
-def test_key_filter_slice_sort_first_and_count(db):
+def test_key_filter_key_range_slice_first_and_count(db):
     seed_notes(db)
 
     assert db.shelf("note").key("note-1").first().run() == [
@@ -86,10 +91,10 @@ def test_key_filter_slice_sort_first_and_count(db):
         ["note-3", {"title": "note-3"}],
     ]
 
-    sliced = db.shelf("note").sort(lambda item: item[0], reverse=True).slice(0, 2)
+    sliced = db.shelf("note").key_range("note-1", "note-5").slice(0, 2)
     assert list(sliced.run()) == [
-        ["note-4", {"title": "note-4"}],
-        ["note-3", {"title": "note-3"}],
+        ["note-1", {"title": "note-1"}],
+        ["note-2", {"title": "note-2"}],
     ]
 
     assert db.shelf("note").first(lambda item: item[0] == "note-2").run() == [
@@ -100,6 +105,56 @@ def test_key_filter_slice_sort_first_and_count(db):
     assert (
         db.shelf("note").filter(lambda item: item[0].endswith("1")).count().run() == 1
     )
+
+
+def test_put_many_creates_items_and_last_value_wins(db):
+    def items():
+        yield ("note-1", {"title": "before"})
+        yield ("note-1", {"title": "after"})
+        yield ("note-2", {"title": "note-2"})
+
+    assert db.shelf("note").put_many(items()).run() is None
+    assert list(db.shelf("note").run()) == [
+        ["note-1", {"title": "after"}],
+        ["note-2", {"title": "note-2"}],
+    ]
+
+
+def test_put_many_accepts_empty_iterable(db):
+    assert db.shelf("note").put_many([]).run() is None
+    assert db.shelf("note").count().run() == 0
+
+
+def test_put_many_is_terminal(db):
+    with pytest.raises(RuntimeError, match="returned None"):
+        db.shelf("note").put_many([("note-0", {"title": "note-0"})]).first().run()
+
+
+def test_keys_in_returns_requested_input_order(db):
+    seed_notes(db, 4)
+
+    assert list(db.shelf("note").keys_in([]).run()) == []
+
+    def keys():
+        yield "note-3"
+        yield "missing"
+        yield "note-1"
+        yield "note-3"
+
+    assert list(db.shelf("note").keys_in(keys()).run()) == [
+        ["note-3", {"title": "note-3"}],
+        ["note-1", {"title": "note-1"}],
+        ["note-3", {"title": "note-3"}],
+    ]
+
+
+def test_keys_in_requires_base_shelf(db):
+    seed_notes(db, 2)
+
+    with pytest.raises(RuntimeError, match="base shelf"):
+        db.shelf("note").filter(lambda item: item[0] == "note-1").keys_in(
+            ["note-1"]
+        ).run()
 
 
 def test_update_replace_edit_and_delete_apply_on_run(db):
@@ -143,6 +198,21 @@ def test_strict_selection_mutators_raise_on_missing_key(db):
     assert db.shelf("note").key("missing").delete().run() == []
 
 
+def test_db_write_transaction_commits_put_many(db):
+    def items():
+        yield ("note-0", {"title": "note-0"})
+        yield ("note-0", {"title": "updated"})
+        yield ("note-1", {"title": "note-1"})
+
+    with db.transaction(write=True) as tx:
+        assert tx.shelf("note").put_many(items()).run() is None
+
+    assert list(db.shelf("note").run()) == [
+        ["note-0", {"title": "updated"}],
+        ["note-1", {"title": "note-1"}],
+    ]
+
+
 def test_replace_rejects_unsupported_msgpack_values(db):
     with pytest.raises(TypeError):
         db.shelf("note").put("dt", {"created_at": datetime.now()}).run()
@@ -181,9 +251,9 @@ def test_db_transaction_reads_with_consistent_snapshot(db):
         assert tx.result is None
         filtered = tx.shelf("note").filter(lambda item: item[0] in {"note-1", "note-3"})
 
-        assert list(
-            filtered.sort(lambda item: item[0], reverse=True).slice(0, 1).run()
-        ) == [["note-3", {"title": "note-3"}]]
+        assert list(filtered.key_range("note-3", "note-4").slice(0, 1).run()) == [
+            ["note-3", {"title": "note-3"}]
+        ]
         assert tx.shelf("note").key("note-2").first().run() == [
             "note-2",
             {"title": "note-2"},
@@ -229,6 +299,9 @@ def test_db_read_transaction_rejects_write_methods(db):
     with db.transaction() as tx:
         with pytest.raises(RuntimeError):
             tx.shelf("note").key("note-0").replace({"title": "nope"}).run()
+
+        with pytest.raises(RuntimeError):
+            tx.shelf("note").put_many([("note-0", {"title": "nope"})]).run()
 
 
 def test_db_transaction_rolls_back_on_error(db):

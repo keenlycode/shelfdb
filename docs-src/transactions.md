@@ -91,6 +91,10 @@ while the transaction is active.
 Server mode also has transactions. The idea is the same, but remote transactions are built
 explicitly and then sent as one request.
 
+!!! info "Information:"
+    Build them with `tx.add(...)` and then call `tx.run()`.
+    Do not call `.run()` on `tx.shelf(...)` queries; they are transaction steps, not directly executable queries.
+
 ```python
 tx = client.transaction(write=True)
 tx.add(tx.shelf("note").put("note-1", {"title": "hello"}))

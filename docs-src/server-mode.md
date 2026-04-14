@@ -122,6 +122,10 @@ instead of materialized lists.
 
 Use `client.transaction(write=True)` to group multiple remote writes together.
 
+!!! info "Information:"
+    Build client transactions with `tx.add(...)` and `tx.run()`.
+    Do not call `.run()` on `tx.shelf(...)` queries; they are transaction steps, not directly executable queries.
+
 ```python
 tx = client.transaction(write=True)
 tx.add(tx.shelf("note").put("note-1", {"title": "ShelfDB"}))

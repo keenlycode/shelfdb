@@ -1,5 +1,6 @@
 site_name: ShelfDB
 site_description: Tiny document database for Python
+repo_url: https://github.com/keenlycode/shelfdb
 docs_dir: docs-src
 site_dir: docs
 
@@ -16,6 +17,7 @@ nav:
 theme:
   name: shadcn
   icon: null
+  show_stargazers: true
   topbar_sections: false
   pygments_style:
     light: shadcn-light

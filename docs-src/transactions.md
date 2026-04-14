@@ -36,6 +36,9 @@ with db.transaction(write=True) as tx:
 
 When the block exits successfully, the changes commit together.
 
+Each individual write query is already atomic by default. Use an explicit write transaction when
+you want several queries to commit or roll back together.
+
 ## Rollback on error
 
 If an exception escapes the transaction block, ShelfDB rolls the transaction back.
@@ -87,7 +90,7 @@ Starting another `db.transaction(...)` inside that block raises an error.
 ## Read-only transactions reject writes
 
 If you use `db.transaction()` without `write=True`, mutating operations such as `put()`,
-`put_many()`, `replace()`, or `update()` are rejected.
+`put_many()`, `replace()`, `update()`, `edit()`, or `delete()` are rejected.
 
 Inside a local transaction, use `tx.shelf(...)` for all queries. `db.shelf(...)` is rejected
 while the transaction is active.

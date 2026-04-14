@@ -198,7 +198,14 @@ def test_handler_closes_writer_when_stream_write_fails(tmp_path):
                             {
                                 "type": "query",
                                 "shelf": "note",
-                                "queries": [{"op": "count", "args": [], "kwargs": {}}],
+                                "queries": [
+                                    {
+                                        "op": "count",
+                                        "args": [],
+                                        "kwargs": {},
+                                        "write": False,
+                                    }
+                                ],
                             }
                         )
                     ),
@@ -334,7 +341,14 @@ def test_handler_rejects_malformed_query_step_payload(tmp_path):
                         {
                             "type": "query",
                             "shelf": "note",
-                            "queries": [{"op": "count", "args": (), "kwargs": {}}],
+                            "queries": [
+                                {
+                                    "op": "count",
+                                    "args": (),
+                                    "kwargs": {},
+                                    "write": False,
+                                }
+                            ],
                         }
                     )
                 ),

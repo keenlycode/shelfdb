@@ -214,6 +214,32 @@ def test_sync_server_update_edit_put_and_delete(sync_server_client):
     assert sync_server_client.shelf("note").key("note-0").first().run() is None
 
 
+def test_sync_server_edit_rolls_back_when_callable_raises(sync_server_client):
+    seed_notes(sync_server_client, 3)
+
+    def edit(item):
+        if item[0] == "note-1":
+            raise RuntimeError("boom")
+        return {"title": item[1]["title"], "content": "updated"}
+
+    with pytest.raises(RuntimeError, match="boom"):
+        (
+            sync_server_client.shelf("note")
+            .filter(lambda item: item[0].startswith("note-"))
+            .edit(edit)
+            .run()
+        )
+
+    assert sync_server_client.shelf("note").key("note-0").first().run() == [
+        "note-0",
+        {"title": "note-0"},
+    ]
+    assert sync_server_client.shelf("note").key("note-1").first().run() == [
+        "note-1",
+        {"title": "note-1"},
+    ]
+
+
 def test_sync_server_transaction_returns_last_result(sync_server_client):
     seed_notes(sync_server_client, 2)
 

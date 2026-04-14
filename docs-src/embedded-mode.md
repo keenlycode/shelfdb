@@ -119,8 +119,10 @@ db.shelf("note").key("note-1").delete().run()
 ```
 
 `update()`, `replace()`, and `edit()` require an existing selection. If nothing matches, they
-raise an error instead of silently creating a new document. `delete()` is safe on a missing key
-and returns an empty result. `put_many()` writes multiple documents and returns `None`.
+raise an error instead of silently creating a new document. All write queries run atomically by
+default, even outside `db.transaction(write=True)`; use an explicit write transaction when you
+need multiple queries to commit together. `delete()` is safe on a missing key and returns an
+empty result. `put_many()` writes multiple documents and returns `None`.
 
 Embedded multi-item `run()` results are one-shot iterators.
 

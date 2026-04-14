@@ -185,6 +185,41 @@ def test_update_replace_edit_and_delete_apply_on_run(db):
     assert db.shelf("note").key("note-1").first().run() is None
 
 
+def test_update_rolls_back_atomically_outside_transaction(db, monkeypatch):
+    seed_notes(db, 3)
+
+    store = db._open_shelf("note")._store
+    original_put = store.put
+    calls = {"count": 0}
+
+    def flaky_put(key, data, txn=None):
+        calls["count"] += 1
+        if calls["count"] == 2:
+            raise RuntimeError("boom")
+        return original_put(key, data, txn=txn)
+
+    monkeypatch.setattr(store, "put", flaky_put)
+
+    with pytest.raises(RuntimeError, match="boom"):
+        db.shelf("note").filter(lambda item: item[0].startswith("note-")).update(
+            {"content": "updated"}
+        ).run()
+
+    assert calls["count"] == 2
+    assert db.shelf("note").key("note-0").first().run() == [
+        "note-0",
+        {"title": "note-0"},
+    ]
+    assert db.shelf("note").key("note-1").first().run() == [
+        "note-1",
+        {"title": "note-1"},
+    ]
+    assert db.shelf("note").key("note-2").first().run() == [
+        "note-2",
+        {"title": "note-2"},
+    ]
+
+
 def test_strict_selection_mutators_raise_on_missing_key(db):
     with pytest.raises(RuntimeError):
         db.shelf("note").key("missing").replace({"title": "first"}).run()

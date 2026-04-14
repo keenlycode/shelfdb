@@ -181,6 +181,8 @@ Async server mode uses the same query chain, but you must `await query.run()`.
 
 ### Using strict mutators on an empty selection
 
-`replace()`, `update()`, and `edit()` expect at least one existing item. If nothing matches,
-they raise an error. `delete()` is different: deleting a missing item just returns an empty
-result.
+`replace()`, `update()`, `edit()`, and `delete()` run inside an implicit write transaction when
+you are not already inside `db.transaction(write=True)`, so a failure rolls back the whole
+query. `replace()`, `update()`, and `edit()` still expect at least one existing item. If nothing
+matches, they raise an error. `delete()` is different: deleting a missing item just returns an
+empty result.

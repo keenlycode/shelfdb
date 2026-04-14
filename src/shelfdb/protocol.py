@@ -25,8 +25,10 @@ class SerializableIterable:
         return (self.__class__, (list(self._iterable),))
 
 
-def prepare_query_step(op: str, args: tuple[Any, ...], kwargs: dict[str, Any]):
-    """Wrap iterable query arguments that must survive RPC serialization."""
+def prepare_query_step(
+    op: str, args: tuple[Any, ...], kwargs: dict[str, Any], *, write: bool = False
+):
+    """Wrap iterable query arguments and attach query metadata."""
 
     prepared_args = list(args)
     if op in _ITERABLE_QUERY_OPS and prepared_args:
@@ -36,6 +38,7 @@ def prepare_query_step(op: str, args: tuple[Any, ...], kwargs: dict[str, Any]):
         "op": op,
         "args": prepared_args,
         "kwargs": dict(kwargs),
+        "write": write,
     }
 
 

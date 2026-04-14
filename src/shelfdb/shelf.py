@@ -1,4 +1,8 @@
-"""Lazy local query builders and LMDB-backed execution primitives."""
+"""Lazy local query builders and LMDB-backed execution primitives.
+
+Write queries carry their own metadata and run in an implicit local transaction
+when needed so they either commit fully or roll back on error.
+"""
 
 from __future__ import annotations
 
@@ -11,7 +15,11 @@ from typing import Any
 
 import lmdb
 
-from .query import QueryBuilderMixin, QueryStep, replay_queries
+from .query import (
+    QueryBuilderMixin,
+    QueryStep,
+    replay_queries,
+)
 from ._normalize import normalize_result
 from .storage.lmdb import LMDBStore
 
@@ -325,6 +333,16 @@ class ShelfQuery(QueryBuilderMixin):
 
     def run(self):
         self._validate_transaction_context()
+        if self._tx_context is None and self._has_write_step():
+            with self._db.transaction(write=True):
+                return self._run_queries()
+
+        return self._run_queries()
+
+    def _has_write_step(self) -> bool:
+        return any(query.get("write") is True for query in self.queries)
+
+    def _run_queries(self):
         result = replay_queries(self._db._open_shelf(self.shelf_name), self.queries)
         if isinstance(result, Shelf):
             return (normalize_result(item) for item in result)

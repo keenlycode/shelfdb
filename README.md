@@ -41,11 +41,10 @@ db.shelf("note").put(
 notes = (
     db.shelf("note")
     .filter(lambda item: item[1]["title"] == "Shelf DB")
-    .sort(key=lambda item: item[1]["created_at"])
     .run()
 )
 
-print(list(notes))
+print(sorted(notes, key=lambda item: item[1]["created_at"]))
 ```
 
 `run()` returns a one-shot iterator for local multi-item queries. Each item has the server-style

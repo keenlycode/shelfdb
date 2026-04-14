@@ -143,7 +143,27 @@ def test_sync_server_put_and_first(sync_server_client):
     ]
 
 
-def test_sync_server_filter_sort_slice_and_count(sync_server_client):
+def test_sync_server_put_many_and_keys_in(sync_server_client):
+    def items():
+        yield ("note-1", {"title": "before"})
+        yield ("note-1", {"title": "after"})
+        yield ("note-2", {"title": "note-2"})
+
+    def keys():
+        yield "note-2"
+        yield "missing"
+        yield "note-1"
+        yield "note-2"
+
+    assert sync_server_client.shelf("note").put_many(items()).run() is None
+    assert sync_server_client.shelf("note").keys_in(keys()).run() == [
+        ["note-2", {"title": "note-2"}],
+        ["note-1", {"title": "after"}],
+        ["note-2", {"title": "note-2"}],
+    ]
+
+
+def test_sync_server_filter_key_range_slice_and_count(sync_server_client):
     seed_notes(sync_server_client, 5)
 
     filtered = (
@@ -157,14 +177,11 @@ def test_sync_server_filter_sort_slice_and_count(sync_server_client):
     ]
 
     sliced = (
-        sync_server_client.shelf("note")
-        .sort(lambda item: item[0], reverse=True)
-        .slice(0, 2)
-        .run()
+        sync_server_client.shelf("note").key_range("note-1", "note-5").slice(0, 2).run()
     )
     assert sliced == [
-        ["note-4", {"title": "note-4"}],
-        ["note-3", {"title": "note-3"}],
+        ["note-1", {"title": "note-1"}],
+        ["note-2", {"title": "note-2"}],
     ]
 
     assert sync_server_client.shelf("note").count().run() == 5
@@ -197,15 +214,40 @@ def test_sync_server_update_edit_put_and_delete(sync_server_client):
     assert sync_server_client.shelf("note").key("note-0").first().run() is None
 
 
+def test_sync_server_edit_rolls_back_when_callable_raises(sync_server_client):
+    seed_notes(sync_server_client, 3)
+
+    def edit(item):
+        if item[0] == "note-1":
+            raise RuntimeError("boom")
+        return {"title": item[1]["title"], "content": "updated"}
+
+    with pytest.raises(RuntimeError, match="boom"):
+        (
+            sync_server_client.shelf("note")
+            .filter(lambda item: item[0].startswith("note-"))
+            .edit(edit)
+            .run()
+        )
+
+    assert sync_server_client.shelf("note").key("note-0").first().run() == [
+        "note-0",
+        {"title": "note-0"},
+    ]
+    assert sync_server_client.shelf("note").key("note-1").first().run() == [
+        "note-1",
+        {"title": "note-1"},
+    ]
+
+
 def test_sync_server_transaction_returns_last_result(sync_server_client):
     seed_notes(sync_server_client, 2)
 
     tx = sync_server_client.transaction(write=True)
-    tx.add(tx.shelf("note").key("note-0").update({"content": "updated"}))
-    tx.add(tx.shelf("note").key("note-0").first())
+    assert tx.shelf("note").key("note-0").update({"content": "updated"}).run() is None
+    assert tx.shelf("note").key("note-0").first().run() is None
 
-    assert tx.run() == ["note-0", {"title": "note-0", "content": "updated"}]
-    assert tx.result == ["note-0", {"title": "note-0", "content": "updated"}]
+    assert tx.commit() == ["note-0", {"title": "note-0", "content": "updated"}]
 
 
 def test_sync_server_transaction_spans_multiple_shelves(sync_server_client):
@@ -220,11 +262,34 @@ def test_sync_server_transaction_spans_multiple_shelves(sync_server_client):
     ]
 
 
+def test_sync_server_transaction_returns_none_for_put_many(sync_server_client):
+    def items():
+        yield ("note-0", {"title": "note-0"})
+        yield ("note-0", {"title": "updated"})
+
+    tx = sync_server_client.transaction(write=True)
+    tx.add(tx.shelf("note").put_many(items()))
+
+    assert tx.run() is None
+    assert sync_server_client.shelf("note").key("note-0").first().run() == [
+        "note-0",
+        {"title": "updated"},
+    ]
+
+
 def test_sync_server_rejects_readonly_writes(sync_server_client):
     seed_notes(sync_server_client, 1)
 
     tx = sync_server_client.transaction()
-    tx.add(tx.shelf("note").key("note-0").delete())
+    tx.shelf("note").key("note-0").delete().run()
+
+    with pytest.raises(RuntimeError):
+        tx.commit()
+
+
+def test_sync_server_rejects_readonly_put_many(sync_server_client):
+    tx = sync_server_client.transaction()
+    tx.add(tx.shelf("note").put_many([("note-0", {"title": "nope"})]))
 
     with pytest.raises(RuntimeError):
         tx.run()

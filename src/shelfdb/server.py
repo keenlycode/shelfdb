@@ -7,12 +7,11 @@ import re as re  # noqa: F401 - exposed for client callables
 import stat
 from typing import Any, cast
 
-import dill
-import msgpack
 import structlog
 
 from . import open as open_db
 from ._normalize import normalize_result
+from .protocol import dumps_response, loads_request
 from .rpc import run_request
 
 
@@ -53,14 +52,13 @@ async def _close_writer(writer):
 
 def _pack_error(error: Exception) -> bytes:
     """Encode one exception as a msgpack RPC error payload."""
-    return msgpack.packb(
+    return dumps_response(
         {
             "error": {
                 "type": type(error).__name__,
                 "message": str(error),
             }
-        },
-        use_bin_type=True,
+        }
     )
 
 
@@ -95,10 +93,10 @@ class ShelfServer:
         payload = await reader.read(-1)
         try:
             try:
-                payload = dill.loads(payload)
+                payload = loads_request(payload)
                 log.debug("rpc_request_received", **_payload_log_kwargs(payload))
                 result = run_request(self.shelfdb, payload)
-                response = msgpack.packb(normalize_result(result), use_bin_type=True)
+                response = dumps_response(normalize_result(result))
                 log.debug("rpc_request_succeeded", **_payload_log_kwargs(payload))
             except Exception as error:
                 log.exception(

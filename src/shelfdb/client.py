@@ -1,4 +1,7 @@
-"""Async and sync RPC clients plus reusable query builders for ShelfDB."""
+"""Async and sync RPC clients plus reusable query builders for ShelfDB.
+
+Client transaction queries queue their steps until commit.
+"""
 
 from __future__ import annotations
 
@@ -8,11 +11,10 @@ import socket
 from urllib.parse import urlparse
 from typing import Any, cast
 
-import dill
-import msgpack
 import structlog
 
 from .query import QueryBuilderMixin, QueryStep
+from .protocol import dumps_request, loads_response
 
 
 log = structlog.get_logger(__name__)
@@ -37,7 +39,7 @@ def _payload_log_kwargs(payload: object) -> dict[str, object]:
 
 
 def _decode_response(data: bytes):
-    payload = msgpack.unpackb(data, raw=False)
+    payload = loads_response(data)
     log.debug("rpc_response_decoded", response_bytes=len(data))
     if isinstance(payload, dict) and "error" in payload:
         error = payload["error"]
@@ -68,7 +70,7 @@ def _parse_client_url(url: str) -> tuple[str, str | int]:
 
 
 def _request_over_socket(sock: socket.socket, payload) -> bytes:
-    sock.sendall(dill.dumps(payload))
+    sock.sendall(dumps_request(payload))
     try:
         sock.shutdown(socket.SHUT_WR)
     except OSError:
@@ -131,6 +133,13 @@ class AsyncTransactionQuery(QueryBuilderMixin):
             self.transaction, self.shelf_name, (*self.queries, query)
         )
 
+    def run(self):
+        if self.transaction._ran:
+            raise RuntimeError("Transaction already ran.")
+
+        self.transaction._enqueue(self)
+        return None
+
 
 class AsyncClientTransaction:
     def __init__(self, client: "AsyncClient", write: bool = False):
@@ -138,15 +147,8 @@ class AsyncClientTransaction:
         self._write = write
         self._txs = []
         self._ran = False
-        self.result = None
 
-    def shelf(self, shelf_name: str) -> AsyncTransactionQuery:
-        if self._ran:
-            raise RuntimeError("Transaction already ran.")
-
-        return AsyncTransactionQuery(self, shelf_name)
-
-    def add(self, query: AsyncTransactionQuery):
+    def _enqueue(self, query: AsyncTransactionQuery):
         if self._ran:
             raise RuntimeError("Transaction already ran.")
         if not isinstance(query, AsyncTransactionQuery):
@@ -157,7 +159,16 @@ class AsyncClientTransaction:
         self._txs.append({"shelf": query.shelf_name, "queries": list(query.queries)})
         return query
 
-    async def run(self):
+    def shelf(self, shelf_name: str) -> AsyncTransactionQuery:
+        if self._ran:
+            raise RuntimeError("Transaction already ran.")
+
+        return AsyncTransactionQuery(self, shelf_name)
+
+    def add(self, query: AsyncTransactionQuery):
+        return self._enqueue(query)
+
+    async def commit(self):
         if self._ran:
             raise RuntimeError("Transaction already ran.")
 
@@ -167,8 +178,10 @@ class AsyncClientTransaction:
             "write": self._write,
             "txs": self._txs,
         }
-        self.result = await self._client._request(payload)
-        return self.result
+        return await self._client._request(payload)
+
+    async def run(self):
+        return await self.commit()
 
 
 class AsyncClient:
@@ -211,7 +224,7 @@ class AsyncClient:
             reader, writer = await asyncio.open_unix_connection(self.unix_path)
         try:
             log.debug("client_request_sending", **_payload_log_kwargs(payload))
-            writer.write(dill.dumps(payload))
+            writer.write(dumps_request(payload))
             writer.write_eof()
             await writer.drain()
             chunks = []
@@ -263,6 +276,13 @@ class SyncTransactionQuery(QueryBuilderMixin):
             self.transaction, self.shelf_name, (*self.queries, query)
         )
 
+    def run(self):
+        if self.transaction._ran:
+            raise RuntimeError("Transaction already ran.")
+
+        self.transaction._enqueue(self)
+        return None
+
 
 class SyncClientTransaction:
     def __init__(self, client: "SyncClient", write: bool = False):
@@ -270,15 +290,8 @@ class SyncClientTransaction:
         self._write = write
         self._txs = []
         self._ran = False
-        self.result = None
 
-    def shelf(self, shelf_name: str) -> SyncTransactionQuery:
-        if self._ran:
-            raise RuntimeError("Transaction already ran.")
-
-        return SyncTransactionQuery(self, shelf_name)
-
-    def add(self, query: SyncTransactionQuery):
+    def _enqueue(self, query: SyncTransactionQuery):
         if self._ran:
             raise RuntimeError("Transaction already ran.")
         if not isinstance(query, SyncTransactionQuery):
@@ -289,7 +302,16 @@ class SyncClientTransaction:
         self._txs.append({"shelf": query.shelf_name, "queries": list(query.queries)})
         return query
 
-    def run(self):
+    def shelf(self, shelf_name: str) -> SyncTransactionQuery:
+        if self._ran:
+            raise RuntimeError("Transaction already ran.")
+
+        return SyncTransactionQuery(self, shelf_name)
+
+    def add(self, query: SyncTransactionQuery):
+        return self._enqueue(query)
+
+    def commit(self):
         if self._ran:
             raise RuntimeError("Transaction already ran.")
 
@@ -299,8 +321,10 @@ class SyncClientTransaction:
             "write": self._write,
             "txs": self._txs,
         }
-        self.result = self._client._request(payload)
-        return self.result
+        return self._client._request(payload)
+
+    def run(self):
+        return self.commit()
 
 
 class SyncClient:

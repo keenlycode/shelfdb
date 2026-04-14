@@ -1,6 +1,6 @@
-"""LMDB-backed storage adapter for ShelfDB."""
+"""LMDB-backed storage adapter and bulk/range helpers for ShelfDB."""
 
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from typing import Any
 
 import msgpack
@@ -75,6 +75,49 @@ class LMDBStore:
             return None
         return self._item_type(key, self._deserialize(data))
 
+    def key_range(self, start: str, end: str, txn=None) -> Iterator:
+        """Yield decoded items whose keys fall in ``[start, end)``."""
+
+        start_bytes = start.encode()
+        end_bytes = end.encode()
+
+        def iterator() -> Iterator:
+            if txn is None:
+                with self.begin() as active_txn:
+                    cursor = active_txn.cursor(db=self._db)
+                    if not cursor.set_range(start_bytes):
+                        return
+                    for key, value in cursor:
+                        if key >= end_bytes:
+                            break
+                        yield self._item_type(key.decode(), self._deserialize(value))
+                return
+
+            cursor = txn.cursor(db=self._db)
+            if not cursor.set_range(start_bytes):
+                return
+            for key, value in cursor:
+                if key >= end_bytes:
+                    break
+                yield self._item_type(key.decode(), self._deserialize(value))
+
+        return iterator()
+
+    def keys_in(self, keys: Iterable[str], txn=None):
+        """Return decoded items for each requested key in input order."""
+
+        def build_items(cursor) -> list:
+            return [
+                self._item_type(key.decode(), self._deserialize(value))
+                for key, value in cursor.getmulti(key.encode() for key in keys)
+            ]
+
+        if txn is None:
+            with self.begin() as txn:
+                return build_items(txn.cursor(db=self._db))
+
+        return build_items(txn.cursor(db=self._db))
+
     def put(self, key: str, data: dict[str, Any], txn=None):
         """Write one mapping payload, reusing an existing transaction when provided."""
         if txn is None:
@@ -82,6 +125,22 @@ class LMDBStore:
                 txn.put(key.encode(), self._serialize(data))
             return
         txn.put(key.encode(), self._serialize(data), db=self._db)
+
+    def put_many(self, items: Iterable[tuple[str, dict[str, Any]]], txn=None):
+        """Write multiple mapping payloads, reusing an existing transaction when provided."""
+
+        def encoded_items():
+            for key, data in items:
+                yield key.encode(), self._serialize(data)
+
+        if txn is None:
+            with self.begin(write=True) as txn:
+                cursor = txn.cursor(db=self._db)
+                cursor.putmulti(encoded_items())
+            return
+
+        cursor = txn.cursor(db=self._db)
+        cursor.putmulti(encoded_items())
 
     def delete(self, key: str, txn=None):
         """Delete one key and return LMDB's success result."""

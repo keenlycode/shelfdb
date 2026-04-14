@@ -26,9 +26,18 @@ Use `write=True` for mutations:
 with db.transaction(write=True) as tx:
     tx.shelf("note").key("note-0").update({"content": "updated"}).run()
     tx.shelf("user").put("user-0", {"name": "alice"}).run()
+    tx.shelf("note").put_many(
+        [
+            ("note-1", {"title": "one"}),
+            ("note-2", {"title": "two"}),
+        ]
+    ).run()
 ```
 
 When the block exits successfully, the changes commit together.
+
+Each individual write query is already atomic by default. Use an explicit write transaction when
+you want several queries to commit or roll back together.
 
 ## Rollback on error
 
@@ -81,7 +90,7 @@ Starting another `db.transaction(...)` inside that block raises an error.
 ## Read-only transactions reject writes
 
 If you use `db.transaction()` without `write=True`, mutating operations such as `put()`,
-`replace()`, or `update()` are rejected.
+`put_many()`, `replace()`, `update()`, `edit()`, or `delete()` are rejected.
 
 Inside a local transaction, use `tx.shelf(...)` for all queries. `db.shelf(...)` is rejected
 while the transaction is active.
@@ -92,15 +101,16 @@ Server mode also has transactions. The idea is the same, but remote transactions
 explicitly and then sent as one request.
 
 !!! info "Information:"
-    Build them with `tx.add(...)` and then call `tx.run()`.
-    Do not call `.run()` on `tx.shelf(...)` queries; they are transaction steps, not directly executable queries.
+    Remote transaction queries queue their steps when you call `.run()`.
+    Call `tx.commit()` to send the batch.
+    `tx.add(...)` still works as a compatibility helper.
 
 ```python
 tx = client.transaction(write=True)
-tx.add(tx.shelf("note").put("note-1", {"title": "hello"}))
-tx.run()
+tx.shelf("note").put("note-1", {"title": "hello"}).run()
+tx.commit()
 ```
 
-For async code, use `await tx.run()` instead.
+For async code, use `await tx.commit()` instead.
 
 See [Server Mode](server-mode.md) for connection setup and the shared remote query model.

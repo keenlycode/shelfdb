@@ -6,7 +6,7 @@ style as local ShelfDB.
 This is useful when several trusted local processes should talk to one ShelfDB server, or when
 you want a transport boundary between your application and the database.
 
-Local mode is still simpler when you can use it.
+Embedded mode is still simpler when you can use it.
 
 ## Start the server
 
@@ -44,6 +44,16 @@ ShelfDB accepts these URL forms:
 
 - `tcp://host:port`
 - `unix:///path/to/socket.sock`
+
+## Unix Socket transport
+
+Use a Unix socket when clients live on the same machine as the server.
+
+```shell
+shelfdb --url unix:///tmp/shelfdb.sock
+```
+
+This is still server mode. It is local-only and cannot be reached from another machine.
 
 ## Connect from Python
 
@@ -105,7 +115,7 @@ For example, a remote item looks like this:
 ["note-1", {"title": "remote"}]
 ```
 
-Local mode uses the same item shape, but multi-item local `run()` calls return one-shot iterators
+Embedded mode uses the same item shape, but multi-item embedded `run()` calls return one-shot iterators
 instead of materialized lists.
 
 ## Transactions

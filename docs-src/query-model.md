@@ -5,7 +5,7 @@ ShelfDB is built around lazy query pipelines.
 Instead of reading or mutating data immediately, you build a query step by step and execute it
 only when you call `.run()`.
 
-This model is shared across local mode and server mode.
+This model is shared across embedded mode and server mode.
 
 ## Mental model
 

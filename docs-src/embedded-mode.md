@@ -1,6 +1,6 @@
-# Local API
+# Embedded Mode
 
-Use `shelfdb.open()` when you want ShelfDB as an embedded local database.
+Use `shelfdb.open()` when you want ShelfDB as an embedded database inside your Python process.
 
 This is the default way to use the project: your Python process talks directly to LMDB and no
 separate server is required.
@@ -103,21 +103,21 @@ db.shelf("note").key("note-1").delete().run()
 raise an error instead of silently creating a new document. `delete()` is safe on a missing key
 and returns an empty result.
 
-Local multi-item `run()` results are one-shot iterators.
+Embedded multi-item `run()` results are one-shot iterators.
 
 ## Result types
 
-Local execution uses these main types:
+Embedded execution uses these main types:
 
 - `shelfdb.DB` for the database
-- `shelfdb.shelf.ShelfQuery` for lazy local query builders
+- `shelfdb.shelf.ShelfQuery` for lazy embedded query builders
 - one-shot iterators from `run()` for executed selections
 
 Each yielded item uses the server-style shape `["key", {"title": "example"}]`.
 
 ## Close the database
 
-When you are done with the local database:
+When you are done with the embedded database:
 
 ```python
 db.close()

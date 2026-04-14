@@ -111,7 +111,7 @@ db.shelf("note").put(
 
 ## Next steps
 
-1. Read [Local API](local-api.md) for more local CRUD patterns.
+1. Read [Embedded Mode](embedded-mode.md) for more embedded CRUD patterns.
 2. Read [Query Model](query-model.md) to understand lazy pipelines.
 3. Read [Transactions](transactions.md) for consistent reads and atomic writes.
 4. Read [Server Mode](server-mode.md) if you need a separate ShelfDB process.

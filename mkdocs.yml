@@ -4,9 +4,9 @@ docs_dir: docs-src
 site_dir: docs
 
 nav:
-  - Overview: index.md
+  - ShelfDB: index.md
   - Getting Started: getting-started.md
-  - Local API: local-api.md
+  - Embedded Mode: embedded-mode.md
   - Server Mode: server-mode.md
   - Query Model: query-model.md
   - Transactions: transactions.md

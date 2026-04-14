@@ -28,7 +28,7 @@ Avoid:
 
 ## Practical guidance
 
-- Prefer embedded local mode unless you specifically need a separate server process.
+- Prefer embedded mode unless you specifically need a separate server process.
 - If you use server mode, keep it on trusted networks only.
 - Prefer loopback or Unix sockets for local development.
 - Review your deployment carefully before enabling remote access.

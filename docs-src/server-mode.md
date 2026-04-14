@@ -140,10 +140,11 @@ instead of materialized lists.
 
 Use `client.transaction(write=True)` to group multiple remote writes together.
 
+Remote transaction queries queue their steps when you call `.run()`, unlike embedded transactions
+where `.run()` executes immediately inside the `with` block.
+
 !!! info "Information:"
-    Remote transaction queries queue their steps when you call `.run()`.
     Call `tx.commit()` to send the batch.
-    `tx.add(...)` still works as a compatibility helper.
 
 ```python
 tx = client.transaction(write=True)
@@ -151,6 +152,8 @@ tx.shelf("note").put("note-1", {"title": "ShelfDB"}).run()
 tx.shelf("user").put("user-1", {"name": "alice"}).run()
 tx.commit()
 ```
+
+`tx.commit()` returns the last queued query result, or `None` for an empty transaction.
 
 For async code, use `await tx.commit()` instead.
 

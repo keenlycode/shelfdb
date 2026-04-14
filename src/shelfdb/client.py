@@ -165,9 +165,6 @@ class AsyncClientTransaction:
 
         return AsyncTransactionQuery(self, shelf_name)
 
-    def add(self, query: AsyncTransactionQuery):
-        return self._enqueue(query)
-
     async def commit(self):
         if self._ran:
             raise RuntimeError("Transaction already ran.")
@@ -307,9 +304,6 @@ class SyncClientTransaction:
             raise RuntimeError("Transaction already ran.")
 
         return SyncTransactionQuery(self, shelf_name)
-
-    def add(self, query: SyncTransactionQuery):
-        return self._enqueue(query)
 
     def commit(self):
         if self._ran:

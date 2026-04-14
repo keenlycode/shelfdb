@@ -456,10 +456,10 @@ def test_server_validation_error(server_client):
 
 def test_server_rejects_readonly_put_many(server_client):
     tx = server_client.transaction()
-    tx.add(tx.shelf("note").put_many([("note-0", {"title": "nope"})]))
+    tx.shelf("note").put_many([("note-0", {"title": "nope"})]).run()
 
     with pytest.raises(RuntimeError):
-        asyncio.run(tx.run())
+        asyncio.run(tx.commit())
 
 
 def test_server_transaction_returns_last_result(server_client):
@@ -477,10 +477,10 @@ def test_server_transaction_returns_last_result(server_client):
 
 def test_server_transaction_spans_multiple_shelves(server_client):
     tx = server_client.transaction(write=True)
-    tx.add(tx.shelf("note").put("note-1", {"title": "note-1"}))
-    tx.add(tx.shelf("user").put("user-1", {"name": "alice"}))
+    tx.shelf("note").put("note-1", {"title": "note-1"}).run()
+    tx.shelf("user").put("user-1", {"name": "alice"}).run()
 
-    assert asyncio.run(tx.run()) == [["user-1", {"name": "alice"}]]
+    assert asyncio.run(tx.commit()) == [["user-1", {"name": "alice"}]]
     assert asyncio.run(server_client.shelf("note").key("note-1").first().run()) == [
         "note-1",
         {"title": "note-1"},
@@ -493,9 +493,9 @@ def test_server_transaction_returns_none_for_put_many(server_client):
         yield ("note-0", {"title": "updated"})
 
     tx = server_client.transaction(write=True)
-    tx.add(tx.shelf("note").put_many(items()))
+    tx.shelf("note").put_many(items()).run()
 
-    assert asyncio.run(tx.run()) is None
+    assert asyncio.run(tx.commit()) is None
     assert asyncio.run(server_client.shelf("note").key("note-0").first().run()) == [
         "note-0",
         {"title": "updated"},
@@ -515,17 +515,17 @@ def test_server_transaction_rejects_readonly_writes(server_client):
 def test_server_transaction_empty_returns_none(server_client):
     tx = server_client.transaction(write=True)
 
-    assert asyncio.run(tx.run()) is None
+    assert asyncio.run(tx.commit()) is None
 
 
 def test_server_transaction_run_is_single_use(server_client):
     tx = server_client.transaction(write=True)
-    tx.add(tx.shelf("note").put("note-1", {"title": "note-1"}))
+    tx.shelf("note").put("note-1", {"title": "note-1"}).run()
 
-    asyncio.run(tx.run())
+    asyncio.run(tx.commit())
 
     with pytest.raises(RuntimeError):
-        asyncio.run(tx.run())
+        asyncio.run(tx.commit())
 
 
 def test_unix_server_put_and_first(unix_server_client):
@@ -545,10 +545,10 @@ def test_unix_server_transaction_returns_last_result(unix_server_client):
     )
 
     tx = unix_server_client.transaction(write=True)
-    tx.add(tx.shelf("note").key("note-0").update({"content": "updated"}))
-    tx.add(tx.shelf("note").key("note-0").first())
+    tx.shelf("note").key("note-0").update({"content": "updated"}).run()
+    tx.shelf("note").key("note-0").first().run()
 
-    assert asyncio.run(tx.run()) == [
+    assert asyncio.run(tx.commit()) == [
         "note-0",
         {"title": "note-0", "content": "updated"},
     ]

@@ -5,6 +5,9 @@ ShelfDB supports database transactions for two main purposes:
 - **consistent reads** with a stable snapshot
 - **atomic writes** that either all commit or all roll back
 
+Embedded transactions execute each query when you call `.run()` inside the `with` block.
+Client transactions queue each query on `.run()` and execute the batch later with `tx.commit()`.
+
 ## Read transactions
 
 Use a read transaction when you want a consistent view of the database while running several
@@ -103,13 +106,14 @@ explicitly and then sent as one request.
 !!! info "Information:"
     Remote transaction queries queue their steps when you call `.run()`.
     Call `tx.commit()` to send the batch.
-    `tx.add(...)` still works as a compatibility helper.
 
 ```python
 tx = client.transaction(write=True)
 tx.shelf("note").put("note-1", {"title": "hello"}).run()
 tx.commit()
 ```
+
+`tx.commit()` returns the last queued query result, or `None` for an empty transaction.
 
 For async code, use `await tx.commit()` instead.
 

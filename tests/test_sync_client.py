@@ -252,10 +252,10 @@ def test_sync_server_transaction_returns_last_result(sync_server_client):
 
 def test_sync_server_transaction_spans_multiple_shelves(sync_server_client):
     tx = sync_server_client.transaction(write=True)
-    tx.add(tx.shelf("note").put("note-1", {"title": "note-1"}))
-    tx.add(tx.shelf("user").put("user-1", {"name": "alice"}))
+    tx.shelf("note").put("note-1", {"title": "note-1"}).run()
+    tx.shelf("user").put("user-1", {"name": "alice"}).run()
 
-    assert tx.run() == [["user-1", {"name": "alice"}]]
+    assert tx.commit() == [["user-1", {"name": "alice"}]]
     assert sync_server_client.shelf("note").key("note-1").first().run() == [
         "note-1",
         {"title": "note-1"},
@@ -268,9 +268,9 @@ def test_sync_server_transaction_returns_none_for_put_many(sync_server_client):
         yield ("note-0", {"title": "updated"})
 
     tx = sync_server_client.transaction(write=True)
-    tx.add(tx.shelf("note").put_many(items()))
+    tx.shelf("note").put_many(items()).run()
 
-    assert tx.run() is None
+    assert tx.commit() is None
     assert sync_server_client.shelf("note").key("note-0").first().run() == [
         "note-0",
         {"title": "updated"},
@@ -289,10 +289,10 @@ def test_sync_server_rejects_readonly_writes(sync_server_client):
 
 def test_sync_server_rejects_readonly_put_many(sync_server_client):
     tx = sync_server_client.transaction()
-    tx.add(tx.shelf("note").put_many([("note-0", {"title": "nope"})]))
+    tx.shelf("note").put_many([("note-0", {"title": "nope"})]).run()
 
     with pytest.raises(RuntimeError):
-        tx.run()
+        tx.commit()
 
 
 def test_unix_sync_client_uses_same_api(unix_sync_server_client):

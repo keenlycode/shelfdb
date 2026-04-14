@@ -125,6 +125,7 @@ db.close()
 
 ## Transactions
 
-For consistent reads and atomic writes, use `DB.transaction()`.
+For consistent reads and atomic writes, use `with db.transaction(...) as tx:` and create
+transaction-scoped queries with `tx.shelf(...)`.
 
 See [Transactions](transactions.md) for the full behavior and examples.

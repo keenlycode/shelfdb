@@ -11,9 +11,11 @@ def run_query_request(db, payload):
 def run_transaction_request(db, payload):
     """Execute one transaction request and return its last result."""
     last_result = None
-    with db.transaction(write=payload["write"]):
-        for tx in payload["txs"]:
-            last_result = replay_queries(db.shelf(tx["shelf"]), tx["queries"]).run()
+    with db.transaction(write=payload["write"]) as tx:
+        for tx_payload in payload["txs"]:
+            last_result = replay_queries(
+                tx.shelf(tx_payload["shelf"]), tx_payload["queries"]
+            ).run()
     return last_result
 
 

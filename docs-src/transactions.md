@@ -11,9 +11,9 @@ Use a read transaction when you want a consistent view of the database while run
 queries.
 
 ```python
-with db.transaction():
-    note = db.shelf("note").key("note-2").first().run()
-    count = db.shelf("note").count().run()
+with db.transaction() as tx:
+    note = tx.shelf("note").key("note-2").first().run()
+    count = tx.shelf("note").count().run()
 ```
 
 Inside the block, queries run against the same transaction context.
@@ -23,9 +23,9 @@ Inside the block, queries run against the same transaction context.
 Use `write=True` for mutations:
 
 ```python
-with db.transaction(write=True):
-    db.shelf("note").key("note-0").update({"content": "updated"}).run()
-    db.shelf("user").put("user-0", {"name": "alice"}).run()
+with db.transaction(write=True) as tx:
+    tx.shelf("note").key("note-0").update({"content": "updated"}).run()
+    tx.shelf("user").put("user-0", {"name": "alice"}).run()
 ```
 
 When the block exits successfully, the changes commit together.
@@ -36,8 +36,8 @@ If an exception escapes the transaction block, ShelfDB rolls the transaction bac
 
 ```python
 try:
-    with db.transaction(write=True):
-        db.shelf("note").key("note-0").update({"content": "updated"}).run()
+    with db.transaction(write=True) as tx:
+        tx.shelf("note").key("note-0").update({"content": "updated"}).run()
         raise RuntimeError("boom")
 except RuntimeError:
     pass
@@ -50,9 +50,9 @@ After that error, the update is not committed.
 Inside a write transaction, later reads can see earlier writes from the same transaction.
 
 ```python
-with db.transaction(write=True):
-    db.shelf("note").put("note-0", {"title": "note-0"}).run()
-    note = db.shelf("note").key("note-0").first().run()
+with db.transaction(write=True) as tx:
+    tx.shelf("note").put("note-0", {"title": "note-0"}).run()
+    note = tx.shelf("note").key("note-0").first().run()
 ```
 
 ## Transaction-scoped queries
@@ -60,8 +60,8 @@ with db.transaction(write=True):
 Queries created inside a transaction must run inside that same transaction.
 
 ```python
-with db.transaction():
-    query = db.shelf("note").filter(lambda item: item[0].startswith("note-"))
+with db.transaction() as tx:
+    query = tx.shelf("note").filter(lambda item: item[0].startswith("note-"))
     results = list(query.run())
 ```
 
@@ -72,7 +72,7 @@ Do not create a query inside a transaction and then try to run it later, outside
 Nested local database transactions are not supported.
 
 ```python
-with db.transaction(write=True):
+with db.transaction(write=True) as tx:
     ...
 ```
 
@@ -82,6 +82,9 @@ Starting another `db.transaction(...)` inside that block raises an error.
 
 If you use `db.transaction()` without `write=True`, mutating operations such as `put()`,
 `replace()`, or `update()` are rejected.
+
+Inside a local transaction, use `tx.shelf(...)` for all queries. `db.shelf(...)` is rejected
+while the transaction is active.
 
 ## Remote transactions
 

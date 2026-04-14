@@ -179,24 +179,24 @@ def test_db_transaction_reads_with_consistent_snapshot(db):
     with db.transaction() as tx:
         assert tx is not None
         assert tx.result is None
-        filtered = db.shelf("note").filter(lambda item: item[0] in {"note-1", "note-3"})
+        filtered = tx.shelf("note").filter(lambda item: item[0] in {"note-1", "note-3"})
 
         assert list(
             filtered.sort(lambda item: item[0], reverse=True).slice(0, 1).run()
         ) == [["note-3", {"title": "note-3"}]]
-        assert db.shelf("note").key("note-2").first().run() == [
+        assert tx.shelf("note").key("note-2").first().run() == [
             "note-2",
             {"title": "note-2"},
         ]
-        assert db.shelf("note").count().run() == 5
+        assert tx.shelf("note").count().run() == 5
 
 
 def test_db_write_transaction_commits_changes(db):
     seed_notes(db, 2)
 
-    with db.transaction(write=True):
-        updated = db.shelf("note").key("note-0").update({"content": "updated"}).run()
-        put = db.shelf("note").put("note-2", {"title": "note-2"}).run()
+    with db.transaction(write=True) as tx:
+        updated = tx.shelf("note").key("note-0").update({"content": "updated"}).run()
+        put = tx.shelf("note").put("note-2", {"title": "note-2"}).run()
 
     assert list(updated) == [["note-0", {"title": "note-0", "content": "updated"}]]
     assert list(put) == [["note-2", {"title": "note-2"}]]
@@ -209,9 +209,9 @@ def test_db_write_transaction_commits_changes(db):
 def test_db_transaction_spans_multiple_shelves(db):
     seed_notes(db, 1)
 
-    with db.transaction(write=True):
-        db.shelf("note").key("note-0").update({"content": "updated"}).run()
-        db.shelf("user").put("user-0", {"name": "alice"}).run()
+    with db.transaction(write=True) as tx:
+        tx.shelf("note").key("note-0").update({"content": "updated"}).run()
+        tx.shelf("user").put("user-0", {"name": "alice"}).run()
 
     assert db.shelf("note").key("note-0").first().run() == [
         "note-0",
@@ -226,18 +226,18 @@ def test_db_transaction_spans_multiple_shelves(db):
 def test_db_read_transaction_rejects_write_methods(db):
     seed_notes(db, 1)
 
-    with db.transaction():
+    with db.transaction() as tx:
         with pytest.raises(RuntimeError):
-            db.shelf("note").key("note-0").replace({"title": "nope"}).run()
+            tx.shelf("note").key("note-0").replace({"title": "nope"}).run()
 
 
 def test_db_transaction_rolls_back_on_error(db):
     seed_notes(db, 1)
 
     with pytest.raises(RuntimeError):
-        with db.transaction(write=True):
-            db.shelf("note").key("note-0").update({"content": "updated"}).run()
-            db.shelf("user").put("user-0", {"name": "alice"}).run()
+        with db.transaction(write=True) as tx:
+            tx.shelf("note").key("note-0").update({"content": "updated"}).run()
+            tx.shelf("user").put("user-0", {"name": "alice"}).run()
             raise RuntimeError("boom")
 
     assert db.shelf("note").key("note-0").first().run() == [
@@ -248,10 +248,10 @@ def test_db_transaction_rolls_back_on_error(db):
 
 
 def test_db_transaction_reads_its_own_writes(db):
-    with db.transaction(write=True):
-        db.shelf("note").put("note-0", {"title": "note-0"}).run()
+    with db.transaction(write=True) as tx:
+        tx.shelf("note").put("note-0", {"title": "note-0"}).run()
 
-        assert db.shelf("note").key("note-0").first().run() == [
+        assert tx.shelf("note").key("note-0").first().run() == [
             "note-0",
             {"title": "note-0"},
         ]
@@ -266,8 +266,8 @@ def test_db_transaction_rejects_nested_transactions(db):
 
 def test_db_transaction_result_allows_explicit_value(db):
     with db.transaction(write=True) as tx:
-        db.shelf("note").put("note-0", {"title": "note-0"}).run()
-        tx.result = db.shelf("note").key("note-0").first().run()
+        tx.shelf("note").put("note-0", {"title": "note-0"}).run()
+        tx.result = tx.shelf("note").key("note-0").first().run()
 
     assert tx.result == ["note-0", {"title": "note-0"}]
 
@@ -290,17 +290,40 @@ def test_db_transaction_result_rejects_second_assignment(db):
 def test_delete_returns_lmdb_results_inside_transaction(db):
     seed_notes(db, 1)
 
-    with db.transaction(write=True):
-        deleted = db.shelf("note").key("note-0").delete().run()
+    with db.transaction(write=True) as tx:
+        deleted = tx.shelf("note").key("note-0").delete().run()
 
     assert deleted == [True]
+
+
+def test_db_shelf_rejects_inside_transaction(db):
+    with db.transaction():
+        with pytest.raises(RuntimeError, match=r"tx\.shelf"):
+            db.shelf("note")
+
+
+def test_transaction_object_rejects_shelf_when_inactive(db):
+    with db.transaction() as tx:
+        pass
+
+    with pytest.raises(RuntimeError, match="not active"):
+        tx.shelf("note")
+
+
+def test_query_created_outside_transaction_rejects_running_inside_transaction(db):
+    seed_notes(db, 1)
+    query = db.shelf("note").key("note-0").first()
+
+    with db.transaction():
+        with pytest.raises(RuntimeError, match="active transaction"):
+            query.run()
 
 
 def test_transaction_scoped_query_must_run_inside_same_transaction(db):
     seed_notes(db, 1)
 
-    with db.transaction():
-        query = db.shelf("note").key("note-0").first()
+    with db.transaction() as tx:
+        query = tx.shelf("note").key("note-0").first()
 
     with pytest.raises(RuntimeError, match="same transaction"):
         query.run()

@@ -20,7 +20,10 @@ UNDEF = object()
 
 
 class Transaction:
-    def __init__(self, txn, write: bool):
+    """Active embedded transaction used for explicit transaction-scoped queries."""
+
+    def __init__(self, db: "DB", txn, write: bool):
+        self._db = db
         self.txn = txn
         self.write = write
         self._result = UNDEF
@@ -35,6 +38,14 @@ class Transaction:
             raise RuntimeError("Transaction result already set.")
 
         self._result = value
+
+    def shelf(self, shelf_name: str) -> "ShelfQuery":
+        """Create one query builder bound to this active transaction."""
+
+        if self._db._active_tx is not self:
+            raise RuntimeError("Transaction is not active.")
+
+        return ShelfQuery(self._db, shelf_name, tx_context=self)
 
 
 class DB:
@@ -64,15 +75,22 @@ class DB:
         )
 
     def shelf(self, shelf_name: str) -> "ShelfQuery":
-        return ShelfQuery(self, shelf_name, tx_context=self._active_tx)
+        """Create a lazy embedded query outside an active transaction."""
+
+        if self._active_tx is not None:
+            raise RuntimeError("Use tx.shelf(...) inside db.transaction(...).")
+
+        return ShelfQuery(self, shelf_name)
 
     @contextmanager
     def transaction(self, write: bool = False):
+        """Open one local transaction and yield its explicit transaction handle."""
+
         if self._active_tx is not None:
             raise RuntimeError("Nested DB transactions are not supported.")
 
         with self._env.begin(write=write) as txn:
-            self._active_tx = Transaction(txn, write)
+            self._active_tx = Transaction(self, txn, write)
             try:
                 yield self._active_tx
             finally:
@@ -279,9 +297,16 @@ class ShelfQuery(QueryBuilderMixin):
         return normalize_result(result)
 
     def _validate_transaction_context(self):
+        active_tx = self._db._active_tx
+
         if self._tx_context is None:
+            if active_tx is not None:
+                raise RuntimeError(
+                    "Query created outside a transaction cannot run inside an active transaction."
+                )
             return
-        if self._db._active_tx is self._tx_context:
+
+        if active_tx is self._tx_context:
             return
         raise RuntimeError(
             "Query created inside a transaction must run inside that same transaction."

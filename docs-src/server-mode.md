@@ -123,6 +123,9 @@ notes = await client.shelf("note").keys_in(["note-3", "note-2"]).run()
 
 `put_many()` returns `None`. `keys_in()` keeps the key order you requested.
 
+Batch inputs are materialized on the client before send, so the API still accepts iterables but the
+RPC payload is explicit.
+
 ## Result shape
 
 Remote results are normalized into plain Python values before they are returned.

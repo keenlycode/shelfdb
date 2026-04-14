@@ -142,3 +142,56 @@ def test_request_emits_debug_logs(monkeypatch, caplog):
     assert any("client_request_sending" in message for message in events)
     assert any("client_response_received" in message for message in events)
     assert any("rpc_response_decoded" in message for message in events)
+
+
+def test_materialize_request_payload_converts_batch_iterables():
+    def items():
+        yield ("note-1", {"title": "before"})
+        yield ("note-1", {"title": "after"})
+
+    def keys():
+        yield "note-2"
+        yield "missing"
+        yield "note-2"
+
+    payload = {
+        "type": "transaction",
+        "write": True,
+        "txs": [
+            {
+                "shelf": "note",
+                "queries": [
+                    {
+                        "op": "put_many",
+                        "args": [items()],
+                        "kwargs": {},
+                        "write": True,
+                    }
+                ],
+            },
+            {
+                "shelf": "note",
+                "queries": [
+                    {
+                        "op": "keys_in",
+                        "args": [keys()],
+                        "kwargs": {},
+                        "write": False,
+                    }
+                ],
+            },
+        ],
+    }
+
+    materialized = client._materialize_request_payload(payload)
+
+    assert materialized is not payload
+    assert materialized["txs"][0]["queries"][0]["args"][0] == [
+        ("note-1", {"title": "before"}),
+        ("note-1", {"title": "after"}),
+    ]
+    assert materialized["txs"][1]["queries"][0]["args"][0] == [
+        "note-2",
+        "missing",
+        "note-2",
+    ]

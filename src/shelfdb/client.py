@@ -19,6 +19,8 @@ from .protocol import dumps_request, loads_response
 
 log = structlog.get_logger(__name__)
 
+_BATCH_QUERY_OPS = {"put_many", "keys_in"}
+
 
 def _payload_log_kwargs(payload: object) -> dict[str, object]:
     if not isinstance(payload, dict):
@@ -36,6 +38,49 @@ def _payload_log_kwargs(payload: object) -> dict[str, object]:
         metadata["tx_count"] = len(cast(list[object], payload_dict.get("txs", [])))
         metadata["write"] = payload_dict.get("write")
     return metadata
+
+
+def _materialize_query_step(query: QueryStep) -> QueryStep:
+    if query.get("op") not in _BATCH_QUERY_OPS:
+        return query
+
+    args = list(query["args"])
+    if args:
+        args[0] = list(args[0])
+
+    return {**query, "args": args}
+
+
+def _materialize_request_payload(payload: object) -> object:
+    if not isinstance(payload, dict):
+        return payload
+
+    payload_dict = cast(dict[str, Any], payload)
+    request_type = payload_dict.get("type")
+    if request_type == "query":
+        return {
+            **payload_dict,
+            "queries": [
+                _materialize_query_step(query)
+                for query in payload_dict.get("queries", [])
+            ],
+        }
+    if request_type == "transaction":
+        return {
+            **payload_dict,
+            "txs": [
+                {
+                    **tx_payload,
+                    "queries": [
+                        _materialize_query_step(query)
+                        for query in tx_payload.get("queries", [])
+                    ],
+                }
+                for tx_payload in payload_dict.get("txs", [])
+            ],
+        }
+
+    return payload
 
 
 def _decode_response(data: bytes):
@@ -206,6 +251,7 @@ class AsyncClient:
         return AsyncClientTransaction(self, write=write)
 
     async def _request(self, payload):
+        payload = _materialize_request_payload(payload)
         if self.unix_path is None:
             log.debug(
                 "client_connection_opening",
@@ -346,6 +392,7 @@ class SyncClient:
         return SyncClientTransaction(self, write=write)
 
     def _request(self, payload):
+        payload = _materialize_request_payload(payload)
         if self.unix_path is None:
             log.debug(
                 "client_connection_opening",

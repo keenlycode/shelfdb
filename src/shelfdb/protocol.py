@@ -2,41 +2,20 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from typing import Any
 
 import dill
 import msgpack
 
 
-_ITERABLE_QUERY_OPS = {"put_many", "keys_in"}
-
-
-class SerializableIterable:
-    """Pickle-friendly iterable wrapper that preserves lazy consumption."""
-
-    def __init__(self, iterable: Iterable[Any]):
-        self._iterable = iterable
-
-    def __iter__(self):
-        return iter(self._iterable)
-
-    def __reduce__(self):
-        return (self.__class__, (list(self._iterable),))
-
-
 def prepare_query_step(
     op: str, args: tuple[Any, ...], kwargs: dict[str, Any], *, write: bool = False
 ):
-    """Wrap iterable query arguments and attach query metadata."""
-
-    prepared_args = list(args)
-    if op in _ITERABLE_QUERY_OPS and prepared_args:
-        prepared_args[0] = SerializableIterable(prepared_args[0])
+    """Build one serialized query step."""
 
     return {
         "op": op,
-        "args": prepared_args,
+        "args": list(args),
         "kwargs": dict(kwargs),
         "write": write,
     }

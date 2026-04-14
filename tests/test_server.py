@@ -466,10 +466,10 @@ def test_server_transaction_returns_last_result(server_client):
     seed_server_notes(server_client, 2)
 
     tx = server_client.transaction(write=True)
-    tx.add(tx.shelf("note").key("note-0").update({"content": "updated"}))
-    tx.add(tx.shelf("note").key("note-0").first())
+    assert tx.shelf("note").key("note-0").update({"content": "updated"}).run() is None
+    assert tx.shelf("note").key("note-0").first().run() is None
 
-    assert asyncio.run(tx.run()) == [
+    assert asyncio.run(tx.commit()) == [
         "note-0",
         {"title": "note-0", "content": "updated"},
     ]
@@ -507,10 +507,10 @@ def test_server_transaction_rejects_readonly_writes(server_client):
     seed_server_notes(server_client, 1)
 
     tx = server_client.transaction()
-    tx.add(tx.shelf("note").key("note-0").delete())
+    tx.shelf("note").key("note-0").delete().run()
 
     with pytest.raises(RuntimeError):
-        asyncio.run(tx.run())
+        asyncio.run(tx.commit())
 
 
 def test_server_transaction_empty_returns_none(server_client):

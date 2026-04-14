@@ -244,10 +244,10 @@ def test_sync_server_transaction_returns_last_result(sync_server_client):
     seed_notes(sync_server_client, 2)
 
     tx = sync_server_client.transaction(write=True)
-    tx.add(tx.shelf("note").key("note-0").update({"content": "updated"}))
-    tx.add(tx.shelf("note").key("note-0").first())
+    assert tx.shelf("note").key("note-0").update({"content": "updated"}).run() is None
+    assert tx.shelf("note").key("note-0").first().run() is None
 
-    assert tx.run() == ["note-0", {"title": "note-0", "content": "updated"}]
+    assert tx.commit() == ["note-0", {"title": "note-0", "content": "updated"}]
     assert tx.result == ["note-0", {"title": "note-0", "content": "updated"}]
 
 
@@ -282,10 +282,10 @@ def test_sync_server_rejects_readonly_writes(sync_server_client):
     seed_notes(sync_server_client, 1)
 
     tx = sync_server_client.transaction()
-    tx.add(tx.shelf("note").key("note-0").delete())
+    tx.shelf("note").key("note-0").delete().run()
 
     with pytest.raises(RuntimeError):
-        tx.run()
+        tx.commit()
 
 
 def test_sync_server_rejects_readonly_put_many(sync_server_client):

@@ -101,15 +101,16 @@ Server mode also has transactions. The idea is the same, but remote transactions
 explicitly and then sent as one request.
 
 !!! info "Information:"
-    Build them with `tx.add(...)` and then call `tx.run()`.
-    Do not call `.run()` on `tx.shelf(...)` queries; they are transaction steps, not directly executable queries.
+    Remote transaction queries queue their steps when you call `.run()`.
+    Call `tx.commit()` to send the batch.
+    `tx.add(...)` still works as a compatibility helper.
 
 ```python
 tx = client.transaction(write=True)
-tx.add(tx.shelf("note").put("note-1", {"title": "hello"}))
-tx.run()
+tx.shelf("note").put("note-1", {"title": "hello"}).run()
+tx.commit()
 ```
 
-For async code, use `await tx.run()` instead.
+For async code, use `await tx.commit()` instead.
 
 See [Server Mode](server-mode.md) for connection setup and the shared remote query model.

@@ -83,7 +83,7 @@ asyncio.run(main())
 ```
 
 After connecting, the query API is the same in both modes. The only async difference is that you
-`await` `connect_async(...)`, `query.run()`, and `tx.run()`.
+`await` `connect_async(...)`, `query.run()`, and `tx.commit()`.
 
 ## Use the same query API
 
@@ -141,19 +141,20 @@ instead of materialized lists.
 Use `client.transaction(write=True)` to group multiple remote writes together.
 
 !!! info "Information:"
-    Build client transactions with `tx.add(...)` and `tx.run()`.
-    Do not call `.run()` on `tx.shelf(...)` queries; they are transaction steps, not directly executable queries.
+    Remote transaction queries queue their steps when you call `.run()`.
+    Call `tx.commit()` to send the batch.
+    `tx.add(...)` still works as a compatibility helper.
 
 ```python
 tx = client.transaction(write=True)
-tx.add(tx.shelf("note").put("note-1", {"title": "ShelfDB"}))
-tx.add(tx.shelf("user").put("user-1", {"name": "alice"}))
-tx.run()
+tx.shelf("note").put("note-1", {"title": "ShelfDB"}).run()
+tx.shelf("user").put("user-1", {"name": "alice"}).run()
+tx.commit()
 ```
 
-For async code, use `await tx.run()` instead.
+For async code, use `await tx.commit()` instead.
 
-Transaction queries must belong to the transaction they are added to.
+Transaction queries must belong to the transaction they are queued into.
 
 ## Client-side logging
 

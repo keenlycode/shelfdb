@@ -147,7 +147,6 @@ class AsyncClientTransaction:
         self._write = write
         self._txs = []
         self._ran = False
-        self.result = None
 
     def _enqueue(self, query: AsyncTransactionQuery):
         if self._ran:
@@ -179,8 +178,7 @@ class AsyncClientTransaction:
             "write": self._write,
             "txs": self._txs,
         }
-        self.result = await self._client._request(payload)
-        return self.result
+        return await self._client._request(payload)
 
     async def run(self):
         return await self.commit()
@@ -292,7 +290,6 @@ class SyncClientTransaction:
         self._write = write
         self._txs = []
         self._ran = False
-        self.result = None
 
     def _enqueue(self, query: SyncTransactionQuery):
         if self._ran:
@@ -324,8 +321,7 @@ class SyncClientTransaction:
             "write": self._write,
             "txs": self._txs,
         }
-        self.result = self._client._request(payload)
-        return self.result
+        return self._client._request(payload)
 
     def run(self):
         return self.commit()

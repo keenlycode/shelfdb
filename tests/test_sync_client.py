@@ -248,7 +248,6 @@ def test_sync_server_transaction_returns_last_result(sync_server_client):
     assert tx.shelf("note").key("note-0").first().run() is None
 
     assert tx.commit() == ["note-0", {"title": "note-0", "content": "updated"}]
-    assert tx.result == ["note-0", {"title": "note-0", "content": "updated"}]
 
 
 def test_sync_server_transaction_spans_multiple_shelves(sync_server_client):

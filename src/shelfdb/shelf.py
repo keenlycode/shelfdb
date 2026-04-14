@@ -24,7 +24,6 @@ from ._normalize import normalize_result
 from .storage.lmdb import LMDBStore
 
 Data = dict[str, Any]
-UNDEF = object()
 
 
 class Transaction:
@@ -34,18 +33,6 @@ class Transaction:
         self._db = db
         self.txn = txn
         self.write = write
-        self._result = UNDEF
-
-    @property
-    def result(self):
-        return None if self._result is UNDEF else self._result
-
-    @result.setter
-    def result(self, value):
-        if self._result is not UNDEF:
-            raise RuntimeError("Transaction result already set.")
-
-        self._result = value
 
     def shelf(self, shelf_name: str) -> "ShelfQuery":
         """Create one query builder bound to this active transaction."""

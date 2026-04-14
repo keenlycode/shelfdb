@@ -473,7 +473,6 @@ def test_server_transaction_returns_last_result(server_client):
         "note-0",
         {"title": "note-0", "content": "updated"},
     ]
-    assert tx.result == ["note-0", {"title": "note-0", "content": "updated"}]
 
 
 def test_server_transaction_spans_multiple_shelves(server_client):

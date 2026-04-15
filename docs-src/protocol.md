@@ -18,7 +18,7 @@ If you only need exact symbols and signatures, see the [API Reference](api-refer
 ## Request sequence
 
 ```mermaid
-flowchart LR
+flowchart TD
   A[Build query steps] --> B[Wrap request payload]
   B --> C[Encode request bytes]
   C --> D[Send to server]
@@ -32,7 +32,7 @@ This shows the request moving from client-side construction to server-side valid
 ## Response flow
 
 ```mermaid
-flowchart LR
+flowchart TD
   A[Request execution completes] --> B{Success?}
   B -->|Yes| C[Normalize result]
   C --> D[Encode response bytes]

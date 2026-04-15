@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from typing import Any, cast
 
 import msgpack
 import pytest
@@ -193,7 +194,7 @@ def test_materialize_request_payload_converts_batch_iterables():
         ],
     }
 
-    materialized = client._materialize_request_payload(payload)
+    materialized = cast(dict[str, Any], client._materialize_request_payload(payload))
 
     assert materialized is not payload
     assert materialized["txs"][0]["queries"][0]["args"][0] == [

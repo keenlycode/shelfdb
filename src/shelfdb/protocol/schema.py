@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any, Mapping, cast
 
 from dictify import Field, Model
 
@@ -18,36 +18,38 @@ ProtocolResponse = Any | ErrorResponse
 
 
 class _QueryStepModel(Model):
-    op: str = Field(required=True)
-    args: list[Any] = Field(required=True)
-    kwargs: dict[str, Any] = Field(required=True)
-    write: bool = Field(default=False)
+    op: str = cast(Any, Field(required=True))
+    args: list[Any] = cast(Any, Field(required=True))
+    kwargs: dict[str, Any] = cast(Any, Field(required=True))
+    write: bool = cast(Any, Field(default=False))
 
 
 class _QueryRequestModel(Model):
-    type: str = Field(required=True).verify(lambda value: value == "query")
-    shelf: str = Field(required=True).verify(lambda value: bool(value))
-    queries: list[_QueryStepModel] = Field(required=True)
+    type: str = cast(Any, Field(required=True).verify(lambda value: value == "query"))
+    shelf: str = cast(Any, Field(required=True).verify(lambda value: bool(value)))
+    queries: list[_QueryStepModel] = cast(Any, Field(required=True))
 
 
 class _TransactionShelfRequestModel(Model):
-    shelf: str = Field(required=True).verify(lambda value: bool(value))
-    queries: list[_QueryStepModel] = Field(required=True)
+    shelf: str = cast(Any, Field(required=True).verify(lambda value: bool(value)))
+    queries: list[_QueryStepModel] = cast(Any, Field(required=True))
 
 
 class _TransactionRequestModel(Model):
-    type: str = Field(required=True).verify(lambda value: value == "transaction")
-    write: bool = Field(required=True)
-    txs: list[_TransactionShelfRequestModel] = Field(required=True)
+    type: str = cast(
+        Any, Field(required=True).verify(lambda value: value == "transaction")
+    )
+    write: bool = cast(Any, Field(required=True))
+    txs: list[_TransactionShelfRequestModel] = cast(Any, Field(required=True))
 
 
 class _RpcErrorModel(Model):
-    type: str = Field(required=True)
-    message: str = Field(required=True)
+    type: str = cast(Any, Field(required=True))
+    message: str = cast(Any, Field(required=True))
 
 
 class _ErrorResponseModel(Model):
-    error: _RpcErrorModel = Field(required=True)
+    error: _RpcErrorModel = cast(Any, Field(required=True))
 
 
 def make_query_request(shelf: str, queries: list[QueryStep]) -> QueryRequest:
@@ -96,6 +98,8 @@ def read_query_step(query: object) -> QueryStep:
     if not isinstance(query, dict):
         raise ValueError("Query step must be a dict.")
 
+    query = cast(dict[str, Any], query)
+
     try:
         model = _QueryStepModel(query)
     except Model.Error as error:
@@ -106,6 +110,8 @@ def read_query_step(query: object) -> QueryStep:
 def read_error_response(payload: object) -> ErrorResponse:
     if not isinstance(payload, dict):
         raise ValueError("RPC error response must be a dict.")
+
+    payload = cast(dict[str, Any], payload)
 
     if set(payload) != {"error"}:
         raise ValueError("RPC error response must contain exactly `error`.")
@@ -120,6 +126,8 @@ def read_error_response(payload: object) -> ErrorResponse:
 def read_request(payload: object) -> ProtocolRequest:
     if not isinstance(payload, dict):
         raise ValueError("RPC payload must be a dict.")
+
+    payload = cast(dict[str, Any], payload)
 
     request_type = payload.get("type")
     if not isinstance(request_type, str):

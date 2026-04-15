@@ -644,6 +644,7 @@ version = "2.0.0.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "cyclopts" },
+    { name = "dictify" },
     { name = "dill" },
     { name = "lmdb" },
     { name = "msgpack" },
@@ -663,6 +664,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "cyclopts", specifier = ">=4.10.2" },
+    { name = "dictify", specifier = ">=4.0.0,<4.1" },
     { name = "dill", specifier = ">=0.4.0,<0.5" },
     { name = "lmdb", specifier = ">=1.7.3,<2" },
     { name = "msgpack", specifier = ">=1.1.2,<2" },

@@ -1,12 +1,10 @@
 """ShelfDB server package public API."""
 
-from pathlib import Path
+from __future__ import annotations
 
+import asyncio as asyncio
 
-_runtime_path = Path(__file__).resolve().parent / "runtime.py"
-with _runtime_path.open("r", encoding="utf-8") as _runtime_file:
-    exec(compile(_runtime_file.read(), str(_runtime_path), "exec"), globals())
+from .. import open as open_db
+from .runtime import ShelfServer
 
-del _runtime_file, _runtime_path, Path
-
-__all__ = sorted(name for name in globals() if not name.startswith("_"))
+__all__ = ["ShelfServer", "asyncio", "open_db"]

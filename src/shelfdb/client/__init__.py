@@ -1,9 +1,38 @@
 """ShelfDB client package public API."""
 
-from . import _impl as _impl
+from __future__ import annotations
 
-globals().update(
-    {name: value for name, value in vars(_impl).items() if not name.startswith("__")}
+import asyncio as asyncio
+
+from ._impl import (
+    AsyncClient,
+    AsyncClientQuery,
+    AsyncClientTransaction,
+    AsyncTransactionQuery,
+    SyncClient,
+    SyncClientQuery,
+    SyncClientTransaction,
+    SyncTransactionQuery,
+    _decode_response,
+    _materialize_request_payload,
+    _parse_client_url,
+    connect,
+    connect_async,
 )
 
-__all__ = sorted(name for name in globals() if not name.startswith("_"))
+__all__ = [
+    "AsyncClient",
+    "AsyncClientQuery",
+    "AsyncClientTransaction",
+    "AsyncTransactionQuery",
+    "SyncClient",
+    "SyncClientQuery",
+    "SyncClientTransaction",
+    "SyncTransactionQuery",
+    "_decode_response",
+    "_materialize_request_payload",
+    "_parse_client_url",
+    "asyncio",
+    "connect",
+    "connect_async",
+]

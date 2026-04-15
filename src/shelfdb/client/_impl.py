@@ -70,23 +70,21 @@ def _materialize_request_payload(payload: object) -> object:
     if request_type == "query":
         if "shelf" not in payload_dict or "queries" not in payload_dict:
             return payload
-        query_payload = cast(QueryRequest, payload_dict)
         return make_query_request(
-            query_payload["shelf"],
-            [_materialize_query_step(query) for query in query_payload["queries"]],
+            payload_dict["shelf"],
+            [_materialize_query_step(query) for query in payload_dict["queries"]],
         )
     if request_type == "transaction":
         if "write" not in payload_dict or "txs" not in payload_dict:
             return payload
-        tx_payload = cast(TransactionRequest, payload_dict)
         return make_transaction_request(
-            tx_payload["write"],
+            payload_dict["write"],
             [
                 make_transaction_shelf_request(
                     tx["shelf"],
                     [_materialize_query_step(query) for query in tx["queries"]],
                 )
-                for tx in tx_payload["txs"]
+                for tx in payload_dict["txs"]
             ],
         )
 

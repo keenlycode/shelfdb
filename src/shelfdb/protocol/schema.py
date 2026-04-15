@@ -18,6 +18,8 @@ ProtocolResponse = Any | ErrorResponse
 
 
 class _QueryStepModel(Model):
+    """One RPC query step used inside query and transaction request payloads."""
+
     op: str = cast(Any, Field(required=True))
     args: list[Any] = cast(Any, Field(required=True))
     kwargs: dict[str, Any] = cast(Any, Field(required=True))
@@ -25,17 +27,23 @@ class _QueryStepModel(Model):
 
 
 class _QueryRequestModel(Model):
+    """Top-level RPC request schema for one shelf query pipeline."""
+
     type: str = cast(Any, Field(required=True).verify(lambda value: value == "query"))
     shelf: str = cast(Any, Field(required=True).verify(lambda value: bool(value)))
     queries: list[_QueryStepModel] = cast(Any, Field(required=True))
 
 
 class _TransactionShelfRequestModel(Model):
+    """One shelf entry inside a transaction request's `txs` batch."""
+
     shelf: str = cast(Any, Field(required=True).verify(lambda value: bool(value)))
     queries: list[_QueryStepModel] = cast(Any, Field(required=True))
 
 
 class _TransactionRequestModel(Model):
+    """Top-level RPC request schema for a multi-shelf transaction batch."""
+
     type: str = cast(
         Any, Field(required=True).verify(lambda value: value == "transaction")
     )
@@ -44,15 +52,21 @@ class _TransactionRequestModel(Model):
 
 
 class _RpcErrorModel(Model):
+    """Structured server-side exception payload sent back to clients."""
+
     type: str = cast(Any, Field(required=True))
     message: str = cast(Any, Field(required=True))
 
 
 class _ErrorResponseModel(Model):
+    """Top-level RPC error envelope returned when server execution fails."""
+
     error: _RpcErrorModel = cast(Any, Field(required=True))
 
 
 class _RequestTypeModel(Model):
+    """Minimal discriminator schema used only to route request validation."""
+
     type: str = cast(Any, Field(required=True))
 
 

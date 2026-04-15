@@ -147,18 +147,21 @@ Remote transaction queries queue their steps when you call `.run()`, unlike embe
 where `.run()` executes immediately inside the `with` block.
 
 !!! info "Information:"
-    Call `tx.commit()` to send the batch.
+    Call `tx.commit()` to send the batch, or use `with client.transaction(...) as tx:` / `async with`
+    to auto-commit and store the commit result on `tx.result`.
 
 ```python
-tx = client.transaction(write=True)
-tx.shelf("note").put("note-1", {"title": "ShelfDB"}).run()
-tx.shelf("user").put("user-1", {"name": "alice"}).run()
-tx.commit()
+with client.transaction(write=True) as tx:
+    tx.shelf("note").put("note-1", {"title": "ShelfDB"}).run()
+    tx.shelf("user").put("user-1", {"name": "alice"}).run()
+
+print(tx.result)
 ```
 
-`tx.commit()` returns the last queued query result, or `None` for an empty transaction.
+`tx.commit()` returns the last queued query result, or `None` for an empty transaction, and stores
+that value on `tx.result`.
 
-For async code, use `await tx.commit()` instead.
+For async code, use `async with` or `await tx.commit()` instead.
 
 Transaction queries must belong to the transaction they are queued into.
 

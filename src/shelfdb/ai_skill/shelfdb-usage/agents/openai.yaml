@@ -1,0 +1,4 @@
+interface:
+  display_name: "ShelfDB Usage"
+  short_description: "ShelfDB server/client usage guide"
+  default_prompt: "Use $shelfdb-usage to help with ShelfDB server startup, client queries, and remote transactions."

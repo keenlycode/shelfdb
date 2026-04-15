@@ -7,6 +7,11 @@ description: "ShelfDB developer workflow for running the local server and queryi
 
 Prefer the simplest mode that fits the task.
 
+## Reference docs
+
+- Read `references/docs/` for mirrored ShelfDB documentation when you need the full narrative docs.
+- Prefer the most specific page for the task: `server-mode.md`, `query-model.md`, `transactions.md`, and `security.md` are the usual first reads.
+
 ## Choose the mode
 
 - Use embedded mode with `shelfdb.open(...)` when the process can access the LMDB directory directly.

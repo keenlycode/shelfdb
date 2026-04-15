@@ -45,6 +45,22 @@ def test_connect_async_rejects_invalid_urls(url):
         asyncio.run(connect_async(url))
 
 
+def test_sync_client_transaction_is_not_a_context_manager():
+    tx = client.SyncClient(host="127.0.0.1", port=17000).transaction(write=True)
+
+    with pytest.raises(TypeError):
+        with tx:
+            pass
+
+
+def test_async_client_transaction_is_not_a_context_manager():
+    tx = client.AsyncClient(host="127.0.0.1", port=17000).transaction(write=True)
+
+    with pytest.raises(TypeError):
+        with tx:
+            pass
+
+
 def test_async_client_rejects_empty_shelf_name():
     with pytest.raises(ValueError, match="Shelf name must not be empty."):
         client.AsyncClient(host="127.0.0.1", port=17000).shelf("")

@@ -1,0 +1,1 @@
+"""ShelfDB bundled AI skills."""

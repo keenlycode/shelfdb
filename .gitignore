@@ -8,3 +8,6 @@ dist/
 .pytest_cache
 .ruff_cache
 .opencode
+!src/shelfdb/ai_skill/shelfdb-usage/references/
+!src/shelfdb/ai_skill/shelfdb-usage/references/docs/
+!src/shelfdb/ai_skill/shelfdb-usage/references/docs/**

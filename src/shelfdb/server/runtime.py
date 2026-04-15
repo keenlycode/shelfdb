@@ -10,7 +10,7 @@ from typing import Any, cast
 import structlog
 
 from .. import open as open_db
-from .._normalize import normalize_result
+from ..shelf.normalize import normalize_result
 from ..protocol.rpc import dumps_response, loads_request
 from .rpc import run_request
 

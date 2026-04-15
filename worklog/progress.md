@@ -427,3 +427,21 @@ compatibility notes:
 
 risk/next-step notes:
 - none; the package layout is stable for now
+
+## T28 — Remove legacy wrapper modules and storage files
+
+status: done
+
+changed:
+- removed the old top-level wrapper modules: `client.py`, `protocol.py`, `query.py`, `rpc.py`, `server.py`, `shelf.py`, and `_normalize.py`
+- removed the old storage files under `src/shelfdb/storage/`
+
+tests/checks:
+- `uv run pytest` passed (89 tests)
+- `uv run python -c "import shelfdb; import shelfdb.client; import shelfdb.server; import shelfdb.shelf; import shelfdb.protocol; from shelfdb.shelf import ShelfQuery; print('imports-ok')"` passed
+
+compatibility notes:
+- package imports remain valid, but the removed module-level compatibility paths are intentionally gone now
+
+risk/next-step notes:
+- if external callers still use `shelfdb.query` / `shelfdb.rpc` / `shelfdb.server.py` style paths, they will need to move to the package paths

@@ -570,6 +570,19 @@ Done when:
 - package layout is stable
 - every previous task left the test suite green
 
+---
+
+### [x] T28 — Remove legacy wrapper modules and storage files
+
+- delete the old top-level compatibility modules that now have package replacements
+- delete the old `storage/*.py` files after moving storage into `shelf/storage/`
+- keep the package implementations and tests green
+
+Done when:
+
+- old top-level module files are gone
+- tests still pass
+
 ## Suggested Execution Order Summary
 
 ```text
@@ -600,4 +613,5 @@ T24 remove internal wrapper usage
 T25 wrapper policy decision
 T26 log/util decision
 T27 final cleanup
+T28 remove legacy wrappers
 ```

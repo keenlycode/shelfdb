@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from .schema import QueryStep
-from .validation import make_query_step, read_query_step
+from .validation import make_query_step
 
 
 def prepare_query_step(
@@ -20,14 +20,3 @@ def build_query_step(op: str, *args, write: bool = False, **kwargs) -> QueryStep
     """Build one serialized query step using an explicit call shape."""
 
     return prepare_query_step(op, args, kwargs, write=write)
-
-
-def _read_query_step(query: QueryStep) -> tuple[str, list[Any], dict[str, Any]]:
-    """Validate and unpack one serialized query step."""
-
-    query = read_query_step(query)
-    op = query["op"]
-    args = query["args"]
-    kwargs = query["kwargs"]
-
-    return op, args, kwargs

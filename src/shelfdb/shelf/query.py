@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from ..protocol.query import QueryStep, _read_query_step, build_query_step
+from ..protocol.query import QueryStep, build_query_step
+from ..protocol.validation import read_query_step
 
 
 class QueryBuilderMixin:
@@ -62,7 +63,10 @@ def replay_queries(current, queries: Iterable[QueryStep]):
         if current is None:
             raise RuntimeError("Query returned None and cannot continue.")
 
-        op, args, kwargs = _read_query_step(query)
+        query = read_query_step(query)
+        op = query["op"]
+        args = query["args"]
+        kwargs = query["kwargs"]
         method = getattr(current, op, None)
         if not callable(method):
             raise ValueError(f"Unsupported query op: {op}")

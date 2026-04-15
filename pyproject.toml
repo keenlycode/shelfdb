@@ -34,10 +34,13 @@ shelfdb = "shelfdb.cli:main"
 
 [dependency-groups]
 dev = [
+    "black>=25.9.0,<26",
     "dictify>=4.0.0,<4.1",
+    "mike>=2.1.3,<3",
     "mkdocs>=1.6.1,<2",
     "mkdocs-shadcn>=0.10.4,<0.11",
     "mkdocstrings[python]>=0.29.0,<0.30",
+    "pymdown-extensions>=10.16.1,<11",
     "pytest>=8.4.2,<10",
 ]
 

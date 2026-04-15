@@ -1,8 +1,10 @@
 site_name: ShelfDB
 site_description: Tiny document database for Python
+site_url: https://keenlycode.github.io/shelfdb/
 repo_url: https://github.com/keenlycode/shelfdb
 docs_dir: docs-src
 site_dir: docs
+strict: true
 
 nav:
   - ShelfDB: index.md

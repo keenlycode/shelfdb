@@ -25,7 +25,7 @@ The transport is not a public interoperability format.
 }
 ```
 
-Validation is strict on the envelope shape:
+Payload envelopes are validated strictly:
 
 - query payloads must contain exactly `type`, `shelf`, and `queries`
 - transaction payloads must contain exactly `type`, `write`, and `txs`
@@ -81,6 +81,7 @@ The error envelope is validated as exactly one `error` key with nested `type` an
 
 ## Source files
 
+- `src/shelfdb/protocol/payload.py`
 - `src/shelfdb/protocol/query.py`
 - `src/shelfdb/protocol/schema.py`
-- `src/shelfdb/protocol/rpc.py`
+- `src/shelfdb/protocol/codec.py`

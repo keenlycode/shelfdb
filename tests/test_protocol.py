@@ -1,8 +1,8 @@
-"""Pytest coverage for protocol validation helpers."""
+"""Pytest coverage for protocol payload helpers."""
 
 import pytest
 
-from shelfdb.protocol.validation import (
+from shelfdb.protocol.payload import (
     make_error_response,
     make_query_request,
     make_query_step,

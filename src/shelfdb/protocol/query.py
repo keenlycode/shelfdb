@@ -1,11 +1,11 @@
-"""Shared query-step helpers for ShelfDB."""
+"""Serialized query-step builders for ShelfDB."""
 
 from __future__ import annotations
 
 from typing import Any
 
+from .payload import make_query_step
 from .schema import QueryStep
-from .validation import make_query_step
 
 
 def prepare_query_step(

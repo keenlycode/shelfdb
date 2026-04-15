@@ -1,4 +1,4 @@
-"""RPC payload validation and codec helpers for ShelfDB."""
+"""Shared RPC payload helpers for ShelfDB."""
 
 from __future__ import annotations
 

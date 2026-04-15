@@ -16,7 +16,7 @@ from ..protocol.schema import (
     QueryStep,
     TransactionShelfRequest,
 )
-from ..protocol.validation import (
+from ..protocol.payload import (
     is_error_response,
     make_query_request,
     make_transaction_request,
@@ -24,7 +24,7 @@ from ..protocol.validation import (
     read_error_response,
 )
 from ..shelf.query import QueryBuilderMixin
-from ..protocol.rpc import dumps_request, loads_response
+from ..protocol.codec import dumps_request, loads_response
 from ..util.transport import parse_transport_url
 from ..util.validation import require_shelf_name
 

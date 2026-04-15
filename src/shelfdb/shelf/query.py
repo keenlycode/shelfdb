@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from ..protocol.payload import read_query_step
 from ..protocol.query import QueryStep, build_query_step
-from ..protocol.validation import read_query_step
 
 
 class QueryBuilderMixin:

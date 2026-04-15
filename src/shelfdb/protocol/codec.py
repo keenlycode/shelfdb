@@ -1,4 +1,4 @@
-"""Shared RPC transport helpers for ShelfDB."""
+"""Shared protocol byte codecs for ShelfDB."""
 
 from __future__ import annotations
 

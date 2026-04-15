@@ -11,8 +11,8 @@ from typing import Any, cast
 import structlog
 
 from ..shelf.normalize import normalize_result
-from ..protocol.rpc import dumps_response, loads_request
-from ..protocol.validation import make_error_response
+from ..protocol.codec import dumps_response, loads_request
+from ..protocol.payload import make_error_response
 from .rpc import run_request
 
 

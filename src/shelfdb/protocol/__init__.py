@@ -9,9 +9,11 @@ from .schema import (
     QueryRequest,
     RpcError,
     TransactionRequest,
+    make_error_response,
     make_query_request,
     make_transaction_request,
     make_transaction_shelf_request,
+    read_error_response,
     read_query_step,
     read_request,
 )

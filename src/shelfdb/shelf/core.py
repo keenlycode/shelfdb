@@ -15,6 +15,14 @@ from .normalize import normalize_result
 from ..protocol.query import QueryStep
 from .query import QueryBuilderMixin, replay_queries
 from .storage.lmdb import LMDBStore
+from ..util.validation import (
+    iter_keys,
+    iter_put_many_items,
+    require_data,
+    require_key,
+    require_key_range,
+    require_shelf_name,
+)
 
 Data = dict[str, Any]
 
@@ -33,7 +41,7 @@ class Transaction:
         if self._db._active_tx is not self:
             raise RuntimeError("Transaction is not active.")
 
-        return ShelfQuery(self._db, shelf_name, tx_context=self)
+        return ShelfQuery(self._db, require_shelf_name(shelf_name), tx_context=self)
 
 
 class DB:
@@ -68,7 +76,7 @@ class DB:
         if self._active_tx is not None:
             raise RuntimeError("Use tx.shelf(...) inside db.transaction(...).")
 
-        return ShelfQuery(self, shelf_name)
+        return ShelfQuery(self, require_shelf_name(shelf_name))
 
     @contextmanager
     def transaction(self, write: bool = False):
@@ -126,8 +134,7 @@ class Shelf:
         return self
 
     def key(self, key: str) -> "Shelf":
-        if not isinstance(key, str):
-            raise TypeError("Key must be a str instance.")
+        key = require_key(key)
 
         if self._selection is None:
             item = self._store.key(key, txn=self._txn)
@@ -145,6 +152,7 @@ class Shelf:
         )
 
     def key_range(self, start: str, end: str) -> "Shelf":
+        start, end = require_key_range(start, end)
         if self._selection is None:
             return Shelf(
                 self._store,
@@ -172,16 +180,14 @@ class Shelf:
 
         return Shelf(
             self._store,
-            self._store.keys_in(keys, txn=self._txn),
+            self._store.keys_in(iter_keys(keys), txn=self._txn),
             txn=self._txn,
             write=self._write,
         )
 
     def put(self, key: str, data: Data) -> "Shelf":
-        if not isinstance(key, str):
-            raise TypeError("Key must be a str instance.")
-        if not isinstance(data, dict):
-            raise TypeError("Data must be a dict instance.")
+        key = require_key(key)
+        data = require_data(data)
 
         self._require_write("put")
         payload = data.copy()
@@ -192,7 +198,7 @@ class Shelf:
 
     def put_many(self, items: Iterable[tuple[str, Data]]):
         self._require_write("put_many")
-        self._store.put_many(items, txn=self._txn)
+        self._store.put_many(iter_put_many_items(items), txn=self._txn)
         return None
 
     def filter(self, filter_=None) -> "Shelf":
@@ -224,8 +230,7 @@ class Shelf:
         return reduce(lambda total, _: total + 1, items, 0)
 
     def replace(self, data: Data) -> "Shelf":
-        if not isinstance(data, dict):
-            raise TypeError("Data must be a dict instance.")
+        data = require_data(data)
 
         self._require_write("replace")
         items = list(self._items())
@@ -240,8 +245,7 @@ class Shelf:
         return Shelf(self._store, updated, txn=self._txn, write=self._write)
 
     def update(self, data: Data) -> "Shelf":
-        if not isinstance(data, dict):
-            raise TypeError("Data must be a dict instance.")
+        data = require_data(data)
 
         self._require_write("update")
         items = list(self._items())
@@ -265,11 +269,11 @@ class Shelf:
         updated = []
         for item in items:
             payload = func(Item(item[0], item[1].copy()))
-            if not isinstance(payload, dict):
-                raise TypeError("Edited data must be a dict instance.")
+            payload = require_data(payload)
 
-            self._store.put(item[0], payload, txn=self._txn)
-            updated.append(Item(item[0], payload))
+            payload_copy = payload.copy()
+            self._store.put(item[0], payload_copy, txn=self._txn)
+            updated.append(Item(item[0], payload_copy))
         return Shelf(self._store, updated, txn=self._txn, write=self._write)
 
     def delete(self) -> list[bool]:

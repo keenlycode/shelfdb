@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any, Literal, NotRequired, TypedDict, cast
 
+from ..util.validation import require_shelf_name
+
 
 class QueryStep(TypedDict):
     op: str
@@ -43,19 +45,23 @@ ProtocolResponse = Any | ErrorResponse
 
 
 def make_query_request(shelf: str, queries: list[QueryStep]) -> QueryRequest:
-    return {"type": "query", "shelf": shelf, "queries": queries}
+    return {"type": "query", "shelf": require_shelf_name(shelf), "queries": queries}
 
 
 def make_transaction_shelf_request(
     shelf: str, queries: list[QueryStep]
 ) -> TransactionShelfRequest:
-    return {"shelf": shelf, "queries": queries}
+    return {"shelf": require_shelf_name(shelf), "queries": queries}
 
 
 def make_transaction_request(
     write: bool, txs: list[TransactionShelfRequest]
 ) -> TransactionRequest:
     return {"type": "transaction", "write": write, "txs": txs}
+
+
+def make_error_response(error: Exception) -> ErrorResponse:
+    return {"error": {"type": type(error).__name__, "message": str(error)}}
 
 
 def read_query_step(query: object) -> QueryStep:
@@ -84,6 +90,28 @@ def read_query_step(query: object) -> QueryStep:
     return cast(QueryStep, query)
 
 
+def read_error_response(payload: object) -> ErrorResponse:
+    if not isinstance(payload, dict):
+        raise ValueError("RPC error response must be a dict.")
+
+    if set(payload) != {"error"}:
+        raise ValueError("RPC error response must contain exactly `error`.")
+
+    error = payload["error"]
+    if not isinstance(error, dict):
+        raise ValueError("RPC error payload must be a dict.")
+
+    if set(error) != {"type", "message"}:
+        raise ValueError("RPC error payload must contain exactly `type` and `message`.")
+
+    if not isinstance(error["type"], str):
+        raise ValueError("RPC error payload `type` must be a string.")
+    if not isinstance(error["message"], str):
+        raise ValueError("RPC error payload `message` must be a string.")
+
+    return cast(ErrorResponse, payload)
+
+
 def read_request(payload: object) -> ProtocolRequest:
     if not isinstance(payload, dict):
         raise ValueError("RPC payload must be a dict.")
@@ -102,6 +130,8 @@ def read_request(payload: object) -> ProtocolRequest:
             )
         if not isinstance(payload["shelf"], str):
             raise ValueError("Query payload `shelf` must be a string.")
+        if not payload["shelf"]:
+            raise ValueError("Query payload `shelf` must not be empty.")
         if not isinstance(payload["queries"], list):
             raise ValueError("Query payload `queries` must be a list.")
         for query in payload["queries"]:
@@ -126,6 +156,8 @@ def read_request(payload: object) -> ProtocolRequest:
                 )
             if not isinstance(tx["shelf"], str):
                 raise ValueError("Transaction payload item `shelf` must be a string.")
+            if not tx["shelf"]:
+                raise ValueError("Transaction payload item `shelf` must not be empty.")
             if not isinstance(tx["queries"], list):
                 raise ValueError("Transaction payload item `queries` must be a list.")
             for query in tx["queries"]:

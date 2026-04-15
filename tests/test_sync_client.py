@@ -123,6 +123,11 @@ def test_connect_rejects_invalid_urls(url):
         connect(url)
 
 
+def test_sync_client_rejects_empty_shelf_name():
+    with pytest.raises(ValueError, match="Shelf name must not be empty."):
+        connect("tcp://127.0.0.1:17000").shelf("")
+
+
 def test_connect_emits_debug_log(caplog):
     configure_logging("debug")
     caplog.set_level(logging.DEBUG, logger="shelfdb")

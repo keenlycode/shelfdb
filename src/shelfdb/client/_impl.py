@@ -8,7 +8,6 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 import socket
-from urllib.parse import urlparse
 from typing import Any, cast
 
 import structlog
@@ -17,12 +16,15 @@ from ..protocol.schema import (
     QueryRequest,
     QueryStep,
     TransactionRequest,
+    read_error_response,
     make_query_request,
     make_transaction_request,
     make_transaction_shelf_request,
 )
 from ..shelf.query import QueryBuilderMixin
 from ..protocol.rpc import dumps_request, loads_response
+from ..util.transport import parse_transport_url
+from ..util.validation import require_shelf_name
 
 
 log = structlog.get_logger(__name__)
@@ -94,8 +96,9 @@ def _materialize_request_payload(payload: object) -> object:
 def _decode_response(data: bytes):
     payload = loads_response(data)
     log.debug("rpc_response_decoded", response_bytes=len(data))
-    if isinstance(payload, dict) and "error" in payload:
-        error = payload["error"]
+    if isinstance(payload, dict) and set(payload) == {"error"}:
+        error_response = read_error_response(payload)
+        error = error_response["error"]
         error_type = error["type"]
         message = error["message"]
         log.debug("rpc_response_error", error_type=error_type)
@@ -106,20 +109,13 @@ def _decode_response(data: bytes):
 
 
 def _parse_client_url(url: str) -> tuple[str, str | int]:
-    parsed = urlparse(url)
-    if parsed.scheme == "tcp":
-        if parsed.hostname is None:
-            raise ValueError("Client URL must include a hostname.")
-        if parsed.port is None:
-            raise ValueError("Client URL must include a port.")
-        return parsed.hostname, parsed.port
-
-    if parsed.scheme == "unix":
-        if not parsed.path:
-            raise ValueError("Client URL must include a Unix socket path.")
-        return "unix", parsed.path
-
-    raise ValueError("Client URL must use tcp:// or unix:// scheme.")
+    return parse_transport_url(
+        url,
+        tcp_hostname_message="Client URL must include a hostname.",
+        tcp_port_message="Client URL must include a port.",
+        unix_path_message="Client URL must include a Unix socket path.",
+        scheme_message="Client URL must use tcp:// or unix:// scheme.",
+    )
 
 
 def _request_over_socket(sock: socket.socket, payload) -> bytes:
@@ -212,7 +208,7 @@ class AsyncClientTransaction:
         if self._ran:
             raise RuntimeError("Transaction already ran.")
 
-        return AsyncTransactionQuery(self, shelf_name)
+        return AsyncTransactionQuery(self, require_shelf_name(shelf_name))
 
     async def commit(self):
         if self._ran:
@@ -245,7 +241,7 @@ class AsyncClient:
         self.unix_path = unix_path
 
     def shelf(self, shelf_name: str) -> AsyncClientQuery:
-        return AsyncClientQuery(self, shelf_name)
+        return AsyncClientQuery(self, require_shelf_name(shelf_name))
 
     def transaction(self, write: bool = False) -> AsyncClientTransaction:
         return AsyncClientTransaction(self, write=write)
@@ -345,7 +341,7 @@ class SyncClientTransaction:
         if self._ran:
             raise RuntimeError("Transaction already ran.")
 
-        return SyncTransactionQuery(self, shelf_name)
+        return SyncTransactionQuery(self, require_shelf_name(shelf_name))
 
     def commit(self):
         if self._ran:
@@ -378,7 +374,7 @@ class SyncClient:
         self.unix_path = unix_path
 
     def shelf(self, shelf_name: str) -> SyncClientQuery:
-        return SyncClientQuery(self, shelf_name)
+        return SyncClientQuery(self, require_shelf_name(shelf_name))
 
     def transaction(self, write: bool = False) -> SyncClientTransaction:
         return SyncClientTransaction(self, write=write)

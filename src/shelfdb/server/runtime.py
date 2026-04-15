@@ -12,6 +12,7 @@ import structlog
 from .. import open as open_db
 from ..shelf.normalize import normalize_result
 from ..protocol.rpc import dumps_response, loads_request
+from ..protocol.schema import make_error_response
 from .rpc import run_request
 
 
@@ -52,14 +53,7 @@ async def _close_writer(writer):
 
 def _pack_error(error: Exception) -> bytes:
     """Encode one exception as a msgpack RPC error payload."""
-    return dumps_response(
-        {
-            "error": {
-                "type": type(error).__name__,
-                "message": str(error),
-            }
-        }
-    )
+    return dumps_response(make_error_response(error))
 
 
 class ShelfServer:

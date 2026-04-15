@@ -44,6 +44,11 @@ def test_connect_async_rejects_invalid_urls(url):
         asyncio.run(connect_async(url))
 
 
+def test_async_client_rejects_empty_shelf_name():
+    with pytest.raises(ValueError, match="Shelf name must not be empty."):
+        client.AsyncClient(host="127.0.0.1", port=17000).shelf("")
+
+
 def test_request_returns_response_when_wait_closed_raises(monkeypatch):
     class FakeReader:
         def __init__(self, payload: bytes):
@@ -142,6 +147,11 @@ def test_request_emits_debug_logs(monkeypatch, caplog):
     assert any("client_request_sending" in message for message in events)
     assert any("client_response_received" in message for message in events)
     assert any("rpc_response_decoded" in message for message in events)
+
+
+def test_decode_response_rejects_invalid_error_envelope():
+    with pytest.raises(ValueError, match="RPC error payload must be a dict."):
+        client._decode_response(msgpack.packb({"error": "boom"}, use_bin_type=True))
 
 
 def test_materialize_request_payload_converts_batch_iterables():

@@ -25,6 +25,12 @@ The transport is not a public interoperability format.
 }
 ```
 
+Validation is strict on the envelope shape:
+
+- query payloads must contain exactly `type`, `shelf`, and `queries`
+- transaction payloads must contain exactly `type`, `write`, and `txs`
+- each query step must contain exactly `op`, `args`, `kwargs`, and optional `write`
+
 ## Transaction request
 
 ```python
@@ -70,6 +76,8 @@ Errors are encoded as:
     }
 }
 ```
+
+The error envelope is validated as exactly one `error` key with nested `type` and `message` strings.
 
 ## Source files
 

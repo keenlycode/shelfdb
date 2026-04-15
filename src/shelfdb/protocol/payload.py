@@ -23,7 +23,7 @@ from .schema import (
 
 
 def is_error_response(payload: object) -> bool:
-    return isinstance(payload, Mapping) and set(payload) == {"error"}
+    return isinstance(payload, Mapping) and set(payload) == {"__error__"}
 
 
 def make_query_step(
@@ -97,7 +97,7 @@ def read_transaction_request(payload: object) -> TransactionRequest:
 def make_error_response(error: Exception) -> ErrorResponse:
     try:
         model = ErrorResponseSchema(
-            {"error": {"type": type(error).__name__, "message": str(error)}}
+            {"__error__": {"type": type(error).__name__, "message": str(error)}}
         )
     except Model.Error as error_:
         raise ValueError("RPC error response is invalid.") from error_

@@ -61,7 +61,7 @@ class RpcErrorSchema(Model):
 class ErrorResponseSchema(Model):
     """Top-level RPC error envelope returned when server execution fails."""
 
-    error: RpcErrorSchema = cast(Any, Field(required=True))
+    __error__: RpcErrorSchema = cast(Any, Field(required=True))
 
 
 class RequestTypeSchema(Model):

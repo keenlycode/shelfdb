@@ -178,7 +178,7 @@ def test_handler_returns_rpc_error_payload(tmp_path):
     assert writer.closed is True
     payload = msgpack.unpackb(writer.payloads[0], raw=False)
     assert payload == {
-        "error": {
+        "__error__": {
             "type": "ValueError",
             "message": "Unsupported request type: nope",
         }
@@ -322,7 +322,7 @@ def test_handler_rejects_legacy_query_step_format(tmp_path):
 
     payload = msgpack.unpackb(writer.payloads[0], raw=False)
     assert payload == {
-        "error": {
+        "__error__": {
             "type": "ValueError",
             "message": "Query payload is invalid.",
         }
@@ -360,7 +360,7 @@ def test_handler_rejects_malformed_query_step_payload(tmp_path):
 
     payload = msgpack.unpackb(writer.payloads[0], raw=False)
     assert payload == {
-        "error": {
+        "__error__": {
             "type": "ValueError",
             "message": "Query payload is invalid.",
         }

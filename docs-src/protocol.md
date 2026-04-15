@@ -111,18 +111,18 @@ Each query step has this shape:
 
 Successful responses are the normalized result returned by the server.
 
-Errors are encoded as:
+Errors are encoded under the reserved `__error__` key:
 
 ```python
 {
-    "error": {
+    "__error__": {
         "type": "AssertionError",
         "message": "...",
     }
 }
 ```
 
-The error envelope is validated as exactly one `error` key with nested `type` and `message` strings.
+The error envelope is validated as exactly one `__error__` key with nested `type` and `message` strings.
 
 ## What to import when
 

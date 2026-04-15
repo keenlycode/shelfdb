@@ -80,7 +80,7 @@ def _decode_response(data: bytes):
     log.debug("rpc_response_decoded", response_bytes=len(data))
     if is_error_response(payload):
         error_response = read_error_response(payload)
-        error = error_response["error"]
+        error = error_response["__error__"]
         error_type = error["type"]
         message = error["message"]
         log.debug("rpc_response_error", error_type=error_type)

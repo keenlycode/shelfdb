@@ -20,7 +20,7 @@ from shelfdb.protocol.payload import (
 def test_make_error_response_uses_exception_type_and_message():
     error = make_error_response(ValueError("boom"))
 
-    assert error == {"error": {"type": "ValueError", "message": "boom"}}
+    assert error == {"__error__": {"type": "ValueError", "message": "boom"}}
 
 
 @pytest.mark.parametrize(
@@ -28,10 +28,18 @@ def test_make_error_response_uses_exception_type_and_message():
     [
         ([], "RPC error response is invalid."),
         ({"error": "boom"}, "RPC error response is invalid."),
-        ({"error": {"type": "ValueError"}}, "RPC error response is invalid."),
-        ({"error": {"type": 1, "message": "boom"}}, "RPC error response is invalid."),
+        ({"__error__": "boom"}, "RPC error response is invalid."),
+        ({"__error__": {"type": "ValueError"}}, "RPC error response is invalid."),
         (
-            {"error": {"type": "ValueError", "message": 1}},
+            {"__error__": {"type": 1, "message": "boom"}},
+            "RPC error response is invalid.",
+        ),
+        (
+            {"__error__": {"type": "ValueError", "message": 1}},
+            "RPC error response is invalid.",
+        ),
+        (
+            {"__error__": {"type": "ValueError", "message": "boom"}, "x": 1},
             "RPC error response is invalid.",
         ),
     ],
@@ -42,11 +50,12 @@ def test_read_error_response_rejects_invalid_shapes(payload, message):
 
 
 def test_is_error_response_detects_only_error_envelopes():
-    assert is_error_response({"error": {"type": "ValueError", "message": "boom"}})
+    assert is_error_response({"__error__": {"type": "ValueError", "message": "boom"}})
     assert not is_error_response([])
     assert not is_error_response(
-        {"error": {"type": "ValueError", "message": "boom"}, "x": 1}
+        {"__error__": {"type": "ValueError", "message": "boom"}, "x": 1}
     )
+    assert not is_error_response({"error": {"type": "ValueError", "message": "boom"}})
 
 
 def test_make_query_step_round_trips_through_reader():

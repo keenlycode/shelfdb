@@ -152,7 +152,17 @@ def test_request_emits_debug_logs(monkeypatch, caplog):
 
 def test_decode_response_rejects_invalid_error_envelope():
     with pytest.raises(ValueError, match="RPC error response is invalid."):
-        client._decode_response(msgpack.packb({"error": "boom"}, use_bin_type=True))
+        client._decode_response(msgpack.packb({"__error__": "boom"}, use_bin_type=True))
+
+
+def test_decode_response_raises_mapped_error_from_error_envelope():
+    with pytest.raises(RuntimeError, match="ValueError: boom"):
+        client._decode_response(
+            msgpack.packb(
+                {"__error__": {"type": "ValueError", "message": "boom"}},
+                use_bin_type=True,
+            )
+        )
 
 
 def test_materialize_request_payload_converts_batch_iterables():

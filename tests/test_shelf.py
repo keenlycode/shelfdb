@@ -31,6 +31,11 @@ def test_db_shelf_returns_lazy_query(db):
     assert isinstance(db.shelf("note"), ShelfQuery)
 
 
+def test_db_shelf_rejects_empty_name(db):
+    with pytest.raises(ValueError, match="Shelf name must not be empty."):
+        db.shelf("")
+
+
 def test_sort_is_removed_from_query_api(db):
     with pytest.raises(AttributeError):
         db.shelf("note").sort(lambda item: item[0])
@@ -123,6 +128,11 @@ def test_put_many_creates_items_and_last_value_wins(db):
 def test_put_many_accepts_empty_iterable(db):
     assert db.shelf("note").put_many([]).run() is None
     assert db.shelf("note").count().run() == 0
+
+
+def test_put_many_rejects_invalid_items_early(db):
+    with pytest.raises(TypeError, match=r"Each item must be a \(key, data\) pair."):
+        db.shelf("note").put_many([(1,)]).run()
 
 
 def test_put_many_is_terminal(db):

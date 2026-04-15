@@ -8,14 +8,23 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 import socket
-from urllib.parse import urlparse
 from typing import Any, cast
 
 import structlog
 
-from ..protocol.query import QueryStep
+from ..protocol.schema import (
+    QueryRequest,
+    QueryStep,
+    TransactionRequest,
+    read_error_response,
+    make_query_request,
+    make_transaction_request,
+    make_transaction_shelf_request,
+)
 from ..shelf.query import QueryBuilderMixin
 from ..protocol.rpc import dumps_request, loads_response
+from ..util.transport import parse_transport_url
+from ..util.validation import require_shelf_name
 
 
 log = structlog.get_logger(__name__)
@@ -59,27 +68,25 @@ def _materialize_request_payload(payload: object) -> object:
     payload_dict = cast(dict[str, Any], payload)
     request_type = payload_dict.get("type")
     if request_type == "query":
-        return {
-            **payload_dict,
-            "queries": [
-                _materialize_query_step(query)
-                for query in payload_dict.get("queries", [])
-            ],
-        }
+        if "shelf" not in payload_dict or "queries" not in payload_dict:
+            return payload
+        return make_query_request(
+            payload_dict["shelf"],
+            [_materialize_query_step(query) for query in payload_dict["queries"]],
+        )
     if request_type == "transaction":
-        return {
-            **payload_dict,
-            "txs": [
-                {
-                    **tx_payload,
-                    "queries": [
-                        _materialize_query_step(query)
-                        for query in tx_payload.get("queries", [])
-                    ],
-                }
-                for tx_payload in payload_dict.get("txs", [])
+        if "write" not in payload_dict or "txs" not in payload_dict:
+            return payload
+        return make_transaction_request(
+            payload_dict["write"],
+            [
+                make_transaction_shelf_request(
+                    tx["shelf"],
+                    [_materialize_query_step(query) for query in tx["queries"]],
+                )
+                for tx in payload_dict["txs"]
             ],
-        }
+        )
 
     return payload
 
@@ -87,8 +94,9 @@ def _materialize_request_payload(payload: object) -> object:
 def _decode_response(data: bytes):
     payload = loads_response(data)
     log.debug("rpc_response_decoded", response_bytes=len(data))
-    if isinstance(payload, dict) and "error" in payload:
-        error = payload["error"]
+    if isinstance(payload, dict) and set(payload) == {"error"}:
+        error_response = read_error_response(payload)
+        error = error_response["error"]
         error_type = error["type"]
         message = error["message"]
         log.debug("rpc_response_error", error_type=error_type)
@@ -99,20 +107,13 @@ def _decode_response(data: bytes):
 
 
 def _parse_client_url(url: str) -> tuple[str, str | int]:
-    parsed = urlparse(url)
-    if parsed.scheme == "tcp":
-        if parsed.hostname is None:
-            raise ValueError("Client URL must include a hostname.")
-        if parsed.port is None:
-            raise ValueError("Client URL must include a port.")
-        return parsed.hostname, parsed.port
-
-    if parsed.scheme == "unix":
-        if not parsed.path:
-            raise ValueError("Client URL must include a Unix socket path.")
-        return "unix", parsed.path
-
-    raise ValueError("Client URL must use tcp:// or unix:// scheme.")
+    return parse_transport_url(
+        url,
+        tcp_hostname_message="Client URL must include a hostname.",
+        tcp_port_message="Client URL must include a port.",
+        unix_path_message="Client URL must include a Unix socket path.",
+        scheme_message="Client URL must use tcp:// or unix:// scheme.",
+    )
 
 
 def _request_over_socket(sock: socket.socket, payload) -> bytes:
@@ -160,11 +161,7 @@ class AsyncClientQuery(QueryBuilderMixin):
         return AsyncClientQuery(self.client, self.shelf_name, (*self.queries, query))
 
     async def run(self):
-        payload = {
-            "type": "query",
-            "shelf": self.shelf_name,
-            "queries": list(self.queries),
-        }
+        payload = make_query_request(self.shelf_name, list(self.queries))
         return await self.client._request(payload)
 
 
@@ -209,18 +206,14 @@ class AsyncClientTransaction:
         if self._ran:
             raise RuntimeError("Transaction already ran.")
 
-        return AsyncTransactionQuery(self, shelf_name)
+        return AsyncTransactionQuery(self, require_shelf_name(shelf_name))
 
     async def commit(self):
         if self._ran:
             raise RuntimeError("Transaction already ran.")
 
         self._ran = True
-        payload = {
-            "type": "transaction",
-            "write": self._write,
-            "txs": self._txs,
-        }
+        payload = make_transaction_request(self._write, self._txs)
         return await self._client._request(payload)
 
     async def run(self):
@@ -246,7 +239,7 @@ class AsyncClient:
         self.unix_path = unix_path
 
     def shelf(self, shelf_name: str) -> AsyncClientQuery:
-        return AsyncClientQuery(self, shelf_name)
+        return AsyncClientQuery(self, require_shelf_name(shelf_name))
 
     def transaction(self, write: bool = False) -> AsyncClientTransaction:
         return AsyncClientTransaction(self, write=write)
@@ -301,11 +294,7 @@ class SyncClientQuery(QueryBuilderMixin):
         return SyncClientQuery(self.client, self.shelf_name, (*self.queries, query))
 
     def run(self):
-        payload = {
-            "type": "query",
-            "shelf": self.shelf_name,
-            "queries": list(self.queries),
-        }
+        payload = make_query_request(self.shelf_name, list(self.queries))
         return self.client._request(payload)
 
 
@@ -350,18 +339,14 @@ class SyncClientTransaction:
         if self._ran:
             raise RuntimeError("Transaction already ran.")
 
-        return SyncTransactionQuery(self, shelf_name)
+        return SyncTransactionQuery(self, require_shelf_name(shelf_name))
 
     def commit(self):
         if self._ran:
             raise RuntimeError("Transaction already ran.")
 
         self._ran = True
-        payload = {
-            "type": "transaction",
-            "write": self._write,
-            "txs": self._txs,
-        }
+        payload = make_transaction_request(self._write, self._txs)
         return self._client._request(payload)
 
     def run(self):
@@ -387,7 +372,7 @@ class SyncClient:
         self.unix_path = unix_path
 
     def shelf(self, shelf_name: str) -> SyncClientQuery:
-        return SyncClientQuery(self, shelf_name)
+        return SyncClientQuery(self, require_shelf_name(shelf_name))
 
     def transaction(self, write: bool = False) -> SyncClientTransaction:
         return SyncClientTransaction(self, write=write)

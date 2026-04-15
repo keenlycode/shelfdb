@@ -4,6 +4,7 @@ import pytest
 
 from shelfdb.cli import ServerConfig, parse_server_url
 from shelfdb.log import configure_logging, normalize_log_level
+from shelfdb.util.transport import parse_transport_url
 
 
 def test_server_config_defaults_are_valid():
@@ -33,6 +34,16 @@ def test_parse_server_url_returns_tcp_values():
 
 def test_parse_server_url_returns_unix_values():
     assert parse_server_url("unix:///tmp/shelfdb.sock") == ("unix", "/tmp/shelfdb.sock")
+
+
+def test_parse_transport_url_is_shared():
+    assert parse_transport_url(
+        "tcp://127.0.0.1:17000",
+        tcp_hostname_message="host",
+        tcp_port_message="port",
+        unix_path_message="path",
+        scheme_message="scheme",
+    ) == ("127.0.0.1", 17000)
 
 
 def test_normalize_log_level_is_case_insensitive():

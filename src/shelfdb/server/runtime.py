@@ -5,13 +5,14 @@ from datetime import datetime as datetime  # noqa: F401 - exposed for client cal
 import os
 import re as re  # noqa: F401 - exposed for client callables
 import stat
+import sys
 from typing import Any, cast
 
 import structlog
 
-from .. import open as open_db
 from ..shelf.normalize import normalize_result
 from ..protocol.rpc import dumps_response, loads_request
+from ..protocol.schema import make_error_response
 from .rpc import run_request
 
 
@@ -52,14 +53,11 @@ async def _close_writer(writer):
 
 def _pack_error(error: Exception) -> bytes:
     """Encode one exception as a msgpack RPC error payload."""
-    return dumps_response(
-        {
-            "error": {
-                "type": type(error).__name__,
-                "message": str(error),
-            }
-        }
-    )
+    return dumps_response(make_error_response(error))
+
+
+def _open_db(db_name: str):
+    return cast(Any, sys.modules["shelfdb.server"]).open_db(db_name)
 
 
 class ShelfServer:
@@ -87,7 +85,7 @@ class ShelfServer:
         self.port = port
         self.db_name = db_name
         self.unix_path = unix_path
-        self.shelfdb = open_db(db_name)
+        self.shelfdb = _open_db(db_name)
 
     async def handler(self, reader, writer):
         payload = await reader.read(-1)

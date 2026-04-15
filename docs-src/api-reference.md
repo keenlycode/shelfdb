@@ -5,6 +5,12 @@ This page is the generated reference for the public Python modules.
 Use the narrative pages first if you are learning ShelfDB. Come back here when you want exact
 signatures, annotations, class members, or module-level details.
 
+## Protocol
+
+Typed request/response envelopes and shared RPC helpers.
+
+::: shelfdb.protocol
+
 ## Package
 
 Top-level package exports such as `open()`, `connect()`, and `connect_async()`.

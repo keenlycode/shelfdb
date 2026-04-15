@@ -4,12 +4,12 @@ import asyncio
 from dataclasses import dataclass
 import sys
 from typing import cast
-from urllib.parse import urlparse
 
 from cyclopts import App
 
 from .log import configure_logging
 from .server import ShelfServer
+from .util.transport import parse_transport_url
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,20 +26,13 @@ class ServerConfig:
 
 def parse_server_url(url: str) -> tuple[str, str | int]:
     """Parse a TCP or Unix server URL into transport-specific values."""
-    parsed = urlparse(url)
-    if parsed.scheme == "tcp":
-        if parsed.hostname is None:
-            raise ValueError("tcp URL must include a hostname")
-        if parsed.port is None:
-            raise ValueError("tcp URL must include a port")
-        return parsed.hostname, parsed.port
-
-    if parsed.scheme == "unix":
-        if not parsed.path:
-            raise ValueError("unix URL must include a socket path")
-        return "unix", parsed.path
-
-    raise ValueError("url must use tcp:// or unix:// scheme")
+    return parse_transport_url(
+        url,
+        tcp_hostname_message="tcp URL must include a hostname",
+        tcp_port_message="tcp URL must include a port",
+        unix_path_message="unix URL must include a socket path",
+        scheme_message="url must use tcp:// or unix:// scheme",
+    )
 
 
 app = App(help="ShelfDB Asyncio Server")

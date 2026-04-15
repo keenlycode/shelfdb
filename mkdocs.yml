@@ -15,6 +15,7 @@ nav:
   - Protocol: protocol.md
   - Transactions: transactions.md
   - Security: security.md
+  - Benchmark: benchmark.md
   - API Reference: api-reference.md
 
 theme:

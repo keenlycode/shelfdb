@@ -139,3 +139,4 @@ Server mode is designed for trusted local clients, not public internet exposure.
 5. [Protocol](protocol.md) for the client/server request and response shapes.
 6. [Transactions](transactions.md) for consistent reads and atomic writes.
 7. [Security](security.md) before using server mode outside a simple trusted setup.
+8. [Benchmark](benchmark.md) for a local comparison against SQLite and TinyDB.

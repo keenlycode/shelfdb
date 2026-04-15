@@ -7,6 +7,11 @@ import shutil
 
 from cyclopts import App
 
+try:
+    from .benchmark import BenchmarkConfig, run_benchmark
+except ImportError:  # pragma: no cover - script execution fallback
+    from benchmark import BenchmarkConfig, run_benchmark
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_DOCS = ROOT / "docs-src"
@@ -81,8 +86,30 @@ def ai_skill_mkdocs():
     print(f"ai-skill-mkdocs: {copied} copied, {removed} removed, {unchanged} unchanged")
 
 
+@app.command(name="benchmark")
+def benchmark(
+    rows: int = 10_000,
+    repeats: int = 5,
+    warmups: int = 1,
+    seed: int = 42,
+    json_path: Path = ROOT / "tmp" / "benchmark.json",
+    markdown_path: Path = ROOT / "docs-src" / "benchmark.md",
+):
+    """Benchmark ShelfDB against SQLite and TinyDB."""
+
+    config = BenchmarkConfig(
+        rows=rows,
+        repeats=repeats,
+        warmups=warmups,
+        seed=seed,
+        json_path=json_path,
+        markdown_path=markdown_path,
+    )
+    run_benchmark(config)
+
+
 def main(tokens: list[str] | None = None):
-    app(tokens)
+    app(tokens, result_action="return_none")
 
 
 if __name__ == "__main__":

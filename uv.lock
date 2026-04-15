@@ -758,6 +758,7 @@ dev = [
     { name = "mkdocstrings", extra = ["python"] },
     { name = "pymdown-extensions" },
     { name = "pytest" },
+    { name = "tinydb" },
 ]
 
 [package.metadata]
@@ -780,7 +781,8 @@ dev = [
     { name = "mkdocs-shadcn", specifier = ">=0.10.4,<0.11" },
     { name = "mkdocstrings", extras = ["python"], specifier = ">=0.29.0,<0.30" },
     { name = "pymdown-extensions", specifier = ">=10.16.1,<11" },
-    { name = "pytest", specifier = ">=8.4.2,<10" },
+    { name = "pytest", specifier = ">=9.0.0,<10" },
+    { name = "tinydb", specifier = ">=4.8.2,<5" },
 ]
 
 [[package]]
@@ -808,6 +810,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/ef/52/9ba0f43b686e7f3ddfeaa78ac3af750292662284b3661e91ad5494f21dbc/structlog-25.5.0.tar.gz", hash = "sha256:098522a3bebed9153d4570c6d0288abf80a031dfdb2048d59a49e9dc2190fc98", size = 1460830, upload-time = "2025-10-27T08:28:23.028Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a8/45/a132b9074aa18e799b891b91ad72133c98d8042c70f6240e4c5f9dabee2f/structlog-25.5.0-py3-none-any.whl", hash = "sha256:a8453e9b9e636ec59bd9e79bbd4a72f025981b3ba0f5837aebf48f02f37a7f9f", size = 72510, upload-time = "2025-10-27T08:28:21.535Z" },
+]
+
+[[package]]
+name = "tinydb"
+version = "4.8.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a0/79/4af51e2bb214b6ea58f857c51183d92beba85b23f7ba61c983ab3de56c33/tinydb-4.8.2.tar.gz", hash = "sha256:f7dfc39b8d7fda7a1ca62a8dbb449ffd340a117c1206b68c50b1a481fb95181d", size = 32566, upload-time = "2024-10-12T15:24:01.13Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/78/17/853354204e1ca022d6b7d011ca7f3206c4f8faa3cc743e92609b49c1d83f/tinydb-4.8.2-py3-none-any.whl", hash = "sha256:f97030ee5cbc91eeadd1d7af07ab0e48ceb04aa63d4a983adbaca4cba16e86c3", size = 24888, upload-time = "2024-10-12T15:23:59.833Z" },
 ]
 
 [[package]]

@@ -4,6 +4,7 @@ data/
 node_modules/
 docs/
 dist/
+tmp/
 .agents/
 .pytest_cache
 .ruff_cache

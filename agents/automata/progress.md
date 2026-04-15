@@ -6,14 +6,14 @@ Refactor ShelfDB client/server code to leverage the shared protocol schema.
 ## Completed
 - Created a protocol docs page and initial typed schema module.
 - Drafted planning artifacts for the schema refactor.
+- Refactored client and server to use the shared protocol schema helpers.
+- Validated the change with the full test suite.
 
 ## Status
-- Ready to implement the client/server refactor.
+- Refactor complete.
 
 ## Next steps
-- Review current protocol code paths.
-- Refactor shared schema usage into client/server/runtime helpers.
-- Add or adjust tests.
+- None.
 
 ## Risks / notes
 - Must preserve existing wire format and error behavior.

@@ -13,7 +13,14 @@ from typing import Any, cast
 
 import structlog
 
-from ..protocol.query import QueryStep
+from ..protocol.schema import (
+    QueryRequest,
+    QueryStep,
+    TransactionRequest,
+    make_query_request,
+    make_transaction_request,
+    make_transaction_shelf_request,
+)
 from ..shelf.query import QueryBuilderMixin
 from ..protocol.rpc import dumps_request, loads_response
 
@@ -59,27 +66,27 @@ def _materialize_request_payload(payload: object) -> object:
     payload_dict = cast(dict[str, Any], payload)
     request_type = payload_dict.get("type")
     if request_type == "query":
-        return {
-            **payload_dict,
-            "queries": [
-                _materialize_query_step(query)
-                for query in payload_dict.get("queries", [])
-            ],
-        }
+        if "shelf" not in payload_dict or "queries" not in payload_dict:
+            return payload
+        query_payload = cast(QueryRequest, payload_dict)
+        return make_query_request(
+            query_payload["shelf"],
+            [_materialize_query_step(query) for query in query_payload["queries"]],
+        )
     if request_type == "transaction":
-        return {
-            **payload_dict,
-            "txs": [
-                {
-                    **tx_payload,
-                    "queries": [
-                        _materialize_query_step(query)
-                        for query in tx_payload.get("queries", [])
-                    ],
-                }
-                for tx_payload in payload_dict.get("txs", [])
+        if "write" not in payload_dict or "txs" not in payload_dict:
+            return payload
+        tx_payload = cast(TransactionRequest, payload_dict)
+        return make_transaction_request(
+            tx_payload["write"],
+            [
+                make_transaction_shelf_request(
+                    tx["shelf"],
+                    [_materialize_query_step(query) for query in tx["queries"]],
+                )
+                for tx in tx_payload["txs"]
             ],
-        }
+        )
 
     return payload
 
@@ -160,11 +167,7 @@ class AsyncClientQuery(QueryBuilderMixin):
         return AsyncClientQuery(self.client, self.shelf_name, (*self.queries, query))
 
     async def run(self):
-        payload = {
-            "type": "query",
-            "shelf": self.shelf_name,
-            "queries": list(self.queries),
-        }
+        payload = make_query_request(self.shelf_name, list(self.queries))
         return await self.client._request(payload)
 
 
@@ -216,11 +219,7 @@ class AsyncClientTransaction:
             raise RuntimeError("Transaction already ran.")
 
         self._ran = True
-        payload = {
-            "type": "transaction",
-            "write": self._write,
-            "txs": self._txs,
-        }
+        payload = make_transaction_request(self._write, self._txs)
         return await self._client._request(payload)
 
     async def run(self):
@@ -301,11 +300,7 @@ class SyncClientQuery(QueryBuilderMixin):
         return SyncClientQuery(self.client, self.shelf_name, (*self.queries, query))
 
     def run(self):
-        payload = {
-            "type": "query",
-            "shelf": self.shelf_name,
-            "queries": list(self.queries),
-        }
+        payload = make_query_request(self.shelf_name, list(self.queries))
         return self.client._request(payload)
 
 
@@ -357,11 +352,7 @@ class SyncClientTransaction:
             raise RuntimeError("Transaction already ran.")
 
         self._ran = True
-        payload = {
-            "type": "transaction",
-            "write": self._write,
-            "txs": self._txs,
-        }
+        payload = make_transaction_request(self._write, self._txs)
         return self._client._request(payload)
 
     def run(self):

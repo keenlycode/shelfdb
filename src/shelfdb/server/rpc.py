@@ -1,5 +1,6 @@
 """RPC request execution helpers for ShelfDB server code."""
 
+from ..protocol.schema import read_request
 from ..shelf.query import replay_queries
 
 
@@ -21,6 +22,7 @@ def run_transaction_request(db, payload):
 
 def run_request(db, payload):
     """Dispatch one RPC payload to the matching request handler."""
+    payload = read_request(payload)
     if payload["type"] == "query":
         return run_query_request(db, payload)
     if payload["type"] == "transaction":

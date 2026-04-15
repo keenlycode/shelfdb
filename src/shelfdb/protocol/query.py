@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-
-QueryStep = dict[str, Any]
+from .schema import QueryStep, read_query_step
 
 
 def prepare_query_step(
@@ -30,26 +29,9 @@ def build_query_step(op: str, *args, write: bool = False, **kwargs) -> QueryStep
 def _read_query_step(query: QueryStep) -> tuple[str, list[Any], dict[str, Any]]:
     """Validate and unpack one serialized query step."""
 
-    if not isinstance(query, dict):
-        raise ValueError("Query step must be a dict.")
-
-    keys = set(query)
-    if keys not in ({"op", "args", "kwargs"}, {"op", "args", "kwargs", "write"}):
-        raise ValueError(
-            "Query step must contain exactly `op`, `args`, `kwargs`, and optional `write`."
-        )
-
+    query = read_query_step(query)
     op = query["op"]
     args = query["args"]
     kwargs = query["kwargs"]
-
-    if not isinstance(op, str):
-        raise ValueError("Query step `op` must be a string.")
-    if not isinstance(args, list):
-        raise ValueError("Query step `args` must be a list.")
-    if not isinstance(kwargs, dict):
-        raise ValueError("Query step `kwargs` must be a dict.")
-    if "write" in query and not isinstance(query["write"], bool):
-        raise ValueError("Query step `write` must be a bool.")
 
     return op, args, kwargs

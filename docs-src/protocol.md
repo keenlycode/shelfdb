@@ -1,6 +1,51 @@
 # Protocol
 
-ShelfDB uses a small Python RPC envelope for trusted local clients.
+ShelfDB uses a small request/response protocol for trusted local clients.
+
+This page explains the layer above byte-level transport: query steps become payloads, and payloads become bytes.
+
+If you only need exact symbols and signatures, see the [API Reference](api-reference.md#protocol).
+
+## Which module to use
+
+| Module | Use it for | Notes |
+| --- | --- | --- |
+| `schema.py` | typed protocol shapes | Dictify schemas and type aliases |
+| `query.py` | serialized query steps | build the step objects that go inside payloads |
+| `payload.py` | request/response envelopes | read, validate, and build protocol payloads |
+| `codec.py` | wire bytes | encode/decode payloads with `dill` and `msgpack` |
+
+## Request sequence
+
+```mermaid
+flowchart LR
+  A[Build query steps] --> B[Wrap request payload]
+  B --> C[Encode request bytes]
+  C --> D[Send to server]
+  D --> E[Decode request bytes]
+  E --> F[Validate payload]
+  F --> G[Dispatch request]
+```
+
+This shows the request moving from client-side construction to server-side validation and dispatch.
+
+## Response flow
+
+```mermaid
+flowchart LR
+  A[Request execution completes] --> B{Success?}
+  B -->|Yes| C[Normalize result]
+  C --> D[Encode response bytes]
+  D --> E[Client decodes response]
+  E --> F[Return result]
+  B -->|No| G[Build error payload]
+  G --> H[Encode response bytes]
+  H --> I[Client decodes response]
+  I --> J[Read error payload]
+  J --> K[Raise mapped exception]
+```
+
+This shows both success and error responses after request execution.
 
 ## Transport
 
@@ -79,9 +124,13 @@ Errors are encoded as:
 
 The error envelope is validated as exactly one `error` key with nested `type` and `message` strings.
 
-## Source files
+## What to import when
 
-- `src/shelfdb/protocol/payload.py`
-- `src/shelfdb/protocol/query.py`
-- `src/shelfdb/protocol/schema.py`
-- `src/shelfdb/protocol/codec.py`
+- Use `shelfdb.protocol.query` for building serialized query steps.
+- Use `shelfdb.protocol.payload` for request/response envelope helpers.
+- Use `shelfdb.protocol.codec` only when you need raw byte serialization.
+
+## More reference
+
+- [API Reference](api-reference.md) for exact module members.
+- Source files: `src/shelfdb/protocol/schema.py`, `src/shelfdb/protocol/query.py`, `src/shelfdb/protocol/payload.py`, `src/shelfdb/protocol/codec.py`.

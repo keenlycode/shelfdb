@@ -88,6 +88,6 @@ The query API stays the same. Async only adds `await` when connecting and runnin
 2. [Embedded Mode](embedded-mode.md) for daily embedded usage.
 3. [Server Mode](server-mode.md) for multi-client access over TCP or a Unix socket.
 4. [Query Model](query-model.md) for how lazy pipelines work.
-5. [Transactions](transactions.md) for consistent reads and atomic writes.
-6. [Protocol](protocol.md) for the client/server request and response shapes.
+5. [Protocol](protocol.md) for the client/server request and response shapes.
+6. [Transactions](transactions.md) for consistent reads and atomic writes.
 7. [Security](security.md) before using server mode outside a simple trusted setup.

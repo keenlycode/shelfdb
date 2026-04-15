@@ -10,6 +10,7 @@ nav:
   - Embedded Mode: embedded-mode.md
   - Server Mode: server-mode.md
   - Query Model: query-model.md
+  - Protocol: protocol.md
   - Transactions: transactions.md
   - Security: security.md
   - API Reference: api-reference.md
@@ -38,11 +39,20 @@ plugins:
             show_root_heading: true
             show_source: false
 
+extra_javascript:
+  - assets/javascripts/vendor/mermaid.min.js
+  - assets/javascripts/mermaid-init.js
+
 markdown_extensions:
   - admonition
   - codehilite
   - fenced_code
   - footnotes
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.blocks.details
   - pymdownx.tabbed
   - pymdownx.blocks.tab:

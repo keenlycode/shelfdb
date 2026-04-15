@@ -7,9 +7,35 @@ signatures, annotations, class members, or module-level details.
 
 ## Protocol
 
-Typed request/response envelopes and shared RPC helpers.
+Start with the [Protocol](protocol.md) page for the conceptual overview and module guide.
+
+The sections below show the public `shelfdb.protocol` package surface and the protocol submodules.
 
 ::: shelfdb.protocol
+
+### `shelfdb.protocol.schema`
+
+Typed protocol shapes and schema models.
+
+::: shelfdb.protocol.schema
+
+### `shelfdb.protocol.query`
+
+Serialized query-step builders.
+
+::: shelfdb.protocol.query
+
+### `shelfdb.protocol.payload`
+
+Request and response payload helpers.
+
+::: shelfdb.protocol.payload
+
+### `shelfdb.protocol.codec`
+
+Byte-level request and response codecs.
+
+::: shelfdb.protocol.codec
 
 ## Package
 

@@ -12,27 +12,12 @@ import structlog
 
 from ..shelf.normalize import normalize_result
 from ..protocol.rpc import dumps_response, loads_request
+from ..protocol.payload import payload_log_kwargs as _payload_log_kwargs
 from ..protocol.schema import make_error_response
 from .rpc import run_request
 
 
 log = structlog.get_logger(__name__)
-
-
-def _payload_log_kwargs(payload: object) -> dict[str, object]:
-    if not isinstance(payload, dict):
-        return {"payload_type": type(payload).__name__}
-
-    payload_dict = cast(dict[str, Any], payload)
-    request_type = payload_dict.get("type")
-    metadata: dict[str, object] = {"request_type": request_type}
-    if request_type == "query":
-        metadata["shelf"] = payload_dict.get("shelf")
-        metadata["query_count"] = len(payload_dict.get("queries", []))
-    elif request_type == "transaction":
-        metadata["tx_count"] = len(payload_dict.get("txs", []))
-        metadata["write"] = payload_dict.get("write")
-    return metadata
 
 
 async def _write_payload(writer, payload: bytes):

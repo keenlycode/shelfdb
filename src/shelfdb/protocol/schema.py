@@ -26,6 +26,22 @@ class _QueryStepModel(Model):
     write: bool = cast(Any, Field(default=False))
 
 
+def is_error_response(payload: object) -> bool:
+    return isinstance(payload, Mapping) and set(payload) == {"error"}
+
+
+def make_query_step(
+    op: str, args: list[Any], kwargs: dict[str, Any], *, write: bool = False
+) -> QueryStep:
+    try:
+        model = _QueryStepModel(
+            {"op": op, "args": args, "kwargs": kwargs, "write": write}
+        )
+    except Model.Error as error:
+        raise ValueError("Query step is invalid.") from error
+    return cast(QueryStep, model.dict())
+
+
 class _QueryRequestModel(Model):
     """Top-level RPC request schema for one shelf query pipeline."""
 
@@ -80,6 +96,14 @@ def make_query_request(shelf: str, queries: list[QueryStep]) -> QueryRequest:
     return cast(QueryRequest, model.dict())
 
 
+def read_query_request(payload: object) -> QueryRequest:
+    try:
+        model = _QueryRequestModel(cast(Mapping[str, Any], payload))
+    except (AssertionError, Model.Error) as error:
+        raise ValueError("Query payload is invalid.") from error
+    return cast(QueryRequest, model.dict())
+
+
 def make_transaction_shelf_request(
     shelf: str, queries: list[QueryStep]
 ) -> TransactionShelfRequest:
@@ -98,6 +122,14 @@ def make_transaction_request(
             {"type": "transaction", "write": write, "txs": txs}
         )
     except Model.Error as error:
+        raise ValueError("Transaction payload is invalid.") from error
+    return cast(TransactionRequest, model.dict())
+
+
+def read_transaction_request(payload: object) -> TransactionRequest:
+    try:
+        model = _TransactionRequestModel(cast(Mapping[str, Any], payload))
+    except (AssertionError, Model.Error) as error:
         raise ValueError("Transaction payload is invalid.") from error
     return cast(TransactionRequest, model.dict())
 
@@ -137,17 +169,9 @@ def read_request(payload: object) -> ProtocolRequest:
         raise ValueError("RPC payload is invalid.") from error
 
     if request_type == "query":
-        try:
-            model = _QueryRequestModel(payload_mapping)
-        except Model.Error as error:
-            raise ValueError("Query payload is invalid.") from error
-        return cast(QueryRequest, model.dict())
+        return read_query_request(payload_mapping)
 
     if request_type == "transaction":
-        try:
-            model = _TransactionRequestModel(payload_mapping)
-        except Model.Error as error:
-            raise ValueError("Transaction payload is invalid.") from error
-        return cast(TransactionRequest, model.dict())
+        return read_transaction_request(payload_mapping)
 
     raise ValueError(f"Unsupported request type: {request_type}")

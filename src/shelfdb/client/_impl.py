@@ -14,11 +14,14 @@ import structlog
 
 from ..protocol.schema import (
     QueryStep,
+    TransactionShelfRequest,
+    is_error_response,
     read_error_response,
     make_query_request,
     make_transaction_request,
     make_transaction_shelf_request,
 )
+from ..protocol.payload import payload_log_kwargs as _payload_log_kwargs
 from ..shelf.query import QueryBuilderMixin
 from ..protocol.rpc import dumps_request, loads_response
 from ..util.transport import parse_transport_url
@@ -28,24 +31,6 @@ from ..util.validation import require_shelf_name
 log = structlog.get_logger(__name__)
 
 _BATCH_QUERY_OPS = {"put_many", "keys_in"}
-
-
-def _payload_log_kwargs(payload: object) -> dict[str, object]:
-    if not isinstance(payload, dict):
-        return {"payload_type": type(payload).__name__}
-
-    payload_dict = cast(dict[str, Any], payload)
-    request_type = payload_dict.get("type")
-    metadata: dict[str, object] = {"request_type": request_type}
-    if request_type == "query":
-        metadata["shelf"] = payload_dict.get("shelf")
-        metadata["query_count"] = len(
-            cast(list[object], payload_dict.get("queries", []))
-        )
-    elif request_type == "transaction":
-        metadata["tx_count"] = len(cast(list[object], payload_dict.get("txs", [])))
-        metadata["write"] = payload_dict.get("write")
-    return metadata
 
 
 def _materialize_query_step(query: QueryStep) -> QueryStep:
@@ -92,7 +77,7 @@ def _materialize_request_payload(payload: object) -> object:
 def _decode_response(data: bytes):
     payload = loads_response(data)
     log.debug("rpc_response_decoded", response_bytes=len(data))
-    if isinstance(payload, dict) and set(payload) == {"error"}:
+    if is_error_response(payload):
         error_response = read_error_response(payload)
         error = error_response["error"]
         error_type = error["type"]
@@ -186,7 +171,7 @@ class AsyncClientTransaction:
     def __init__(self, client: "AsyncClient", write: bool = False):
         self._client = client
         self._write = write
-        self._txs = []
+        self._txs: list[TransactionShelfRequest] = []
         self._ran = False
 
     def _enqueue(self, query: AsyncTransactionQuery):
@@ -197,7 +182,9 @@ class AsyncClientTransaction:
         if query.transaction is not self:
             raise RuntimeError("Query belongs to a different transaction.")
 
-        self._txs.append({"shelf": query.shelf_name, "queries": list(query.queries)})
+        self._txs.append(
+            make_transaction_shelf_request(query.shelf_name, list(query.queries))
+        )
         return query
 
     def shelf(self, shelf_name: str) -> AsyncTransactionQuery:
@@ -319,7 +306,7 @@ class SyncClientTransaction:
     def __init__(self, client: "SyncClient", write: bool = False):
         self._client = client
         self._write = write
-        self._txs = []
+        self._txs: list[TransactionShelfRequest] = []
         self._ran = False
 
     def _enqueue(self, query: SyncTransactionQuery):
@@ -330,7 +317,9 @@ class SyncClientTransaction:
         if query.transaction is not self:
             raise RuntimeError("Query belongs to a different transaction.")
 
-        self._txs.append({"shelf": query.shelf_name, "queries": list(query.queries)})
+        self._txs.append(
+            make_transaction_shelf_request(query.shelf_name, list(query.queries))
+        )
         return query
 
     def shelf(self, shelf_name: str) -> SyncTransactionQuery:

@@ -2,7 +2,6 @@
 
 import pytest
 
-from shelfdb.protocol.payload import payload_log_kwargs
 from shelfdb.protocol.validation import (
     make_error_response,
     make_query_request,
@@ -48,16 +47,6 @@ def test_is_error_response_detects_only_error_envelopes():
     assert not is_error_response(
         {"error": {"type": "ValueError", "message": "boom"}, "x": 1}
     )
-
-
-def test_payload_log_kwargs_summarizes_requests():
-    assert payload_log_kwargs("boom") == {"payload_type": "str"}
-    assert payload_log_kwargs(
-        {"type": "query", "shelf": "note", "queries": [{"op": "count"}]}
-    ) == {"request_type": "query", "shelf": "note", "query_count": 1}
-    assert payload_log_kwargs(
-        {"type": "transaction", "write": True, "txs": [{"shelf": "note"}]}
-    ) == {"request_type": "transaction", "tx_count": 1, "write": True}
 
 
 def test_make_query_step_round_trips_through_reader():

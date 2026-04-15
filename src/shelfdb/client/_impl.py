@@ -16,7 +16,6 @@ from ..protocol.schema import (
     QueryStep,
     TransactionShelfRequest,
 )
-from ..protocol.payload import payload_log_kwargs as _payload_log_kwargs
 from ..protocol.validation import (
     is_error_response,
     make_query_request,
@@ -247,7 +246,7 @@ class AsyncClient:
             )
             reader, writer = await asyncio.open_unix_connection(self.unix_path)
         try:
-            log.debug("client_request_sending", **_payload_log_kwargs(payload))
+            log.debug("client_request_sending")
             writer.write(dumps_request(payload))
             writer.write_eof()
             await writer.drain()
@@ -388,7 +387,7 @@ class SyncClient:
         return _decode_response(response)
 
     def _request_with_socket(self, sock: socket.socket, payload) -> bytes:
-        log.debug("client_request_sending", **_payload_log_kwargs(payload))
+        log.debug("client_request_sending")
         try:
             response = _request_over_socket(sock, payload)
             log.debug("client_response_received", response_bytes=len(response))

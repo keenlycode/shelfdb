@@ -12,7 +12,6 @@ import structlog
 
 from ..shelf.normalize import normalize_result
 from ..protocol.rpc import dumps_response, loads_request
-from ..protocol.payload import payload_log_kwargs as _payload_log_kwargs
 from ..protocol.validation import make_error_response
 from .rpc import run_request
 
@@ -77,15 +76,14 @@ class ShelfServer:
         try:
             try:
                 payload = loads_request(payload)
-                log.debug("rpc_request_received", **_payload_log_kwargs(payload))
+                log.debug("rpc_request_received")
                 result = run_request(self.shelfdb, payload)
                 response = dumps_response(normalize_result(result))
-                log.debug("rpc_request_succeeded", **_payload_log_kwargs(payload))
+                log.debug("rpc_request_succeeded")
             except Exception as error:
                 log.exception(
                     "rpc_request_failed",
                     error_type=type(error).__name__,
-                    **_payload_log_kwargs(payload),
                 )
                 response = _pack_error(error)
 

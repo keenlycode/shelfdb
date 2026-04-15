@@ -324,7 +324,7 @@ def test_handler_rejects_legacy_query_step_format(tmp_path):
     assert payload == {
         "error": {
             "type": "ValueError",
-            "message": "Query step must be a dict.",
+            "message": "Query payload is invalid.",
         }
     }
 
@@ -362,7 +362,7 @@ def test_handler_rejects_malformed_query_step_payload(tmp_path):
     assert payload == {
         "error": {
             "type": "ValueError",
-            "message": "Query step `args` must be a list.",
+            "message": "Query payload is invalid.",
         }
     }
 

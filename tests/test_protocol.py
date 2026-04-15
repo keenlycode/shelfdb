@@ -15,18 +15,12 @@ def test_make_error_response_uses_exception_type_and_message():
     ("payload", "message"),
     [
         ([], "RPC error response must be a dict."),
-        ({"error": "boom"}, "RPC error payload must be a dict."),
-        (
-            {"error": {"type": "ValueError"}},
-            "RPC error payload must contain exactly `type` and `message`.",
-        ),
-        (
-            {"error": {"type": 1, "message": "boom"}},
-            "RPC error payload `type` must be a string.",
-        ),
+        ({"error": "boom"}, "RPC error response is invalid."),
+        ({"error": {"type": "ValueError"}}, "RPC error response is invalid."),
+        ({"error": {"type": 1, "message": "boom"}}, "RPC error response is invalid."),
         (
             {"error": {"type": "ValueError", "message": 1}},
-            "RPC error payload `message` must be a string.",
+            "RPC error response is invalid.",
         ),
     ],
 )

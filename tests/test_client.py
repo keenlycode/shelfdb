@@ -150,7 +150,7 @@ def test_request_emits_debug_logs(monkeypatch, caplog):
 
 
 def test_decode_response_rejects_invalid_error_envelope():
-    with pytest.raises(ValueError, match="RPC error payload must be a dict."):
+    with pytest.raises(ValueError, match="RPC error response is invalid."):
         client._decode_response(msgpack.packb({"error": "boom"}, use_bin_type=True))
 
 

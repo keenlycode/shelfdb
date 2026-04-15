@@ -2,92 +2,105 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal, NotRequired, TypedDict, cast
+from typing import Any, cast
 
-from ..util.validation import require_shelf_name
-
-
-class QueryStep(TypedDict):
-    op: str
-    args: list[Any]
-    kwargs: dict[str, Any]
-    write: NotRequired[bool]
+from dictify import Field, Model
 
 
-class QueryRequest(TypedDict):
-    type: Literal["query"]
-    shelf: str
-    queries: list[QueryStep]
-
-
-class TransactionShelfRequest(TypedDict):
-    shelf: str
-    queries: list[QueryStep]
-
-
-class TransactionRequest(TypedDict):
-    type: Literal["transaction"]
-    write: bool
-    txs: list[TransactionShelfRequest]
-
-
-class RpcError(TypedDict):
-    type: str
-    message: str
-
-
-class ErrorResponse(TypedDict):
-    error: RpcError
-
-
+QueryStep = dict[str, Any]
+QueryRequest = dict[str, Any]
+TransactionShelfRequest = dict[str, Any]
+TransactionRequest = dict[str, Any]
+RpcError = dict[str, Any]
+ErrorResponse = dict[str, Any]
 ProtocolRequest = QueryRequest | TransactionRequest
 ProtocolResponse = Any | ErrorResponse
 
 
+class _QueryStepModel(Model):
+    op: str = Field(required=True)
+    args: list[Any] = Field(required=True)
+    kwargs: dict[str, Any] = Field(required=True)
+    write: bool = Field(default=False)
+
+
+class _QueryRequestModel(Model):
+    type: str = Field(required=True).verify(lambda value: value == "query")
+    shelf: str = Field(required=True).verify(lambda value: bool(value))
+    queries: list[_QueryStepModel] = Field(required=True)
+
+
+class _TransactionShelfRequestModel(Model):
+    shelf: str = Field(required=True).verify(lambda value: bool(value))
+    queries: list[_QueryStepModel] = Field(required=True)
+
+
+class _TransactionRequestModel(Model):
+    type: str = Field(required=True).verify(lambda value: value == "transaction")
+    write: bool = Field(required=True)
+    txs: list[_TransactionShelfRequestModel] = Field(required=True)
+
+
+class _RpcErrorModel(Model):
+    type: str = Field(required=True)
+    message: str = Field(required=True)
+
+
+class _ErrorResponseModel(Model):
+    error: _RpcErrorModel = Field(required=True)
+
+
 def make_query_request(shelf: str, queries: list[QueryStep]) -> QueryRequest:
-    return {"type": "query", "shelf": require_shelf_name(shelf), "queries": queries}
+    try:
+        model = _QueryRequestModel(
+            {"type": "query", "shelf": shelf, "queries": queries}
+        )
+    except Model.Error as error:
+        raise ValueError("Query payload is invalid.") from error
+    return cast(QueryRequest, model.dict())
 
 
 def make_transaction_shelf_request(
     shelf: str, queries: list[QueryStep]
 ) -> TransactionShelfRequest:
-    return {"shelf": require_shelf_name(shelf), "queries": queries}
+    try:
+        model = _TransactionShelfRequestModel({"shelf": shelf, "queries": queries})
+    except Model.Error as error:
+        raise ValueError("Transaction payload item is invalid.") from error
+    return cast(TransactionShelfRequest, model.dict())
 
 
 def make_transaction_request(
     write: bool, txs: list[TransactionShelfRequest]
 ) -> TransactionRequest:
-    return {"type": "transaction", "write": write, "txs": txs}
+    try:
+        model = _TransactionRequestModel(
+            {"type": "transaction", "write": write, "txs": txs}
+        )
+    except Model.Error as error:
+        raise ValueError("Transaction payload is invalid.") from error
+    return cast(TransactionRequest, model.dict())
 
 
 def make_error_response(error: Exception) -> ErrorResponse:
-    return {"error": {"type": type(error).__name__, "message": str(error)}}
+    try:
+        model = _ErrorResponseModel(
+            {"error": {"type": type(error).__name__, "message": str(error)}}
+        )
+    except Model.Error as error_:
+        raise ValueError("RPC error response is invalid.") from error_
+    return cast(ErrorResponse, model.dict())
 
 
 def read_query_step(query: object) -> QueryStep:
     if not isinstance(query, dict):
         raise ValueError("Query step must be a dict.")
 
-    keys = set(query)
-    if keys not in ({"op", "args", "kwargs"}, {"op", "args", "kwargs", "write"}):
-        raise ValueError(
-            "Query step must contain exactly `op`, `args`, `kwargs`, and optional `write`."
-        )
-
-    op = query["op"]
-    args = query["args"]
-    kwargs = query["kwargs"]
-
-    if not isinstance(op, str):
-        raise ValueError("Query step `op` must be a string.")
-    if not isinstance(args, list):
-        raise ValueError("Query step `args` must be a list.")
-    if not isinstance(kwargs, dict):
-        raise ValueError("Query step `kwargs` must be a dict.")
-    if "write" in query and not isinstance(query["write"], bool):
-        raise ValueError("Query step `write` must be a bool.")
-
-    return cast(QueryStep, query)
+    try:
+        model = _QueryStepModel(query)
+    except Model.Error as error:
+        raise ValueError("Query step is invalid.") from error
+    return cast(QueryStep, model.dict())
 
 
 def read_error_response(payload: object) -> ErrorResponse:
@@ -97,71 +110,33 @@ def read_error_response(payload: object) -> ErrorResponse:
     if set(payload) != {"error"}:
         raise ValueError("RPC error response must contain exactly `error`.")
 
-    error = payload["error"]
-    if not isinstance(error, dict):
-        raise ValueError("RPC error payload must be a dict.")
-
-    if set(error) != {"type", "message"}:
-        raise ValueError("RPC error payload must contain exactly `type` and `message`.")
-
-    if not isinstance(error["type"], str):
-        raise ValueError("RPC error payload `type` must be a string.")
-    if not isinstance(error["message"], str):
-        raise ValueError("RPC error payload `message` must be a string.")
-
-    return cast(ErrorResponse, payload)
+    try:
+        model = _ErrorResponseModel(payload)
+    except Model.Error as error:
+        raise ValueError("RPC error response is invalid.") from error
+    return cast(ErrorResponse, model.dict())
 
 
 def read_request(payload: object) -> ProtocolRequest:
     if not isinstance(payload, dict):
         raise ValueError("RPC payload must be a dict.")
 
-    if "type" not in payload:
-        raise ValueError("RPC payload must include `type`.")
-
-    request_type = payload["type"]
+    request_type = payload.get("type")
     if not isinstance(request_type, str):
         raise ValueError("RPC payload `type` must be a string.")
 
     if request_type == "query":
-        if set(payload) != {"type", "shelf", "queries"}:
-            raise ValueError(
-                "Query payload must contain exactly `type`, `shelf`, and `queries`."
-            )
-        if not isinstance(payload["shelf"], str):
-            raise ValueError("Query payload `shelf` must be a string.")
-        if not payload["shelf"]:
-            raise ValueError("Query payload `shelf` must not be empty.")
-        if not isinstance(payload["queries"], list):
-            raise ValueError("Query payload `queries` must be a list.")
-        for query in payload["queries"]:
-            read_query_step(query)
-        return cast(QueryRequest, payload)
+        try:
+            model = _QueryRequestModel(payload)
+        except Model.Error as error:
+            raise ValueError("Query payload is invalid.") from error
+        return cast(QueryRequest, model.dict())
 
     if request_type == "transaction":
-        if set(payload) != {"type", "write", "txs"}:
-            raise ValueError(
-                "Transaction payload must contain exactly `type`, `write`, and `txs`."
-            )
-        if not isinstance(payload["write"], bool):
-            raise ValueError("Transaction payload `write` must be a bool.")
-        if not isinstance(payload["txs"], list):
-            raise ValueError("Transaction payload `txs` must be a list.")
-        for tx in payload["txs"]:
-            if not isinstance(tx, dict):
-                raise ValueError("Transaction payload items must be dicts.")
-            if set(tx) != {"shelf", "queries"}:
-                raise ValueError(
-                    "Transaction payload items must contain exactly `shelf` and `queries`."
-                )
-            if not isinstance(tx["shelf"], str):
-                raise ValueError("Transaction payload item `shelf` must be a string.")
-            if not tx["shelf"]:
-                raise ValueError("Transaction payload item `shelf` must not be empty.")
-            if not isinstance(tx["queries"], list):
-                raise ValueError("Transaction payload item `queries` must be a list.")
-            for query in tx["queries"]:
-                read_query_step(query)
-        return cast(TransactionRequest, payload)
+        try:
+            model = _TransactionRequestModel(payload)
+        except Model.Error as error:
+            raise ValueError("Transaction payload is invalid.") from error
+        return cast(TransactionRequest, model.dict())
 
     raise ValueError(f"Unsupported request type: {request_type}")

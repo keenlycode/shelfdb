@@ -233,7 +233,10 @@ class SQLiteBackend:
 
     def scan(self) -> int:
         count = 0
-        for _ in self._conn.execute(f"SELECT key FROM {SQLITE_TABLE} ORDER BY key"):
+        for _, payload in self._conn.execute(
+            f"SELECT key, data FROM {SQLITE_TABLE} ORDER BY key"
+        ):
+            self._load(payload)
             count += 1
         return count
 
@@ -287,7 +290,7 @@ class TinyDBBackend:
         return row["data"]
 
     def scan(self) -> int:
-        return len(self._table.all())
+        return sum(1 for _ in self._table.all())
 
     def update(self, key: str, patch: dict[str, Any]) -> None:
         current = self.lookup(key)
@@ -538,6 +541,7 @@ def render_markdown(report: BenchmarkReport) -> str:
         "## Methodology",
         "",
         "- ShelfDB is benchmarked in embedded mode.",
+        "- Scan reads full documents on every backend to keep the workload equivalent.",
         "- SQLite uses a local file with a `key TEXT PRIMARY KEY, data TEXT` table.",
         "- TinyDB uses a local JSON file with key-field queries and no custom index.",
         "- Each backend gets fresh storage for every measured repeat.",

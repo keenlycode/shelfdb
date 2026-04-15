@@ -64,6 +64,15 @@ class LMDBStore:
 
         return iterator()
 
+    def count(self, txn=None) -> int:
+        """Return the number of stored entries without iterating documents."""
+
+        if txn is None:
+            with self.begin() as txn:
+                return txn.stat(db=self._db)["entries"]
+
+        return txn.stat(db=self._db)["entries"]
+
     def key(self, key: str, txn=None):
         """Return one decoded item by key, or None when it is missing."""
         if txn is None:

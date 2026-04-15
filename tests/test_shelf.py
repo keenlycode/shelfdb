@@ -112,6 +112,24 @@ def test_key_filter_key_range_slice_first_and_count(db):
     )
 
 
+def test_count_uses_store_count_fast_path(db, monkeypatch):
+    seed_notes(db, 3)
+
+    store = db._open_shelf("note")._store
+    calls = {}
+
+    def fake_count(txn=None):
+        calls["txn"] = txn
+        return 3
+
+    monkeypatch.setattr(store, "count", fake_count)
+
+    with db.transaction() as tx:
+        assert tx.shelf("note").count().run() == 3
+
+    assert calls["txn"] is not None
+
+
 def test_put_many_creates_items_and_last_value_wins(db):
     def items():
         yield ("note-1", {"title": "before"})

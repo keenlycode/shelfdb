@@ -225,6 +225,9 @@ class Shelf:
         return next(items, None)
 
     def count(self, filter_=None) -> int:
+        if filter_ is None and self._selection is None:
+            return self._store.count(txn=self._txn)
+
         items = self._items()
         if filter_ is not None:
             items = filter(filter_, items)

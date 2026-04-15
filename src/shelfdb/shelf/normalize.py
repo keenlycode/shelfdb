@@ -14,7 +14,7 @@ def normalize_result(result: Any):
     if isinstance(result, Shelf):
         return [normalize_result(item) for item in result]
     if isinstance(result, Item):
-        return [result[0], normalize_result(result[1])]
+        return [result[0], result[1]]
     if isinstance(result, Iterator):
         return [normalize_result(value) for value in result]
     if isinstance(result, tuple):

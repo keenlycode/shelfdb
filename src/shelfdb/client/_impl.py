@@ -13,9 +13,7 @@ from typing import Any, cast
 import structlog
 
 from ..protocol.schema import (
-    QueryRequest,
     QueryStep,
-    TransactionRequest,
     read_error_response,
     make_query_request,
     make_transaction_request,

@@ -174,6 +174,7 @@ class AsyncClientTransaction:
         self._write = write
         self._txs: list[TransactionShelfRequest] = []
         self._ran = False
+        self.result = None
 
     def _enqueue(self, query: AsyncTransactionQuery):
         if self._ran:
@@ -194,13 +195,23 @@ class AsyncClientTransaction:
 
         return AsyncTransactionQuery(self, require_shelf_name(shelf_name))
 
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        if exc_type is None and not self._ran:
+            await self.commit()
+        return False
+
     async def commit(self):
         if self._ran:
             raise RuntimeError("Transaction already ran.")
 
         self._ran = True
         payload = make_transaction_request(self._write, self._txs)
-        return await self._client._request(payload)
+        result = await self._client._request(payload)
+        self.result = result
+        return result
 
     async def run(self):
         return await self.commit()
@@ -309,6 +320,7 @@ class SyncClientTransaction:
         self._write = write
         self._txs: list[TransactionShelfRequest] = []
         self._ran = False
+        self.result = None
 
     def _enqueue(self, query: SyncTransactionQuery):
         if self._ran:
@@ -329,13 +341,23 @@ class SyncClientTransaction:
 
         return SyncTransactionQuery(self, require_shelf_name(shelf_name))
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        if exc_type is None and not self._ran:
+            self.commit()
+        return False
+
     def commit(self):
         if self._ran:
             raise RuntimeError("Transaction already ran.")
 
         self._ran = True
         payload = make_transaction_request(self._write, self._txs)
-        return self._client._request(payload)
+        result = self._client._request(payload)
+        self.result = result
+        return result
 
     def run(self):
         return self.commit()

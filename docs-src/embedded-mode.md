@@ -149,7 +149,8 @@ db.close()
 For consistent reads and atomic writes, use `with db.transaction(...) as tx:` and create
 transaction-scoped queries with `tx.shelf(...)`.
 
-Inside the block, embedded `.run()` calls execute immediately. Remote client transactions queue
-their steps until `tx.commit()`.
+Inside the block, embedded `.run()` calls execute immediately and update `tx.result`. Remote
+client transactions queue their steps until `tx.commit()` or a clean `with` / `async with` exit
+stores the commit result on `tx.result`.
 
 See [Transactions](transactions.md) for the full behavior and examples.

@@ -502,6 +502,24 @@ def test_server_transaction_returns_none_for_put_many(server_client):
     ]
 
 
+def test_server_transaction_context_manager_commits(server_client):
+    async def main():
+        async with server_client.transaction(write=True) as tx:
+            tx.shelf("note").put("note-context", {"title": "context"}).run()
+            tx.shelf("note").key("note-context").first().run()
+        return tx
+
+    tx = asyncio.run(main())
+
+    assert tx.result == ["note-context", {"title": "context"}]
+    assert asyncio.run(
+        server_client.shelf("note").key("note-context").first().run()
+    ) == [
+        "note-context",
+        {"title": "context"},
+    ]
+
+
 def test_server_transaction_rejects_readonly_writes(server_client):
     seed_server_notes(server_client, 1)
 

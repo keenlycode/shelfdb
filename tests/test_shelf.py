@@ -320,6 +320,56 @@ def test_db_write_transaction_commits_changes(db):
     ]
 
 
+def test_db_transaction_result_tracks_last_query_and_survives_exit(db):
+    seed_notes(db, 2)
+
+    with db.transaction(write=True) as tx:
+        assert tx.result is None
+        assert tx.shelf("note").count().run() == 2
+        assert tx.result == 2
+
+        deleted = tx.shelf("note").key("note-0").delete().run()
+        assert tx.result == deleted
+
+    assert tx.result == [True]
+
+
+def test_db_transaction_result_iterator_is_available_after_exit(db):
+    seed_notes(db, 3)
+
+    with db.transaction() as tx:
+        filtered = tx.shelf("note").filter(lambda item: item[0] != "note-1").run()
+        assert tx.result is filtered
+
+    assert list(tx.result) == [
+        ["note-0", {"title": "note-0"}],
+        ["note-2", {"title": "note-2"}],
+    ]
+
+
+def test_db_empty_transaction_result_is_none(db):
+    with db.transaction(write=True) as tx:
+        pass
+
+    assert tx.result is None
+
+
+def test_db_transaction_result_survives_rollback(db):
+    seed_notes(db, 1)
+
+    with pytest.raises(RuntimeError, match="boom"):
+        with db.transaction(write=True) as tx:
+            deleted = tx.shelf("note").key("note-0").delete().run()
+            assert tx.result == deleted
+            raise RuntimeError("boom")
+
+    assert tx.result == [True]
+    assert db.shelf("note").key("note-0").first().run() == [
+        "note-0",
+        {"title": "note-0"},
+    ]
+
+
 def test_db_transaction_spans_multiple_shelves(db):
     seed_notes(db, 1)
 

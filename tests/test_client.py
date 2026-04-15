@@ -45,20 +45,204 @@ def test_connect_async_rejects_invalid_urls(url):
         asyncio.run(connect_async(url))
 
 
-def test_sync_client_transaction_is_not_a_context_manager():
-    tx = client.SyncClient(host="127.0.0.1", port=17000).transaction(write=True)
+def test_sync_client_transaction_commit_stores_result(monkeypatch):
+    remote = client.SyncClient(host="127.0.0.1", port=17000)
 
-    with pytest.raises(TypeError):
-        with tx:
+    monkeypatch.setattr(remote, "_request", lambda payload: ["note-1", {"title": "ok"}])
+
+    tx = remote.transaction(write=True)
+    tx.shelf("note").key("note-1").update({"title": "ok"}).run()
+
+    assert tx.commit() == ["note-1", {"title": "ok"}]
+    assert tx.result == ["note-1", {"title": "ok"}]
+
+
+def test_sync_client_transaction_context_manager_commits_on_exit(monkeypatch):
+    calls = []
+    remote = client.SyncClient(host="127.0.0.1", port=17000)
+
+    def fake_request(payload):
+        calls.append(payload)
+        return ["note-1", {"title": "context"}]
+
+    monkeypatch.setattr(remote, "_request", fake_request)
+
+    with remote.transaction(write=True) as tx:
+        assert tx.result is None
+        assert tx.shelf("note").put("note-1", {"title": "context"}).run() is None
+        assert tx.result is None
+
+    assert tx.result == ["note-1", {"title": "context"}]
+    assert len(calls) == 1
+
+
+def test_sync_client_transaction_context_manager_skips_commit_on_error(monkeypatch):
+    calls = []
+    remote = client.SyncClient(host="127.0.0.1", port=17000)
+
+    def fake_request(payload):
+        calls.append(payload)
+        return ["note-1", {"title": "context"}]
+
+    monkeypatch.setattr(remote, "_request", fake_request)
+
+    with pytest.raises(RuntimeError, match="boom"):
+        with remote.transaction(write=True) as tx:
+            tx.shelf("note").put("note-1", {"title": "context"}).run()
+            raise RuntimeError("boom")
+
+    assert tx.result is None
+    assert calls == []
+
+
+def test_sync_client_transaction_context_manager_manual_commit_is_single_use(
+    monkeypatch,
+):
+    calls = []
+    remote = client.SyncClient(host="127.0.0.1", port=17000)
+
+    def fake_request(payload):
+        calls.append(payload)
+        return ["note-1", {"title": "manual"}]
+
+    monkeypatch.setattr(remote, "_request", fake_request)
+
+    with remote.transaction(write=True) as tx:
+        tx.shelf("note").put("note-1", {"title": "manual"}).run()
+        assert tx.commit() == ["note-1", {"title": "manual"}]
+        assert tx.result == ["note-1", {"title": "manual"}]
+
+    assert len(calls) == 1
+    assert tx.result == ["note-1", {"title": "manual"}]
+
+
+def test_sync_client_empty_transaction_context_manager_stores_none(monkeypatch):
+    calls = []
+    remote = client.SyncClient(host="127.0.0.1", port=17000)
+
+    def fake_request(payload):
+        calls.append(payload)
+        return None
+
+    monkeypatch.setattr(remote, "_request", fake_request)
+
+    with remote.transaction(write=True) as tx:
+        pass
+
+    assert tx.result is None
+    assert len(calls) == 1
+
+
+def test_async_client_transaction_commit_stores_result(monkeypatch):
+    remote = client.AsyncClient(host="127.0.0.1", port=17000)
+
+    async def fake_request(payload):
+        return ["note-1", {"title": "ok"}]
+
+    monkeypatch.setattr(remote, "_request", fake_request)
+
+    async def main():
+        tx = remote.transaction(write=True)
+        tx.shelf("note").key("note-1").update({"title": "ok"}).run()
+        result = await tx.commit()
+        return tx, result
+
+    tx, result = asyncio.run(main())
+
+    assert result == ["note-1", {"title": "ok"}]
+    assert tx.result == ["note-1", {"title": "ok"}]
+
+
+def test_async_client_transaction_context_manager_commits_on_exit(monkeypatch):
+    calls = []
+    remote = client.AsyncClient(host="127.0.0.1", port=17000)
+
+    async def fake_request(payload):
+        calls.append(payload)
+        return ["note-1", {"title": "context"}]
+
+    monkeypatch.setattr(remote, "_request", fake_request)
+
+    async def main():
+        async with remote.transaction(write=True) as tx:
+            assert tx.result is None
+            assert tx.shelf("note").put("note-1", {"title": "context"}).run() is None
+            assert tx.result is None
+        return tx
+
+    tx = asyncio.run(main())
+
+    assert tx.result == ["note-1", {"title": "context"}]
+    assert len(calls) == 1
+
+
+def test_async_client_transaction_context_manager_skips_commit_on_error(monkeypatch):
+    calls = []
+    remote = client.AsyncClient(host="127.0.0.1", port=17000)
+
+    async def fake_request(payload):
+        calls.append(payload)
+        return ["note-1", {"title": "context"}]
+
+    monkeypatch.setattr(remote, "_request", fake_request)
+
+    async def main():
+        with pytest.raises(RuntimeError, match="boom"):
+            async with remote.transaction(write=True) as tx:
+                tx.shelf("note").put("note-1", {"title": "context"}).run()
+                raise RuntimeError("boom")
+        return tx
+
+    tx = asyncio.run(main())
+
+    assert tx.result is None
+    assert calls == []
+
+
+def test_async_client_transaction_context_manager_manual_commit_is_single_use(
+    monkeypatch,
+):
+    calls = []
+    remote = client.AsyncClient(host="127.0.0.1", port=17000)
+
+    async def fake_request(payload):
+        calls.append(payload)
+        return ["note-1", {"title": "manual"}]
+
+    monkeypatch.setattr(remote, "_request", fake_request)
+
+    async def main():
+        async with remote.transaction(write=True) as tx:
+            tx.shelf("note").put("note-1", {"title": "manual"}).run()
+            assert await tx.commit() == ["note-1", {"title": "manual"}]
+            assert tx.result == ["note-1", {"title": "manual"}]
+        return tx
+
+    tx = asyncio.run(main())
+
+    assert len(calls) == 1
+    assert tx.result == ["note-1", {"title": "manual"}]
+
+
+def test_async_client_empty_transaction_context_manager_stores_none(monkeypatch):
+    calls = []
+    remote = client.AsyncClient(host="127.0.0.1", port=17000)
+
+    async def fake_request(payload):
+        calls.append(payload)
+        return None
+
+    monkeypatch.setattr(remote, "_request", fake_request)
+
+    async def main():
+        async with remote.transaction(write=True) as tx:
             pass
+        return tx
 
+    tx = asyncio.run(main())
 
-def test_async_client_transaction_is_not_a_context_manager():
-    tx = client.AsyncClient(host="127.0.0.1", port=17000).transaction(write=True)
-
-    with pytest.raises(TypeError):
-        with tx:
-            pass
+    assert tx.result is None
+    assert len(calls) == 1
 
 
 def test_async_client_rejects_empty_shelf_name():

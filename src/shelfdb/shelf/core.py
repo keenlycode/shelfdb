@@ -34,6 +34,7 @@ class Transaction:
         self._db = db
         self.txn = txn
         self.write = write
+        self.result = None
 
     def shelf(self, shelf_name: str) -> "ShelfQuery":
         """Create one query builder bound to this active transaction."""
@@ -321,7 +322,12 @@ class ShelfQuery(QueryBuilderMixin):
             with self._db.transaction(write=True):
                 return self._run_queries()
 
-        return self._run_queries()
+        result = self._run_queries()
+        if self._tx_context is not None:
+            if isinstance(result, Iterator):
+                result = list(result)
+            self._tx_context.result = result
+        return result
 
     def _has_write_step(self) -> bool:
         return any(query.get("write") is True for query in self.queries)

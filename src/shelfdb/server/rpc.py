@@ -11,15 +11,14 @@ def run_query_request(db, shelf, queries):
 
 def run_transaction_request(db, write, txs):
     """Execute one transaction request and return its last result."""
-    last_result = None
     with db.transaction(write=write) as tx:
         for tx_payload in txs:
             match tx_payload:
                 case {"shelf": shelf, "queries": queries}:
-                    last_result = replay_queries(tx.shelf(shelf), queries).run()
+                    replay_queries(tx.shelf(shelf), queries).run()
                 case _:
                     raise ValueError("Transaction payload item is invalid.")
-    return last_result
+    return tx.result
 
 
 def run_request(db, payload):

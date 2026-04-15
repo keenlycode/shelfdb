@@ -5,8 +5,8 @@ ShelfDB supports database transactions for two main purposes:
 - **consistent reads** with a stable snapshot
 - **atomic writes** that either all commit or all roll back
 
-Embedded transactions execute each query when you call `.run()` inside the `with` block.
-Client transactions queue each query on `.run()` and execute the batch later with `tx.commit()`.
+Embedded transactions execute each query when you call `.run()` inside the `with` block and keep the latest result on `tx.result`.
+Client transactions queue each query on `.run()` and store the commit result on `tx.result` when you call `tx.commit()` or use `with` / `async with`.
 
 ## Read transactions
 
@@ -56,6 +56,7 @@ except RuntimeError:
 ```
 
 After that error, the update is not committed.
+`tx.result` still reflects the last successful query result from inside the aborted block.
 
 ## Read your own writes
 
@@ -113,8 +114,15 @@ tx.shelf("note").put("note-1", {"title": "hello"}).run()
 tx.commit()
 ```
 
-`tx.commit()` returns the last queued query result, or `None` for an empty transaction.
+`tx.commit()` returns the last queued query result, or `None` for an empty transaction, and stores that value on `tx.result`.
 
-For async code, use `await tx.commit()` instead.
+You can also write:
+
+```python
+with client.transaction(write=True) as tx:
+    tx.shelf("note").put("note-1", {"title": "hello"}).run()
+```
+
+For async code, use `async with` or `await tx.commit()` instead.
 
 See [Server Mode](server-mode.md) for connection setup and the shared remote query model.

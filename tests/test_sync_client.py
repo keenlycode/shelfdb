@@ -282,6 +282,18 @@ def test_sync_server_transaction_returns_none_for_put_many(sync_server_client):
     ]
 
 
+def test_sync_server_transaction_context_manager_commits(sync_server_client):
+    with sync_server_client.transaction(write=True) as tx:
+        tx.shelf("note").put("note-context", {"title": "context"}).run()
+        tx.shelf("note").key("note-context").first().run()
+
+    assert tx.result == ["note-context", {"title": "context"}]
+    assert sync_server_client.shelf("note").key("note-context").first().run() == [
+        "note-context",
+        {"title": "context"},
+    ]
+
+
 def test_sync_server_rejects_readonly_writes(sync_server_client):
     seed_notes(sync_server_client, 1)
 

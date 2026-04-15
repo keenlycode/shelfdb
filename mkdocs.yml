@@ -1,0 +1,60 @@
+site_name: ShelfDB
+site_description: Tiny document database for Python
+repo_url: https://github.com/keenlycode/shelfdb
+docs_dir: docs-src
+site_dir: docs
+
+nav:
+  - ShelfDB: index.md
+  - Getting Started: getting-started.md
+  - Embedded Mode: embedded-mode.md
+  - Server Mode: server-mode.md
+  - Query Model: query-model.md
+  - Protocol: protocol.md
+  - Transactions: transactions.md
+  - Security: security.md
+  - API Reference: api-reference.md
+
+theme:
+  name: shadcn
+  icon: null
+  show_stargazers: true
+  topbar_sections: false
+  pygments_style:
+    light: shadcn-light
+    dark: github-dark
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths:
+            - src
+          options:
+            annotations_path: brief
+            modernize_annotations: true
+            separate_signature: true
+            show_signature_annotations: true
+            show_root_heading: true
+            show_source: false
+
+extra_javascript:
+  - assets/javascripts/vendor/mermaid.min.js
+  - assets/javascripts/mermaid-init.js
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - fenced_code
+  - footnotes
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.blocks.details
+  - pymdownx.tabbed
+  - pymdownx.blocks.tab:
+      combine_header_slug: true
+      separator: ___

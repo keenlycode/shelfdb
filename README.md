@@ -1,93 +1,98 @@
-# Shelf DB
-<img src="https://raw.githubusercontent.com/nitipit/shelfdb/master/docs/shelf.png" style="max-width: 400px;">
+# ShelfDB
 
-## Introduction
-**Shelf DB** is a tiny document database for Python to stores **documents** or **JSON**-like data.
+ShelfDB is a tiny document database for Python that stores JSON-like dictionaries in LMDB.
 
-## Get it
-```shell
-$ pip install shelfdb shelfquery
-```
+Docs: build and browse the MkDocs site from `docs-src/`.
 
-## Develop with uv
-```shell
-$ uv sync --dev
-```
-
-Run the test suite:
+## Install
 
 ```shell
-$ uv run python -m unittest
+pip install shelfdb
 ```
 
-Run the server CLI:
+## Develop
 
 ```shell
-$ uv run shelfdb
+uv sync --dev
+uv run pytest
+uv build
 ```
 
-Build distributions:
+## Local API
 
-```shell
-$ uv build
-```
+Local queries are lazy. Build a query chain and call `.run()` to execute it.
 
-## Start asyncio server
-```shell
-$ shelfdb
-Serving on ('127.0.0.1', 17000)
-Database : db
-pid : 12359
-```
-
-> <bits-tag>uvloop</bits-tag> built-in already to make it faster. See [uvloop](https://github.com/MagicStack/uvloop).
-
-## Sync/Async query client through network.
 ```python
-import shelfquery
+from datetime import datetime
 
-# Sync client point to 127.0.0.1:17000
-db = shelfquery.db()
+import shelfdb
 
-# Make it async client
-db.asyncio()
+db = shelfdb.open("db")
 
-# Make it sync client again
-db.sync()
-```
+db.shelf("note").put(
+    "note-1",
+    {
+        "title": "Shelf DB",
+        "content": "Simple note",
+        "created_at": datetime.utcnow().isoformat(),
+    },
+).run()
 
-## Store data
-```python
-db.shelf('note').insert({
-    'title': 'Shelf DB',
-    'content': 'Simple note',
-    'datetime': datetime.utcnow()})
-```
-
-## Flexible query API with similar syntax
-```python
-db.shelf('note')\
-    .filter(lambda note:
-        note['title'] == 'Shelf DB')\
-    .sort(key=lambda note: note['datetime'])
+notes = (
+    db.shelf("note")
+    .filter(lambda item: item[1]["title"] == "Shelf DB")
     .run()
-```
-No need to learn more syntax. Let's just query using `filter`, `slice`, `sort`, `map`, `reduce` which almost the same to Python built-in functions.
+)
 
-## Regular expression
-Python reqular expression `re` can be use inside query function
+print(sorted(notes, key=lambda item: item[1]["created_at"]))
+```
+
+`run()` returns a one-shot iterator for local multi-item queries. Each item has the server-style
+shape `["key", data]`, so use `item[0]` for the key and `item[1]` for the stored document.
+
+## Server
+
+Start the asyncio server:
+
+```shell
+shelfdb
+```
+
+Or choose an explicit transport:
+
+```shell
+shelfdb --url tcp://127.0.0.1:17000
+shelfdb --url unix:///tmp/shelfdb.sock
+```
+
+Control server logging with stdlib-integrated structlog:
+
+```shell
+shelfdb --log-level info
+shelfdb --log-level debug
+```
+
+If you use the Python client directly, call `shelfdb.log.configure_logging(...)` first to
+see client-side debug logs as well.
+
+## Network Client
+
+RPC queries are also lazy and execute on `.run()`.
+
 ```python
-import re
-db.shelf('note')\
-    .filter(lambda note:
-        re.match(r'.*DB$', note['title']))\
-    .run()
+import shelfdb
+
+
+def main():
+    db = shelfdb.connect("tcp://127.0.0.1:17000")
+    note = db.shelf("note").key("note-1").first().run()
+    print(note)
+
+
+main()
 ```
 
-<h2 style="display: inline-block; width: auto; margin-bottom: 0;">Tiny</h2>
-<span style="vertical-align: text-bottom;">
-    <bits-tag class="bg-c">shelfdb ~ 12kB</bits-tag>
-    <bits-tag class="bg-c">shelfquery ~ 4kB</bits-tag>
-</span>
+## Security
 
-Runtime code is small, easy to install. <bits-tag>Shelf DB</bits-tag> also works on **Raspberry Pi**.
+The RPC protocol uses Python object deserialization and can transport Python callables.
+Only use the server with trusted local clients.

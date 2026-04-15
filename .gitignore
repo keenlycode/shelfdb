@@ -4,3 +4,7 @@ data/
 node_modules/
 docs/
 dist/
+.agents/
+.pytest_cache
+.ruff_cache
+.opencode

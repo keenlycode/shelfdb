@@ -1,3 +1,5 @@
+from .client import connect as connect
+from .client import connect_async as connect_async
 from .shelf import DB
 
 

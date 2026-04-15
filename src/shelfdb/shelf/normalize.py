@@ -1,4 +1,4 @@
-"""Internal result normalization helpers for local and RPC execution."""
+"""Normalization helpers for ShelfDB shelf execution."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from typing import Any
 def normalize_result(result: Any):
     """Convert ShelfDB execution results into plain Python values."""
 
-    from .shelf import Item, Shelf
+    from ..shelf import Item, Shelf
 
     if isinstance(result, Shelf):
         return [normalize_result(item) for item in result]

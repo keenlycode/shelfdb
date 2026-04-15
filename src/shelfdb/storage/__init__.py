@@ -1,1 +1,0 @@
-"""Storage adapters for ShelfDB."""

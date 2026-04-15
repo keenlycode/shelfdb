@@ -1,4 +1,4 @@
-"""Shared RPC protocol helpers for ShelfDB."""
+"""Shared RPC transport helpers for ShelfDB."""
 
 from __future__ import annotations
 
@@ -6,19 +6,6 @@ from typing import Any
 
 import dill
 import msgpack
-
-
-def prepare_query_step(
-    op: str, args: tuple[Any, ...], kwargs: dict[str, Any], *, write: bool = False
-):
-    """Build one serialized query step."""
-
-    return {
-        "op": op,
-        "args": list(args),
-        "kwargs": dict(kwargs),
-        "write": write,
-    }
 
 
 def dumps_request(payload: Any) -> bytes:

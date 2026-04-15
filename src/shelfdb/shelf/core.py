@@ -1,8 +1,4 @@
-"""Lazy local query builders and LMDB-backed execution primitives.
-
-Write queries carry their own metadata and run in an implicit local transaction
-when needed so they either commit fully or roll back on error.
-"""
+"""Core domain classes for ShelfDB shelf execution."""
 
 from __future__ import annotations
 
@@ -15,12 +11,9 @@ from typing import Any
 
 import lmdb
 
-from .query import (
-    QueryBuilderMixin,
-    QueryStep,
-    replay_queries,
-)
-from ._normalize import normalize_result
+from .normalize import normalize_result
+from ..protocol.query import QueryStep
+from .query import QueryBuilderMixin, replay_queries
 from .storage.lmdb import LMDBStore
 
 Data = dict[str, Any]

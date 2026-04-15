@@ -1,47 +1,10 @@
-"""Shared query builders, step validation, and replay helpers for ShelfDB."""
+"""Behavior-side query helpers for ShelfDB."""
 
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Any
 
-from .protocol import prepare_query_step
-
-QueryStep = dict[str, Any]
-
-
-def build_query_step(op: str, *args, write: bool = False, **kwargs) -> QueryStep:
-    """Build one serialized query step using an explicit call shape."""
-
-    return prepare_query_step(op, args, kwargs, write=write)
-
-
-def _read_query_step(query: QueryStep) -> tuple[str, list[Any], dict[str, Any]]:
-    """Validate and unpack one serialized query step."""
-
-    if not isinstance(query, dict):
-        raise ValueError("Query step must be a dict.")
-
-    keys = set(query)
-    if keys not in ({"op", "args", "kwargs"}, {"op", "args", "kwargs", "write"}):
-        raise ValueError(
-            "Query step must contain exactly `op`, `args`, `kwargs`, and optional `write`."
-        )
-
-    op = query["op"]
-    args = query["args"]
-    kwargs = query["kwargs"]
-
-    if not isinstance(op, str):
-        raise ValueError("Query step `op` must be a string.")
-    if not isinstance(args, list):
-        raise ValueError("Query step `args` must be a list.")
-    if not isinstance(kwargs, dict):
-        raise ValueError("Query step `kwargs` must be a dict.")
-    if "write" in query and not isinstance(query["write"], bool):
-        raise ValueError("Query step `write` must be a bool.")
-
-    return op, args, kwargs
+from ..protocol.query import QueryStep, _read_query_step, build_query_step
 
 
 class QueryBuilderMixin:

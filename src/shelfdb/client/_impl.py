@@ -13,8 +13,9 @@ from typing import Any, cast
 
 import structlog
 
-from .query import QueryBuilderMixin, QueryStep
-from .protocol import dumps_request, loads_response
+from ..protocol.query import QueryStep
+from ..shelf.query import QueryBuilderMixin
+from ..protocol.rpc import dumps_request, loads_response
 
 
 log = structlog.get_logger(__name__)

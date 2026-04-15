@@ -1,6 +1,6 @@
-"""RPC request execution helpers for ShelfDB."""
+"""RPC request execution helpers for ShelfDB server code."""
 
-from .query import replay_queries
+from ..shelf.query import replay_queries
 
 
 def run_query_request(db, payload):

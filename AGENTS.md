@@ -18,6 +18,8 @@ Use this document as the operating guide for implementing the ShelfDB refactor p
 
 Implement `worklog/plan.md` by following `worklog/action.md` in order.
 
+If `worklog/action.md` needs to be adjusted for a safer or clearer implementation path, update it as needed, but keep it aligned with `worklog/plan.md`.
+
 Do not skip ahead unless:
 
 - the current task is blocked,
@@ -56,6 +58,8 @@ For each task:
 - if a new dependency between tasks is discovered, update the file
 
 ## How To Use `worklog/progress.md`
+
+Use it as the current progress snapshot and working notebook, not as a long historical log. Keep entries focused on the current state, blockers, and next steps.
 
 Use it as both:
 

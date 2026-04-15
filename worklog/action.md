@@ -135,7 +135,7 @@ Rule for every task:
 - run tests after the change
 - do not remove compatibility imports until all consumers have moved
 
-### [ ] T01 — Record clean baseline
+### [x] T01 — Record clean baseline
 
 - run tests
 - note baseline command and result in commit/worklog notes
@@ -147,9 +147,9 @@ Done when:
 
 ---
 
-### [ ] T02 — Create package skeletons only
+### [x] T02 — Create package skeletons with compatibility wrappers
 
-Create empty package markers without moving any code yet:
+Create package directories and `__init__.py` wrappers that keep the current imports working while the new package paths are introduced:
 
 - `src/shelfdb/client/__init__.py`
 - `src/shelfdb/protocol/__init__.py`
@@ -158,7 +158,7 @@ Create empty package markers without moving any code yet:
 - `src/shelfdb/shelf/storage/__init__.py`
 - `src/shelfdb/util/__init__.py`
 
-Do not change any existing imports in this step.
+These wrappers should execute the legacy top-level modules in place so the package paths do not shadow the existing behavior yet.
 
 Done when:
 
@@ -167,7 +167,7 @@ Done when:
 
 ---
 
-### [ ] T03 — Add `protocol/rpc.py` and re-export from `protocol/__init__.py`
+### [x] T03 — Add `protocol/rpc.py` and re-export from `protocol/__init__.py`
 
 Copy transport helpers from `protocol.py` into:
 
@@ -186,7 +186,7 @@ Done when:
 
 ---
 
-### [ ] T04 — Move transport-helper imports to the new protocol package
+### [x] T04 — Move transport-helper imports to the new protocol package
 
 Update internal imports to use:
 
@@ -202,7 +202,7 @@ Done when:
 
 ---
 
-### [ ] T05 — Add `protocol/query.py` and re-export query-step helpers
+### [x] T05 — Add `protocol/query.py` and re-export query-step helpers
 
 Create `src/shelfdb/protocol/query.py` with:
 
@@ -221,7 +221,7 @@ Done when:
 
 ---
 
-### [ ] T06 — Add `shelf/query.py` for query behavior only
+### [x] T06 — Add `shelf/query.py` for query behavior only
 
 Create `src/shelfdb/shelf/query.py` with:
 
@@ -239,7 +239,7 @@ Done when:
 
 ---
 
-### [ ] T07 — Make old `query.py` a compatibility wrapper
+### [x] T07 — Make old `query.py` a compatibility wrapper
 
 Change top-level `src/shelfdb/query.py` to re-export from:
 
@@ -255,7 +255,7 @@ Done when:
 
 ---
 
-### [ ] T08 — Move internal imports off top-level `query.py`
+### [x] T08 — Move internal imports off top-level `query.py`
 
 Update internal code so it imports from:
 
@@ -271,7 +271,7 @@ Done when:
 
 ---
 
-### [ ] T09 — Add `shelf/storage/lmdb.py`
+### [x] T09 — Add `shelf/storage/lmdb.py`
 
 Copy the LMDB adapter into:
 
@@ -286,7 +286,7 @@ Done when:
 
 ---
 
-### [ ] T10 — Move shelf internals to new storage import path
+### [x] T10 — Move shelf internals to new storage import path
 
 Update shelf/domain code to import LMDB storage from:
 
@@ -301,7 +301,7 @@ Done when:
 
 ---
 
-### [ ] T11 — Add `shelf/normalize.py`
+### [x] T11 — Add `shelf/normalize.py`
 
 Move or copy `normalize_result` into:
 
@@ -329,7 +329,7 @@ Done when:
 
 ---
 
-### [ ] T13 — Add `shelf/core.py` with core domain classes
+### [x] T13 — Add `shelf/core.py` with core domain classes
 
 Create `src/shelfdb/shelf/core.py` and move or copy:
 
@@ -347,7 +347,7 @@ Done when:
 
 ---
 
-### [ ] T14 — Add `shelf/__init__.py` re-exports
+### [x] T14 — Add `shelf/__init__.py` re-exports
 
 Re-export the public shelf API from the new package:
 
@@ -381,7 +381,7 @@ Done when:
 
 ---
 
-### [ ] T16 — Move internal imports to the new shelf package
+### [x] T16 — Move internal imports to the new shelf package
 
 Update internal code to import from:
 
@@ -399,7 +399,7 @@ Done when:
 
 ---
 
-### [ ] T17 — Add client package implementation without removing `client.py`
+### [x] T17 — Add client package implementation without removing `client.py`
 
 Create a real client package implementation under:
 
@@ -419,7 +419,7 @@ Done when:
 
 ---
 
-### [ ] T18 — Convert old `client.py` into a compatibility wrapper
+### [x] T18 — Convert old `client.py` into a compatibility wrapper
 
 Change top-level `src/shelfdb/client.py` to re-export from the new client package.
 
@@ -435,7 +435,7 @@ Done when:
 
 ---
 
-### [ ] T19 — Move internal client-related imports to package locations
+### [x] T19 — Move internal client-related imports to package locations
 
 Update internal imports to use the new client package paths where useful.
 
@@ -446,7 +446,7 @@ Done when:
 
 ---
 
-### [ ] T20 — Add `server/runtime.py` without removing `server.py`
+### [x] T20 — Add `server/runtime.py` without removing `server.py`
 
 Copy the current server runtime into:
 
@@ -463,7 +463,7 @@ Done when:
 
 ---
 
-### [ ] T21 — Add `server/rpc.py` without removing top-level `rpc.py`
+### [x] T21 — Add `server/rpc.py` without removing top-level `rpc.py`
 
 Copy request-dispatch helpers into:
 
@@ -478,7 +478,7 @@ Done when:
 
 ---
 
-### [ ] T22 — Convert old `server.py` and `rpc.py` into compatibility wrappers
+### [x] T22 — Convert old `server.py` and `rpc.py` into compatibility wrappers
 
 Change:
 
@@ -494,7 +494,7 @@ Done when:
 
 ---
 
-### [ ] T23 — Update `cli.py` and package root imports
+### [x] T23 — Update `cli.py` and package root imports
 
 Update `cli.py` and `src/shelfdb/__init__.py` to use the new package locations.
 
@@ -507,7 +507,7 @@ Done when:
 
 ---
 
-### [ ] T24 — Remove no-longer-needed internal uses of compatibility wrappers
+### [x] T24 — Remove no-longer-needed internal uses of compatibility wrappers
 
 Search internal code for any remaining imports of:
 
@@ -526,7 +526,7 @@ Done when:
 
 ---
 
-### [ ] T25 — Decide whether to keep or remove compatibility wrappers
+### [x] T25 — Decide whether to keep or remove compatibility wrappers
 
 Only after all internals are migrated:
 
@@ -544,7 +544,7 @@ Done when:
 
 ---
 
-### [ ] T26 — Decide whether `log.py` should stay top-level
+### [x] T26 — Decide whether `log.py` should stay top-level
 
 Default recommendation:
 
@@ -558,7 +558,7 @@ Done when:
 
 ---
 
-### [ ] T27 — Final cleanup
+### [x] T27 — Final cleanup
 
 - remove dead duplicate code if wrappers already cover it
 - normalize imports
@@ -569,6 +569,19 @@ Done when:
 
 - package layout is stable
 - every previous task left the test suite green
+
+---
+
+### [x] T28 — Remove legacy wrapper modules and storage files
+
+- delete the old top-level compatibility modules that now have package replacements
+- delete the old `storage/*.py` files after moving storage into `shelf/storage/`
+- keep the package implementations and tests green
+
+Done when:
+
+- old top-level module files are gone
+- tests still pass
 
 ## Suggested Execution Order Summary
 
@@ -600,4 +613,5 @@ T24 remove internal wrapper usage
 T25 wrapper policy decision
 T26 log/util decision
 T27 final cleanup
+T28 remove legacy wrappers
 ```

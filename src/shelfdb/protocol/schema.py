@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any, Mapping, cast
 
 from dictify import Field, Model
 
@@ -52,6 +52,10 @@ class _ErrorResponseModel(Model):
     error: _RpcErrorModel = cast(Any, Field(required=True))
 
 
+class _RequestTypeModel(Model):
+    type: str = cast(Any, Field(required=True))
+
+
 def make_query_request(shelf: str, queries: list[QueryStep]) -> QueryRequest:
     try:
         model = _QueryRequestModel(
@@ -95,54 +99,39 @@ def make_error_response(error: Exception) -> ErrorResponse:
 
 
 def read_query_step(query: object) -> QueryStep:
-    if not isinstance(query, dict):
-        raise ValueError("Query step must be a dict.")
-
-    query = cast(dict[str, Any], query)
-
     try:
-        model = _QueryStepModel(query)
-    except Model.Error as error:
+        model = _QueryStepModel(cast(Mapping[str, Any], query))
+    except (AssertionError, Model.Error) as error:
         raise ValueError("Query step is invalid.") from error
     return cast(QueryStep, model.dict())
 
 
 def read_error_response(payload: object) -> ErrorResponse:
-    if not isinstance(payload, dict):
-        raise ValueError("RPC error response must be a dict.")
-
-    payload = cast(dict[str, Any], payload)
-
-    if set(payload) != {"error"}:
-        raise ValueError("RPC error response must contain exactly `error`.")
-
     try:
-        model = _ErrorResponseModel(payload)
-    except Model.Error as error:
+        model = _ErrorResponseModel(cast(Mapping[str, Any], payload))
+    except (AssertionError, Model.Error) as error:
         raise ValueError("RPC error response is invalid.") from error
     return cast(ErrorResponse, model.dict())
 
 
 def read_request(payload: object) -> ProtocolRequest:
-    if not isinstance(payload, dict):
-        raise ValueError("RPC payload must be a dict.")
+    payload_mapping = cast(Mapping[str, Any], payload)
 
-    payload = cast(dict[str, Any], payload)
-
-    request_type = payload.get("type")
-    if not isinstance(request_type, str):
-        raise ValueError("RPC payload `type` must be a string.")
+    try:
+        request_type = _RequestTypeModel(payload_mapping, strict=False).type
+    except (AssertionError, Model.Error) as error:
+        raise ValueError("RPC payload is invalid.") from error
 
     if request_type == "query":
         try:
-            model = _QueryRequestModel(payload)
+            model = _QueryRequestModel(payload_mapping)
         except Model.Error as error:
             raise ValueError("Query payload is invalid.") from error
         return cast(QueryRequest, model.dict())
 
     if request_type == "transaction":
         try:
-            model = _TransactionRequestModel(payload)
+            model = _TransactionRequestModel(payload_mapping)
         except Model.Error as error:
             raise ValueError("Transaction payload is invalid.") from error
         return cast(TransactionRequest, model.dict())

@@ -14,7 +14,7 @@ def test_make_error_response_uses_exception_type_and_message():
 @pytest.mark.parametrize(
     ("payload", "message"),
     [
-        ([], "RPC error response must be a dict."),
+        ([], "RPC error response is invalid."),
         ({"error": "boom"}, "RPC error response is invalid."),
         ({"error": {"type": "ValueError"}}, "RPC error response is invalid."),
         ({"error": {"type": 1, "message": "boom"}}, "RPC error response is invalid."),

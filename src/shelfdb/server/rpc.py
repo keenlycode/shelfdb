@@ -1,6 +1,6 @@
 """RPC request execution helpers for ShelfDB server code."""
 
-from ..protocol.schema import read_request
+from ..protocol.validation import read_request
 from ..shelf.query import replay_queries
 
 

@@ -1,8 +1,9 @@
-"""Pytest coverage for protocol schema helpers."""
+"""Pytest coverage for protocol validation helpers."""
 
 import pytest
 
-from shelfdb.protocol.schema import (
+from shelfdb.protocol.payload import payload_log_kwargs
+from shelfdb.protocol.validation import (
     make_error_response,
     make_query_request,
     make_query_step,
@@ -15,7 +16,6 @@ from shelfdb.protocol.schema import (
     read_transaction_request,
     read_request,
 )
-from shelfdb.protocol.payload import payload_log_kwargs
 
 
 def test_make_error_response_uses_exception_type_and_message():

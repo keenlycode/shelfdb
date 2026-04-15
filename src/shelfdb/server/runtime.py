@@ -13,7 +13,7 @@ import structlog
 from ..shelf.normalize import normalize_result
 from ..protocol.rpc import dumps_response, loads_request
 from ..protocol.payload import payload_log_kwargs as _payload_log_kwargs
-from ..protocol.schema import make_error_response
+from ..protocol.validation import make_error_response
 from .rpc import run_request
 
 

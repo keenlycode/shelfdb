@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from .schema import QueryStep, make_query_step, read_query_step
+from .schema import QueryStep
+from .validation import make_query_step, read_query_step
 
 
 def prepare_query_step(

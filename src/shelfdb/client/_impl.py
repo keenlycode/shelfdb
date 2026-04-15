@@ -15,13 +15,15 @@ import structlog
 from ..protocol.schema import (
     QueryStep,
     TransactionShelfRequest,
+)
+from ..protocol.payload import payload_log_kwargs as _payload_log_kwargs
+from ..protocol.validation import (
     is_error_response,
-    read_error_response,
     make_query_request,
     make_transaction_request,
     make_transaction_shelf_request,
+    read_error_response,
 )
-from ..protocol.payload import payload_log_kwargs as _payload_log_kwargs
 from ..shelf.query import QueryBuilderMixin
 from ..protocol.rpc import dumps_request, loads_response
 from ..util.transport import parse_transport_url

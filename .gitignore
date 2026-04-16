@@ -1,0 +1,12 @@
+.venv/
+data/
+*.pyc
+node_modules/
+docs/
+dist/
+tmp/
+.agents/
+.pytest_cache
+.ruff_cache
+.opencode
+!src/shelfdb/ai_skill/shelfdb-usage/references/

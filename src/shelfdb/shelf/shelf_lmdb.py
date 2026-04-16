@@ -123,11 +123,6 @@ class DB:
     def shelf(self, name: str, *, tx: Transaction | None = None) -> Shelf:
         return Shelf(self, name, tx=tx)
 
-    def query(self, *, write: bool = False) -> ShelfQuery:
-        from .shelfquery import ShelfQuery
-
-        return ShelfQuery(self.transaction(write=write))
-
     def close(self) -> None:
         if self._closed:
             return

@@ -3,8 +3,6 @@ from __future__ import annotations
 import pytest
 
 from shelfdb.shelf.shelf_lmdb import DB
-from shelfdb.shelf.shelfdb import ShelfDB, shelfdb
-from shelfdb.shelf.shelfquery import ShelfQuery
 
 
 def make_db(tmp_path):
@@ -90,24 +88,6 @@ def test_cursor_lifetime_safety(tmp_path):
         cursor = tx.shelf("users").cursor()
         assert cursor.first() is True
 
-
-def test_query_read_pipeline(tmp_path):
-    db = make_db(tmp_path)
-    seed_users(db)
-    with ShelfQuery(db.transaction()) as q:
-        users = q.shelf("users")
-        assert users.key("u1").all() == [("u1", {"name": "Ann"})]
-        assert users.keys_in(["u3", "u1"]).all() == [
-            ("u3", {"name": "Cat"}),
-            ("u1", {"name": "Ann"}),
-        ]
-        assert users.key_range("u1", "u4").filter(lambda item: item[0] != "u2").slice(
-            0, 1
-        ).all() == [("u1", {"name": "Ann"})]
-        assert users.first() == ("u1", {"name": "Ann"})
-        assert users.count() == 3
-
-
 def test_query_write_pipeline(tmp_path):
     db = make_db(tmp_path)
     seed_users(db)
@@ -128,12 +108,3 @@ def test_query_write_pipeline(tmp_path):
         assert users.get("u1") == {"name": "Ann2"}
         assert users.get("u2") == {"name": "BOB"}
         assert users.get("u3") is None
-
-
-def test_shelfdb_wrapper(tmp_path):
-    wrapper = shelfdb(str(tmp_path / "db"))
-    assert isinstance(wrapper, ShelfDB)
-    with wrapper.transaction(write=True) as tx:
-        tx.shelf("users").put("u1", {"name": "Um"})
-    with wrapper.query() as q:
-        assert q.shelf("users").all() == [("u1", {"name": "Um"})]

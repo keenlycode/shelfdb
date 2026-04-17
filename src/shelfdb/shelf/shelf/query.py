@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from functools import reduce
 from itertools import islice, tee
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, Iterator
 
 from .schema import Item, MutationResult
 from .shelf import Shelf
@@ -20,13 +21,18 @@ class ShelfQuery:
         """Delegate missing attributes to the wrapped shelf."""
         return getattr(self._shelf, name)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         """Iterate over the currently selected keys."""
         self._keys, keys = tee(self._keys)
         return iter(keys)
 
     def _set_keys(self, keys: Any) -> None:
         self._keys = keys
+
+    def _clone_keys(self) -> Iterator[str]:
+        """Clone the current keys iterator and keep the original usable."""
+        self._keys, keys = tee(self._keys)
+        return keys
 
     def key(self, key: str) -> ShelfQuery:
         """Select a single key if it exists."""
@@ -54,6 +60,15 @@ class ShelfQuery:
         self._set_keys(islice(self._keys, start, stop, step))
         return self
 
+    def sort(
+        self,
+        key: Callable[[str], Any] | None = None,
+        reverse: bool = False,
+    ) -> ShelfQuery:
+        """Sort the currently selected keys."""
+        self._set_keys(tuple(sorted(self._keys, key=key, reverse=reverse)))
+        return self
+
     def filter(self, fn: Callable[[Item], bool]) -> ShelfQuery:
         """Filter the currently selected keys by item predicate."""
         self._set_keys((item.key for item in self._shelf.filter(self._keys, fn)))
@@ -73,13 +88,11 @@ class ShelfQuery:
 
     def count(self) -> int:
         """Return the number of currently selected keys."""
-        self._keys, keys = tee(self._keys)
-        return sum(1 for _ in keys)
+        return sum(1 for _ in self._clone_keys())
 
     def exists(self) -> bool:
         """Return ``True`` when at least one key is selected."""
-        self._keys, keys = tee(self._keys)
-        return next(keys, None) is not None
+        return next(self._clone_keys(), None) is not None
 
     def item(self) -> Item:
         """Return the single selected item.
@@ -89,7 +102,7 @@ class ShelfQuery:
         ValueError
             If zero or more than one key is selected.
         """
-        self._keys, keys = tee(self._keys)
+        keys = self._clone_keys()
         first = next(keys, None)
         if first is None:
             raise ValueError("expected exactly one selected item, found none")
@@ -102,8 +115,23 @@ class ShelfQuery:
 
     def items(self) -> Iterable[Item]:
         """Iterate over the currently selected items."""
-        return self._shelf.filter(self._keys, lambda _: True)
+        return self._shelf.filter(self._clone_keys(), lambda _: True)
+
+    def map_reduce(
+        self,
+        fn_map: Callable[[Item], Any] | None = None,
+        fn_reduce: Callable[[Any, Any], Any] | None = None,
+    ) -> Any:
+        """Map and/or reduce the currently selected items."""
+        items = self.items()
+        if fn_map is not None and fn_reduce is not None:
+            return reduce(fn_reduce, (fn_map(item) for item in items))
+        if fn_map is not None:
+            return (fn_map(item) for item in items)
+        if fn_reduce is not None:
+            return reduce(fn_reduce, items)
+        raise ValueError("expected fn_map, fn_reduce, or both")
 
     def delete(self) -> list[MutationResult]:
         """Delete the currently selected keys."""
-        return self._shelf.delete(self._keys)
+        return self._shelf.delete(self._clone_keys())

@@ -8,7 +8,8 @@ from typing import Any
 import lmdb
 
 # lib: local
-from .shelf import Shelf
+from .shelf import Shelf, ShelfQuery
+
 
 class DB:
     """LMDB environment wrapper.
@@ -194,7 +195,7 @@ class Transaction:
         else:
             self.tx.abort()
 
-    def shelf(self, name: str):
+    def shelf(self, name: str) -> ShelfQuery:
         """Open a named shelf (LMDB named database) within this transaction.
 
         Parameters
@@ -204,8 +205,8 @@ class Transaction:
 
         Returns
         -------
-        Shelf
-            Shelf wrapper bound to this transaction.
+        ShelfQuery
+            Query wrapper bound to this transaction's shelf.
         """
 
-        return Shelf(self._lmdb_env, self.tx, name)
+        return ShelfQuery(Shelf(self._lmdb_env, self.tx, name))

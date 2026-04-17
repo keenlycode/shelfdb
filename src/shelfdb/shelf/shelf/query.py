@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Callable, Iterable
+from itertools import tee
+from typing import Any, Callable
 
 from .schema import Item, MutationResult
 from .shelf import Shelf
@@ -12,44 +13,67 @@ class ShelfQuery:
     """Chainable key-query operations for a ``Shelf`` instance."""
 
     def __init__(self, shelf: Shelf):
-        self._shelf = shelf
-        self._keys: Iterable[str] = ()
-        self._keys_count: int | None = None
+        self._shelf = shelf._shelf if isinstance(shelf, ShelfQuery) else shelf
+        self._keys: Any = ()
+        self._keys_count: int | None = 0
+
+    def __getattr__(self, name: str) -> Any:
+        """Delegate missing attributes to the wrapped shelf."""
+        return getattr(self._shelf, name)
+
+    def __iter__(self):
+        """Iterate over the currently selected keys."""
+        self._keys, keys = tee(self._keys)
+        return iter(keys)
+
+    def _set_keys(self, keys: Any, count: int | None) -> None:
+        self._keys = keys
+        self._keys_count = count
+
+    def keys_count(self) -> int:
+        if self._keys_count is None:
+            self._keys, keys = tee(self._keys)
+            self._keys_count = sum(1 for _ in keys)
+        return self._keys_count
 
     def key(self, key: str) -> ShelfQuery:
         """Select a single key if it exists."""
         exists = self._shelf.key(key)
-        self._keys = [key] if exists else []
-        self._keys_count = 1 if exists else 0
+        self._set_keys((key,) if exists else (), 1 if exists else 0)
         return self
 
     def keys(self, limit: int | None = None) -> ShelfQuery:
         """Select keys from the shelf."""
-        self._keys = self._shelf.keys(limit=limit)
+        self._set_keys(self._shelf.keys(limit=limit), None)
         return self
 
     def keys_range(self, start: str, stop: str | None = None) -> ShelfQuery:
         """Select keys in a key range."""
-        self._keys = self._shelf.keys_range(start=start, stop=stop)
+        self._set_keys(self._shelf.keys_range(start=start, stop=stop), None)
         return self
 
     def filter(self, fn: Callable[[Item], bool]) -> ShelfQuery:
         """Filter the currently selected keys by item predicate."""
-        self._keys = (item.key for item in self._shelf.filter(self._keys, fn))
+        self._set_keys((item.key for item in self._shelf.filter(self._keys, fn)), None)
         return self
 
     def key_first(self) -> ShelfQuery:
         """Select the first key, if any."""
         key = self._shelf.key_first()
-        self._keys = [key] if key is not None else []
+        self._set_keys((key,) if key is not None else (), 1 if key is not None else 0)
         return self
 
     def key_last(self) -> ShelfQuery:
         """Select the last key, if any."""
         key = self._shelf.key_last()
-        self._keys = [key] if key is not None else []
+        self._set_keys((key,) if key is not None else (), 1 if key is not None else 0)
         return self
+
+    def keys_count(self) -> int:
+        """Return the number of currently selected keys."""
+        return self._ensure_keys_count()
 
     def delete(self) -> list[MutationResult]:
         """Delete the currently selected keys."""
+        self._ensure_keys_count()
         return self._shelf.delete(self._keys)

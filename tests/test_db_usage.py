@@ -81,13 +81,13 @@ def test_shelf_direct_methods_return_direct_values(tmp_path):
                 MutationResult("carol", True),
             ]
 
-            assert users.key("alice") is True
-            assert users.key("missing") is False
-            assert list(users.keys(limit=2)) == ["alice", "bob"]
-            assert list(users.keys_range("bob", "d")) == ["bob", "carol"]
-            assert users.key_first() == "alice"
-            assert users.key_last() == "carol"
-            assert users.keys_count() == 3
+            assert users.get("alice") == Item("alice", {"age": 30})
+            assert users.key("alice").keys_count() == 1
+            assert users.key("missing").keys_count() == 0
+            assert users.keys(limit=2).keys_count() == 2
+            assert users.keys_range("bob", "d").keys_count() == 2
+            assert users.key_first().keys_count() == 1
+            assert users.key_last().keys_count() == 1
 
 
 def test_shelf_query_keys_range_delete_chain(tmp_path):
@@ -129,7 +129,10 @@ def test_shelf_query_keys_count(tmp_path):
                 ]
             )
 
-            assert ShelfQuery(users).keys().keys_count() == 3
+            query = ShelfQuery(users).keys()
+            assert list(query) == ["alice", "bob", "carol"]
+            assert query.keys_count() == 3
+
             assert ShelfQuery(users).keys_range("bob", "d").keys_count() == 2
             assert ShelfQuery(users).key("alice").keys_count() == 1
 

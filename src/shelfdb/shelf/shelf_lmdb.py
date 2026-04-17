@@ -15,7 +15,6 @@ from __future__ import annotations
 
 from typing import (
     Any,
-    NewType,
     Iterable,
     Generator,
     cast,
@@ -362,7 +361,7 @@ class Shelf:
                 db=self._shelf,
             )
             result = PutManyResult(key, ok)
-            results.append((key, ok))
+            results.append(result)
 
         return self
 

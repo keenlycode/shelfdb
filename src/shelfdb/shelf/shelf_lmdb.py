@@ -97,7 +97,11 @@ class Transaction:
 
     def shelf(self, name):
         if self._shelf is None:
-            self._shelf = self._lmdb_env.open_db(name.encode(), txn=self.tx)
+            self._shelf = self._lmdb_env.open_db(
+                name.encode(),
+                txn=self.tx,
+                create=self.is_write,
+            )
         return self
 
     def get(self, key: str) -> Item | None:
@@ -119,7 +123,7 @@ class Transaction:
     def items(self) -> Generator[Item, None, None]:
         with self.cursor() as cur:
             for key, value in cur.iternext():
-                yield cast(Item, (key, unpackb(value)))
+                yield cast(Item, (key.decode(), unpackb(value)))
 
     def get_many(self, keys: Iterable[str]) -> Iterator[Item]:
         with self.cursor() as cur:
@@ -127,8 +131,21 @@ class Transaction:
                  value = cur.get(key.encode())
                  if value is None:
                      yield cast(Item, (key, None))
+                     continue
                  yield cast(Item, (key, unpackb(value)))
 
 # class Shelf:
 
-#     def __init__()
+#     def __init__(self, tx: lmdb.Transaction, shelf):
+#         self._tx = tx
+#         self._shelf = shelf
+
+#     @property
+#     def tx(self):
+#         return self._tx
+
+#     def get(self, key: str) -> Item | None:
+#         value = self.tx.get(key.encode(), db=self._shelf)
+#         if value is None:
+#             return None
+#         return cast(Item, (key, unpackb(value)))

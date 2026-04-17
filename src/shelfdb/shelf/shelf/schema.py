@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, Iterable, List
+from dataclasses import dataclass
 
 
 class Item(NamedTuple):
@@ -33,3 +34,9 @@ class MutationResult(NamedTuple):
 
     key: str
     ok: bool
+
+
+@dataclass
+class KeysResult:
+    keys: Iterable[str] | List
+    count: int | None = None

@@ -24,7 +24,7 @@ from typing import (
 import lmdb
 import msgpack
 
-from .schema import Item, MutationResult
+from .schema import Item, MutationResult, KeysResult
 
 
 def packb(value: Any) -> bytes:
@@ -99,12 +99,15 @@ class Shelf:
         -------
         Shelf
         """
-        self.result = self._tx.put(
+        result = self._tx.put(
             key.encode(),
             msgpack.packb(value, use_bin_type=True),
             db=self._shelf,
         )
-        self.result = cast(bool, self.result)
+        self.result = MutationResult(
+            key=key,
+            ok=result,
+        )
         return self
 
 
@@ -132,26 +135,35 @@ class Shelf:
             result = MutationResult(key, ok)
             results.append(result)
 
+        self.result = results
+
         return self
 
 
-    def get(self, key: str) -> Item | None:
-        """Retrieve a value by key.
+    def key(self, key: str) -> Shelf:
+        """Set result to a single-key selection summary.
 
         Parameters
         ----------
         key : str
-            Key to retrieve.
+            Key to check in the shelf.
 
         Returns
         -------
-        Item | None
-            ``(key, value)`` if found, otherwise ``None``.
+        Shelf
         """
-        value = self._tx.get(key.encode(), db=self._shelf)
-        if value is None:
-            return None
-        return Item(key, unpackb(value))
+        with self.cursor() as cur:
+            exists = cur.set_key(key.encode())
+
+        keys = [key] if exists else []
+        count = 1 if exists else
+
+        self.result = KeysResult(
+            keys=keys,
+            count=count,
+        )
+
+        return self
 
 
     def cursor(self) -> lmdb.Cursor:
@@ -165,22 +177,20 @@ class Shelf:
         return self._tx.cursor(db=self._shelf)
 
 
-    def keys(self) -> Generator[str, None, None]:
-        """Iterate over all keys in a shelf.
+    def keys(self, limit: int | None = None) -> Shelf:
+        def _iter() -> Generator[str, None, None]:
+            with self.cursor() as cur:
+                count = 0
+                for key, _ in cur.iternext():
+                    if limit is not None and count >= limit:
+                        break
+                    yield key.decode()
+                    count += 1
 
-        Parameters
-        ----------
-        shelf : Shelf
-            Target shelf.
-
-        Yields
-        ------
-        str
-            Decoded string keys.
-        """
-        with self.cursor() as cur:
-            for key, _ in cur.iternext():
-                yield key.decode()
+        self.result = KeysResult(
+            keys=_iter(),
+        )
+        return self
 
 
     def keys_range(
@@ -214,7 +224,9 @@ class Shelf:
                         break
                     yield key.decode()
 
-        self.result = _iter()
+        self.result = KeysResult(
+            keys=_iter(),
+        )
         return self
 
 
@@ -226,13 +238,21 @@ class Shelf:
         str | None
             First key if present, otherwise ``None``.
         """
+        key = None
         with self.cursor() as cur:
             if cur.first():
-                return cur.key().decode()
+                key = cur.key().decode()
+
+        count = 1 if key else 0
+
+        self.result = KeysResult(
+            keys=[key],
+            count=count,
+        )
         return None
 
 
-    def key_last(self) -> str | None:
+    def key_last(self) -> Shelf:
         """Get the last key in the shelf.
 
         Returns
@@ -240,13 +260,20 @@ class Shelf:
         str | None
             Last key if present, otherwise ``None``.
         """
+        key = None
         with self.cursor() as cur:
             if cur.last():
                 return cur.key().decode()
-        return None
+        count = 1 if key else 0
+
+        self.result = KeysResult(
+            keys=[key],
+            count=count
+        )
+        return self
 
 
-    def key_count(self) -> int:
+    def keys_count(self) -> int:
         """Count keys in the shelf.
 
         Returns
@@ -286,7 +313,6 @@ class Shelf:
         Item
             Decoded ``(key, value)`` tuples.
         """
-
 
 
         with self.cursor() as cur:

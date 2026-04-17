@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Iterable
+from typing import Callable, Iterable
 
-from .schema import MutationResult
+from .schema import Item, MutationResult
 from .shelf import Shelf
 
 
@@ -28,6 +28,11 @@ class ShelfQuery:
     def keys_range(self, start: str, stop: str | None = None) -> ShelfQuery:
         """Select keys in a key range."""
         self._keys = self._shelf.keys_range(start=start, stop=stop)
+        return self
+
+    def filter(self, fn: Callable[[Item], bool]) -> ShelfQuery:
+        """Filter the currently selected keys by item predicate."""
+        self._keys = (item.key for item in self._shelf.filter(self._keys, fn))
         return self
 
     def key_first(self) -> ShelfQuery:

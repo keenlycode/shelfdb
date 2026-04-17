@@ -113,3 +113,52 @@ def test_shelf_query_keys_range_delete_chain(tmp_path):
         with db.transaction(write=False) as tx:
             users = tx.shelf("users")
             assert list(users.keys()) == ["alice"]
+
+
+def test_shelf_query_keys_count(tmp_path):
+    db_path = tmp_path / "shelfdb"
+
+    with DB(str(db_path)) as db:
+        with db.transaction(write=True) as tx:
+            users = tx.shelf("users")
+            users.put_many(
+                [
+                    Item("alice", {"age": 30}),
+                    Item("bob", {"age": 25}),
+                    Item("carol", {"age": 20}),
+                ]
+            )
+
+            assert ShelfQuery(users).keys().keys_count() == 3
+            assert ShelfQuery(users).keys_range("bob", "d").keys_count() == 2
+            assert ShelfQuery(users).key("alice").keys_count() == 1
+
+
+def test_shelf_query_filter_chain(tmp_path):
+    db_path = tmp_path / "shelfdb"
+
+    with DB(str(db_path)) as db:
+        with db.transaction(write=True) as tx:
+            users = tx.shelf("users")
+            users.put_many(
+                [
+                    Item("alice", {"age": 30}),
+                    Item("bob", {"age": 25}),
+                    Item("carol", {"age": 20}),
+                ]
+            )
+
+            deleted = (
+                ShelfQuery(users)
+                .keys()
+                .filter(lambda item: item.value["age"] >= 25)
+                .delete()
+            )
+            assert deleted == [
+                MutationResult("alice", True),
+                MutationResult("bob", True),
+            ]
+
+        with db.transaction(write=False) as tx:
+            users = tx.shelf("users")
+            assert list(users.keys()) == ["carol"]

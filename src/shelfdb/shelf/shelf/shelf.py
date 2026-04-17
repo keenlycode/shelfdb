@@ -148,7 +148,7 @@ class Shelf:
             for key, value in cur.iternext():
                 yield Item(key.decode(), unpackb(value))
 
-    def filter_items(
+    def filter(
         self,
         keys: Iterable[str],
         fn: Callable[[Item], bool],

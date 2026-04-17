@@ -130,7 +130,7 @@ class Shelf:
                 return cast(bytes, cur.key()).decode()
         return None
 
-    def keys_count(self) -> int:
+    def count(self) -> int:
         """Count keys in the shelf."""
         return cast(int, self._tx.stat(db=self._shelf)["entries"])
 

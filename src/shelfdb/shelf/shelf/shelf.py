@@ -12,6 +12,7 @@ MessagePack (`msgpack`) using ``use_bin_type=True`` and deserialized with
 ``raw=False``.
 """
 
+# lib: built-in
 from __future__ import annotations
 
 from typing import (
@@ -21,9 +22,11 @@ from typing import (
     cast,
 )
 
+# lib: external
 import lmdb
 import msgpack
 
+# lib: local
 from .schema import Item, MutationResult, KeysResult
 
 
@@ -121,8 +124,8 @@ class Shelf:
 
         Returns
         -------
-        int
-            Number of successful writes.
+        Shelf
+            Current shelf instance.
         """
 
         results: list[MutationResult] = []
@@ -156,7 +159,7 @@ class Shelf:
             exists = cur.set_key(key.encode())
 
         keys = [key] if exists else []
-        count = 1 if exists else
+        count = 1 if exists else 0
 
         self.result = KeysResult(
             keys=keys,
@@ -178,6 +181,19 @@ class Shelf:
 
 
     def keys(self, limit: int | None = None) -> Shelf:
+        """Prepare iteration over keys in the shelf.
+
+        Parameters
+        ----------
+        limit : int | None, optional
+            Maximum number of keys to include. If ``None``, all keys are
+            included.
+
+        Returns
+        -------
+        Shelf
+            Current shelf instance with key results stored in ``result``.
+        """
         def _iter() -> Generator[str, None, None]:
             with self.cursor() as cur:
                 count = 0
@@ -198,7 +214,7 @@ class Shelf:
         start: str,
         stop: str | None = None,
     ) -> Shelf:
-        """Iterate over keys in a key range.
+        """Prepare iteration over keys in a key range.
 
         Parameters
         ----------
@@ -211,6 +227,7 @@ class Shelf:
         Returns
         -------
         Shelf
+            Current shelf instance with key results stored in ``result``.
         """
         start_b = start.encode()
         stop_b = stop.encode() if stop is not None else None
@@ -230,7 +247,7 @@ class Shelf:
         return self
 
 
-    def key_first(self) -> str | None:
+    def key_first(self) -> Shelf:
         """Get the first key in the shelf.
 
         Returns
@@ -249,7 +266,7 @@ class Shelf:
             keys=[key],
             count=count,
         )
-        return None
+        return self
 
 
     def key_last(self) -> Shelf:
@@ -285,16 +302,12 @@ class Shelf:
 
 
     def delete(self) -> Shelf:
-        """Delete multiple keys from the shelf.
-
-        Parameters
-        ----------
-        keys : Iterable[str]
-            Keys to delete.
+        """Delete keys currently stored in ``result``.
 
         Returns
         -------
         Shelf
+            Current shelf instance with deletion results stored in ``result``.
         """
         results: list[MutationResult] = []
         for key in self.result:
@@ -305,13 +318,13 @@ class Shelf:
         return self
 
 
-    def items(self) -> Shelf:
-        """Iterate over all key/value pairs in the shelf.
+    def items(self) -> Iterable[Item]:
+        """Prepare iteration over all key/value pairs in the shelf.
 
-        Yields
-        ------
-        Item
-            Decoded ``(key, value)`` tuples.
+        Returns
+        -------
+        Shelf
+            Current shelf instance with item results stored in ``result``.
         """
 
 
@@ -321,4 +334,4 @@ class Shelf:
                 for key, value in cur.iternext()
             )
 
-        return self
+        return self.result

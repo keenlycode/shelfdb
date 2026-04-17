@@ -1,5 +1,6 @@
 """Schema types for shelf-level data exchange."""
 
+# lib: built-in
 from __future__ import annotations
 
 from typing import Any, NamedTuple, Iterable, List

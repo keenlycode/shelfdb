@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from itertools import tee
+from itertools import islice, tee
 from typing import Any, Callable, Iterable
 
 from .schema import Item, MutationResult
@@ -44,6 +44,16 @@ class ShelfQuery:
         self._set_keys(self._shelf.keys_range(start=start, stop=stop))
         return self
 
+    def slice(
+        self,
+        start: int | None = None,
+        stop: int | None = None,
+        step: int | None = None,
+    ) -> ShelfQuery:
+        """Slice the currently selected keys."""
+        self._set_keys(islice(self._keys, start, stop, step))
+        return self
+
     def filter(self, fn: Callable[[Item], bool]) -> ShelfQuery:
         """Filter the currently selected keys by item predicate."""
         self._set_keys((item.key for item in self._shelf.filter(self._keys, fn)))
@@ -63,7 +73,36 @@ class ShelfQuery:
 
     def count(self) -> int:
         """Return the number of currently selected keys."""
-        return sum(1 for _ in self._keys)
+        self._keys, keys = tee(self._keys)
+        return sum(1 for _ in keys)
+
+    def exists(self) -> bool:
+        """Return ``True`` when at least one key is selected."""
+        self._keys, keys = tee(self._keys)
+        return next(keys, None) is not None
+
+    def item(self) -> Item:
+        """Return the single selected item.
+
+        Raises
+        ------
+        ValueError
+            If zero or more than one key is selected.
+        """
+        self._keys, keys = tee(self._keys)
+        first = next(keys, None)
+        if first is None:
+            raise ValueError("expected exactly one selected item, found none")
+        if next(keys, None) is not None:
+            raise ValueError("expected exactly one selected item, found many")
+        item = self._shelf.item(first)
+        if item is None:
+            raise ValueError(f"selected key does not exist: {first}")
+        return item
+
+    def items(self) -> Iterable[Item]:
+        """Iterate over the currently selected items."""
+        return self._shelf.filter(self._keys, lambda _: True)
 
     def delete(self) -> list[MutationResult]:
         """Delete the currently selected keys."""

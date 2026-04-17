@@ -73,7 +73,7 @@ class Shelf:
             results.append(MutationResult(key=key, ok=ok))
         return results
 
-    def get(self, key: str) -> Item | None:
+    def item(self, key: str) -> Item | None:
         """Retrieve a value by key."""
         value = self._tx.get(key.encode(), db=self._shelf)
         if value is None:

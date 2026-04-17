@@ -14,10 +14,13 @@ class ShelfQuery:
     def __init__(self, shelf: Shelf):
         self._shelf = shelf
         self._keys: Iterable[str] = ()
+        self._keys_count: int | None = None
 
     def key(self, key: str) -> ShelfQuery:
         """Select a single key if it exists."""
-        self._keys = [key] if self._shelf.key(key) else []
+        exists = self._shelf.key(key)
+        self._keys = [key] if exists else []
+        self._keys_count = 1 if exists else 0
         return self
 
     def keys(self, limit: int | None = None) -> ShelfQuery:

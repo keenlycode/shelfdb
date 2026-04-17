@@ -31,18 +31,32 @@ logging.basicConfig()
 logger = logging.getLogger(__name__)
 
 
-Item = NewType("Item", tuple[str, Any])
-"""Type alias for shelf key/value pairs.
+class Item(NamedTuple):
+    """Shelf key/value pair.
 
-Notes
------
-`Item` represents a tuple of ``(key, value)`` where:
+    Attributes
+    ----------
+    key : str
+        String key in the shelf.
+    value : Any
+        Python value stored for the key.
+    """
 
-- ``key`` is a string key in the shelf.
-- ``value`` is the corresponding Python object.
-"""
+    key: str
+    value: Any
+
 
 class PutManyResult(NamedTuple):
+    """Result for a single ``put_many`` write operation.
+
+    Attributes
+    ----------
+    key : str
+        Key that was written.
+    ok : bool
+        ``True`` if the write succeeded, otherwise ``False``.
+    """
+
     key: str
     ok: bool
 

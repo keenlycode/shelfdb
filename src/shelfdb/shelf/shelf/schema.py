@@ -20,7 +20,7 @@ class Item(NamedTuple):
     value: Any
 
 
-class PutManyResult(NamedTuple):
+class MutationResult(NamedTuple):
     """Result for a single ``put_many`` write operation.
 
     Attributes

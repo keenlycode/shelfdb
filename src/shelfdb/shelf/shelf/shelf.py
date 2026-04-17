@@ -24,7 +24,7 @@ from typing import (
 import lmdb
 import msgpack
 
-from .schema import Item, PutManyResult
+from .schema import Item, MutationResult
 
 
 def packb(value: Any) -> bytes:
@@ -84,6 +84,7 @@ class Shelf:
         )
         self.result: Any = None
 
+
     def put(self, key: str, value: Any) -> Shelf:
         """Store a single key/value pair.
 
@@ -106,6 +107,7 @@ class Shelf:
         self.result = cast(bool, self.result)
         return self
 
+
     def put_many(self, items: Iterable[Item]) -> Shelf:
         """Store multiple key/value pairs.
 
@@ -120,17 +122,18 @@ class Shelf:
             Number of successful writes.
         """
 
-        results: list[PutManyResult] = []
+        results: list[MutationResult] = []
         for key, value in items:
             ok = self._tx.put(
                 key.encode(),
                 msgpack.packb(value, use_bin_type=True),
                 db=self._shelf,
             )
-            result = PutManyResult(key, ok)
+            result = MutationResult(key, ok)
             results.append(result)
 
         return self
+
 
     def get(self, key: str) -> Item | None:
         """Retrieve a value by key.
@@ -148,7 +151,8 @@ class Shelf:
         value = self._tx.get(key.encode(), db=self._shelf)
         if value is None:
             return None
-        return cast(Item, (key, unpackb(value)))
+        return Item(key, unpackb(value))
+
 
     def cursor(self) -> lmdb.Cursor:
         """Create an LMDB cursor for this shelf.
@@ -160,87 +164,8 @@ class Shelf:
         """
         return self._tx.cursor(db=self._shelf)
 
-    def items(self) -> Generator[Item, None, None]:
-        """Iterate over all key/value pairs in the shelf.
 
-        Yields
-        ------
-        Item
-            Decoded ``(key, value)`` tuples.
-        """
-        with self.cursor() as cur:
-            for key, value in cur.iternext():
-                yield cast(Item, (key.decode(), unpackb(value)))
-
-    def get_many(self, keys: Iterable[str]) -> Generator[Item, None, None]:
-        """Retrieve multiple values by key.
-
-        Parameters
-        ----------
-        keys : Iterable[str]
-            Keys to retrieve.
-
-        Yields
-        ------
-        Item
-            ``(key, value)`` tuples for keys found in the shelf.
-        """
-        for key in keys:
-            value = self._tx.get(key.encode(), db=self._shelf)
-            if value is not None:
-                yield cast(Item, (key, unpackb(value)))
-
-    def get_range(
-        self,
-        start: str,
-        stop: str | None = None,
-    ) -> Generator[Item, None, None]:
-        """Iterate over key/value pairs in a key range.
-
-        Parameters
-        ----------
-        start : str
-            Inclusive lower bound key.
-        stop : str | None, optional
-            Exclusive upper bound key. If ``None``, iteration continues to the
-            end of the shelf.
-
-        Yields
-        ------
-        Item
-            Decoded ``(key, value)`` tuples whose keys are in the specified
-            range.
-        """
-        start_b = start.encode()
-        stop_b = stop.encode() if stop is not None else None
-
-        with self.cursor() as cur:
-            if not cur.set_range(start_b):
-                return
-            for key, value in cur:
-                if stop_b is not None and key >= stop_b:
-                    break
-                yield cast(Item, (key.decode(), unpackb(value)))
-
-    def delete(shelf: Shelf, key: str) -> bool:
-        """Delete a key from a shelf.
-
-        Parameters
-        ----------
-        shelf : Shelf
-            Target shelf.
-        key : str
-            Key to delete.
-
-        Returns
-        -------
-        bool
-            ``True`` if the key existed and was deleted, otherwise ``False``.
-        """
-        return shelf._tx.delete(key.encode(), db=shelf._shelf)
-
-
-    def keys(shelf: Shelf) -> Generator[str, None, None]:
+    def keys(self) -> Generator[str, None, None]:
         """Iterate over all keys in a shelf.
 
         Parameters
@@ -253,24 +178,121 @@ class Shelf:
         str
             Decoded string keys.
         """
-        with shelf.cursor() as cur:
+        with self.cursor() as cur:
             for key, _ in cur.iternext():
                 yield key.decode()
 
 
-    def values(shelf: Shelf) -> Generator[Any, None, None]:
-        """Iterate over all values in a shelf.
+    def keys_range(
+        self,
+        start: str,
+        stop: str | None = None,
+    ) -> Shelf:
+        """Iterate over keys in a key range.
 
         Parameters
         ----------
-        shelf : Shelf
-            Target shelf.
+        start : str
+            Inclusive lower bound key.
+        stop : str | None, optional
+            Exclusive upper bound key. If ``None``, iteration continues to the
+            end of the shelf.
+
+        Returns
+        -------
+        Shelf
+        """
+        start_b = start.encode()
+        stop_b = stop.encode() if stop is not None else None
+
+        def _iter() -> Generator[str, None, None]:
+            with self.cursor() as cur:
+                if not cur.set_range(start_b):
+                    return
+                for key, _ in cur:
+                    if stop_b is not None and key >= stop_b:
+                        break
+                    yield key.decode()
+
+        self.result = _iter()
+        return self
+
+
+    def key_first(self) -> str | None:
+        """Get the first key in the shelf.
+
+        Returns
+        -------
+        str | None
+            First key if present, otherwise ``None``.
+        """
+        with self.cursor() as cur:
+            if cur.first():
+                return cur.key().decode()
+        return None
+
+
+    def key_last(self) -> str | None:
+        """Get the last key in the shelf.
+
+        Returns
+        -------
+        str | None
+            Last key if present, otherwise ``None``.
+        """
+        with self.cursor() as cur:
+            if cur.last():
+                return cur.key().decode()
+        return None
+
+
+    def key_count(self) -> int:
+        """Count keys in the shelf.
+
+        Returns
+        -------
+        int
+            Total number of keys in the shelf.
+        """
+        return cast(int, self._tx.stat(db=self._shelf)["entries"])
+
+
+    def delete(self) -> Shelf:
+        """Delete multiple keys from the shelf.
+
+        Parameters
+        ----------
+        keys : Iterable[str]
+            Keys to delete.
+
+        Returns
+        -------
+        Shelf
+        """
+        results: list[MutationResult] = []
+        for key in self.result:
+            ok = cast(bool, self._tx.delete(key.encode(), db=self._shelf))
+            results.append(MutationResult(key, ok))
+
+        self.result = results
+        return self
+
+
+    def items(self) -> Shelf:
+        """Iterate over all key/value pairs in the shelf.
 
         Yields
         ------
-        Any
-            Decoded values.
+        Item
+            Decoded ``(key, value)`` tuples.
         """
-        with shelf.cursor() as cur:
-            for _, value in cur.iternext():
-                yield unpackb(value)
+
+
+
+        with self.cursor() as cur:
+            self.result = (
+                Item(key.decode(), unpackb(value))
+                for key, value in cur.iternext()
+            )
+
+        return self

@@ -18,13 +18,13 @@ def test_db_shelf_happy_path_put_get_and_items(tmp_path):
         with db.transaction(write=False) as tx:
             users = tx.shelf("users")
 
-            alice = users.get("alice")
+            alice = ShelfQuery(users).key("alice").item()
             assert alice is not None
             assert isinstance(alice, Item)
             assert alice.key == "alice"
             assert alice.value == {"name": "Alice", "age": 30}
 
-            all_items = list(users.items())
+            all_items = list(ShelfQuery(users).keys().items())
             assert all(isinstance(item, Item) for item in all_items)
             assert all_items == [
                 Item("alice", {"name": "Alice", "age": 30}),
@@ -44,11 +44,11 @@ def test_db_keeps_named_shelves_isolated(tmp_path):
             users = tx.shelf("users")
             posts = tx.shelf("posts")
 
-            assert users.get("alice") == Item("alice", {"role": "admin"})
-            assert users.get("post:1") is None
+            assert users.key("alice").item() == Item("alice", {"role": "admin"})
+            assert users.key("post:1").exists() is False
 
-            assert posts.get("post:1") == Item("post:1", {"title": "Hello"})
-            assert posts.get("alice") is None
+            assert posts.key("post:1").item() == Item("post:1", {"title": "Hello"})
+            assert posts.key("alice").exists() is False
 
 
 def test_successful_write_transaction_persists_between_transactions(tmp_path):
@@ -60,7 +60,7 @@ def test_successful_write_transaction_persists_between_transactions(tmp_path):
 
         with db.transaction(write=False) as tx:
             settings = tx.shelf("settings")
-            assert settings.get("theme") == Item("theme", {"mode": "dark"})
+            assert settings.key("theme").item() == Item("theme", {"mode": "dark"})
 
 
 def test_shelf_direct_methods_return_direct_values(tmp_path):
@@ -81,13 +81,78 @@ def test_shelf_direct_methods_return_direct_values(tmp_path):
                 MutationResult("carol", True),
             ]
 
-            assert users.get("alice") == Item("alice", {"age": 30})
-            assert users.key("alice").keys_count() == 1
-            assert users.key("missing").keys_count() == 0
-            assert users.keys(limit=2).keys_count() == 2
-            assert users.keys_range("bob", "d").keys_count() == 2
-            assert users.key_first().keys_count() == 1
-            assert users.key_last().keys_count() == 1
+            assert ShelfQuery(users).key("alice").item() == Item("alice", {"age": 30})
+            assert ShelfQuery(users).key("alice").exists() is True
+            assert ShelfQuery(users).key("missing").exists() is False
+            assert ShelfQuery(users).keys().count() == 3
+
+
+def test_shelf_query_inspection_and_selection_helpers(tmp_path):
+    db_path = tmp_path / "shelfdb"
+
+    with DB(str(db_path)) as db:
+        with db.transaction(write=True) as tx:
+            users = tx.shelf("users")
+            users.put_many(
+                [
+                    Item("alice", {"age": 30}),
+                    Item("bob", {"age": 25}),
+                    Item("carol", {"age": 20}),
+                ]
+            )
+
+            query = ShelfQuery(users).keys()
+            assert query.exists() is True
+            assert query.count() == 3
+            assert list(query.items()) == [
+                Item("alice", {"age": 30}),
+                Item("bob", {"age": 25}),
+                Item("carol", {"age": 20}),
+            ]
+            assert ShelfQuery(users).key("alice").item() == Item("alice", {"age": 30})
+            assert (
+                query.map_reduce(
+                    fn_map=lambda item: item.value["age"],
+                    fn_reduce=lambda acc, age: acc + age,
+                )
+                == 75
+            )
+
+            assert list(ShelfQuery(users).keys().sort(reverse=True).slice(0, 2)) == [
+                "carol",
+                "bob",
+            ]
+
+
+def test_shelf_query_update(tmp_path):
+    db_path = tmp_path / "shelfdb"
+
+    with DB(str(db_path)) as db:
+        with db.transaction(write=True) as tx:
+            users = tx.shelf("users")
+            users.put_many(
+                [
+                    Item("alice", {"age": 30}),
+                    Item("bob", {"age": 25}),
+                    Item("carol", {"age": 20}),
+                ]
+            )
+
+            updated = (
+                ShelfQuery(users)
+                .keys_range("bob", "d")
+                .update(lambda item: {**item.value, "age": item.value["age"] + 1})
+            )
+            assert updated == [
+                MutationResult("bob", True),
+                MutationResult("carol", True),
+            ]
+
+        with db.transaction(write=False) as tx:
+            users = tx.shelf("users")
+            assert users.key("alice").item() == Item("alice", {"age": 30})
+            assert users.key("bob").item() == Item("bob", {"age": 26})
+            assert users.key("carol").item() == Item("carol", {"age": 21})
 
 
 def test_shelf_query_keys_range_delete_chain(tmp_path):
@@ -131,10 +196,10 @@ def test_shelf_query_keys_count(tmp_path):
 
             query = ShelfQuery(users).keys()
             assert list(query) == ["alice", "bob", "carol"]
-            assert query.keys_count() == 3
+            assert query.count() == 3
 
-            assert ShelfQuery(users).keys_range("bob", "d").keys_count() == 2
-            assert ShelfQuery(users).key("alice").keys_count() == 1
+            assert ShelfQuery(users).keys_range("bob", "d").count() == 2
+            assert ShelfQuery(users).key("alice").count() == 1
 
 
 def test_shelf_query_filter_chain(tmp_path):

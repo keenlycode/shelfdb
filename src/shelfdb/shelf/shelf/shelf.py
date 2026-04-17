@@ -87,7 +87,6 @@ class Shelf:
         )
         self.result: Any = None
 
-
     def put(self, key: str, value: Any) -> Shelf:
         """Store a single key/value pair.
 
@@ -112,7 +111,6 @@ class Shelf:
             ok=result,
         )
         return self
-
 
     def put_many(self, items: Iterable[Item]) -> Shelf:
         """Store multiple key/value pairs.
@@ -142,7 +140,6 @@ class Shelf:
 
         return self
 
-
     def key(self, key: str) -> Shelf:
         """Set result to a single-key selection summary.
 
@@ -155,7 +152,7 @@ class Shelf:
         -------
         Shelf
         """
-        with self.cursor() as cur:
+        with self._cursor() as cur:
             exists = cur.set_key(key.encode())
 
         keys = [key] if exists else []
@@ -168,8 +165,7 @@ class Shelf:
 
         return self
 
-
-    def cursor(self) -> lmdb.Cursor:
+    def _cursor(self) -> lmdb.Cursor:
         """Create an LMDB cursor for this shelf.
 
         Returns
@@ -178,7 +174,6 @@ class Shelf:
             Cursor over the current shelf.
         """
         return self._tx.cursor(db=self._shelf)
-
 
     def keys(self, limit: int | None = None) -> Shelf:
         """Prepare iteration over keys in the shelf.
@@ -194,8 +189,9 @@ class Shelf:
         Shelf
             Current shelf instance with key results stored in ``result``.
         """
+
         def _iter() -> Generator[str, None, None]:
-            with self.cursor() as cur:
+            with self._cursor() as cur:
                 count = 0
                 for key, _ in cur.iternext():
                     if limit is not None and count >= limit:
@@ -207,7 +203,6 @@ class Shelf:
             keys=_iter(),
         )
         return self
-
 
     def keys_range(
         self,
@@ -233,7 +228,7 @@ class Shelf:
         stop_b = stop.encode() if stop is not None else None
 
         def _iter() -> Generator[str, None, None]:
-            with self.cursor() as cur:
+            with self._cursor() as cur:
                 if not cur.set_range(start_b):
                     return
                 for key, _ in cur:
@@ -246,17 +241,17 @@ class Shelf:
         )
         return self
 
-
     def key_first(self) -> Shelf:
         """Get the first key in the shelf.
 
         Returns
         -------
-        str | None
-            First key if present, otherwise ``None``.
+        Shelf
+            Current shelf instance with the first-key result stored in
+            ``result``.
         """
         key = None
-        with self.cursor() as cur:
+        with self._cursor() as cur:
             if cur.first():
                 key = cur.key().decode()
 
@@ -268,27 +263,26 @@ class Shelf:
         )
         return self
 
-
     def key_last(self) -> Shelf:
         """Get the last key in the shelf.
 
         Returns
         -------
-        str | None
-            Last key if present, otherwise ``None``.
+        Shelf
+            Current shelf instance with the last-key result stored in
+            ``result``.
         """
         key = None
-        with self.cursor() as cur:
+        with self._cursor() as cur:
             if cur.last():
-                return cur.key().decode()
-        count = 1 if key else 0
+                key = cur.key().decode()
+        count = 1 if key is not None else 0
 
         self.result = KeysResult(
-            keys=[key],
-            count=count
+            keys=[key] if key is not None else [],
+            count=count,
         )
         return self
-
 
     def keys_count(self) -> int:
         """Count keys in the shelf.
@@ -299,7 +293,6 @@ class Shelf:
             Total number of keys in the shelf.
         """
         return cast(int, self._tx.stat(db=self._shelf)["entries"])
-
 
     def delete(self) -> Shelf:
         """Delete keys currently stored in ``result``.
@@ -317,21 +310,18 @@ class Shelf:
         self.result = results
         return self
 
-
     def items(self) -> Iterable[Item]:
-        """Prepare iteration over all key/value pairs in the shelf.
+        """Iterate over all key/value pairs in the shelf.
 
         Returns
         -------
-        Shelf
-            Current shelf instance with item results stored in ``result``.
+        Iterable[Item]
+            Iterable of decoded ``(key, value)`` items.
         """
 
-
-        with self.cursor() as cur:
+        with self._cursor() as cur:
             self.result = (
-                Item(key.decode(), unpackb(value))
-                for key, value in cur.iternext()
+                Item(key.decode(), unpackb(value)) for key, value in cur.iternext()
             )
 
         return self.result

@@ -71,7 +71,13 @@ class ShelfQuery:
 
     def filter(self, fn: Callable[[Item], bool]) -> ShelfQuery:
         """Filter the currently selected keys by item predicate."""
-        self._set_keys((item.key for item in self._shelf.filter(self._keys, fn)))
+        self._set_keys(
+            (
+                item.key
+                for key in self._clone_keys()
+                if (item := self._shelf.item(key)) is not None and fn(item)
+            )
+        )
         return self
 
     def key_first(self) -> ShelfQuery:
@@ -115,7 +121,11 @@ class ShelfQuery:
 
     def items(self) -> Iterable[Item]:
         """Iterate over the currently selected items."""
-        return self._shelf.filter(self._clone_keys(), lambda _: True)
+        return (
+            item
+            for key in self._clone_keys()
+            if (item := self._shelf.item(key)) is not None
+        )
 
     def map_reduce(
         self,

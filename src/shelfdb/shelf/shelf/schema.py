@@ -1,10 +1,8 @@
 """Schema types for shelf-level data exchange."""
 
-# lib: built-in
 from __future__ import annotations
 
-from typing import Any, NamedTuple, Iterable, List
-from dataclasses import dataclass
+from typing import Any, NamedTuple
 
 
 class Item(NamedTuple):
@@ -23,7 +21,7 @@ class Item(NamedTuple):
 
 
 class MutationResult(NamedTuple):
-    """Result for a single ``put_many`` write operation.
+    """Result for a single shelf mutation operation.
 
     Attributes
     ----------
@@ -35,9 +33,3 @@ class MutationResult(NamedTuple):
 
     key: str
     ok: bool
-
-
-@dataclass
-class KeysResult:
-    keys: Iterable[str] | List
-    count: int | None = None

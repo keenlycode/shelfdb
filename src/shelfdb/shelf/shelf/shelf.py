@@ -3,7 +3,8 @@
 Classes
 -------
 Shelf
-    Named-database wrapper that provides shelf-level key/value operations.
+    Named-database wrapper that provides direct shelf-level key/value
+    operations.
 
 Notes
 -----
@@ -15,69 +16,28 @@ MessagePack (`msgpack`) using ``use_bin_type=True`` and deserialized with
 # lib: built-in
 from __future__ import annotations
 
-from typing import (
-    Any,
-    Iterable,
-    Generator,
-    cast,
-)
+from typing import Any, Generator, Iterable, cast
 
 # lib: external
 import lmdb
 import msgpack
 
 # lib: local
-from .schema import Item, MutationResult, KeysResult
+from .schema import Item, MutationResult
 
 
 def packb(value: Any) -> bytes:
-    """Serialize a Python object to MessagePack bytes.
-
-    Parameters
-    ----------
-    value : Any
-        Python object to serialize.
-
-    Returns
-    -------
-    bytes
-        MessagePack-encoded bytes.
-    """
+    """Serialize a Python object to MessagePack bytes."""
     return msgpack.packb(value, use_bin_type=True)
 
 
 def unpackb(value: bytes) -> Any:
-    """Deserialize MessagePack bytes into a Python object.
-
-    Parameters
-    ----------
-    value : bytes
-        MessagePack-encoded bytes.
-
-    Returns
-    -------
-    Any
-        Decoded Python object.
-    """
+    """Deserialize MessagePack bytes into a Python object."""
     return msgpack.unpackb(value, raw=False)
 
 
 class Shelf:
-    """High-level key/value operations for an LMDB named database.
-
-    Parameters
-    ----------
-    lmdb_env : lmdb.Environment
-        LMDB environment containing the shelf.
-    tx : lmdb.Transaction
-        Transaction used for all shelf operations.
-    shelf : str
-        Name of the shelf (named LMDB database).
-
-    Notes
-    -----
-    Keys are UTF-8 encoded strings. Values are serialized using MessagePack.
-    """
+    """High-level direct key/value operations for an LMDB named database."""
 
     def __init__(self, lmdb_env: lmdb.Environment, tx: lmdb.Transaction, shelf: str):
         self._tx = tx
@@ -85,243 +45,105 @@ class Shelf:
             shelf.encode(),
             txn=tx,
         )
-        self.result: Any = None
 
-    def put(self, key: str, value: Any) -> Shelf:
-        """Store a single key/value pair.
-
-        Parameters
-        ----------
-        key : str
-            Key to write.
-        value : Any
-            Value to serialize and store.
-
-        Returns
-        -------
-        Shelf
-        """
-        result = self._tx.put(
-            key.encode(),
-            msgpack.packb(value, use_bin_type=True),
-            db=self._shelf,
+    def put(self, key: str, value: Any) -> MutationResult:
+        """Store a single key/value pair."""
+        ok = cast(
+            bool,
+            self._tx.put(
+                key.encode(),
+                packb(value),
+                db=self._shelf,
+            ),
         )
-        self.result = MutationResult(
-            key=key,
-            ok=result,
-        )
-        return self
+        return MutationResult(key=key, ok=ok)
 
-    def put_many(self, items: Iterable[Item]) -> Shelf:
-        """Store multiple key/value pairs.
-
-        Parameters
-        ----------
-        items : Iterable[Item]
-            Iterable of ``(key, value)`` items to write.
-
-        Returns
-        -------
-        Shelf
-            Current shelf instance.
-        """
-
+    def put_many(self, items: Iterable[Item]) -> list[MutationResult]:
+        """Store multiple key/value pairs."""
         results: list[MutationResult] = []
         for key, value in items:
-            ok = self._tx.put(
-                key.encode(),
-                msgpack.packb(value, use_bin_type=True),
-                db=self._shelf,
+            ok = cast(
+                bool,
+                self._tx.put(
+                    key.encode(),
+                    packb(value),
+                    db=self._shelf,
+                ),
             )
-            result = MutationResult(key, ok)
-            results.append(result)
+            results.append(MutationResult(key=key, ok=ok))
+        return results
 
-        self.result = results
+    def get(self, key: str) -> Item | None:
+        """Retrieve a value by key."""
+        value = self._tx.get(key.encode(), db=self._shelf)
+        if value is None:
+            return None
+        return Item(key, unpackb(value))
 
-        return self
-
-    def key(self, key: str) -> Shelf:
-        """Set result to a single-key selection summary.
-
-        Parameters
-        ----------
-        key : str
-            Key to check in the shelf.
-
-        Returns
-        -------
-        Shelf
-        """
+    def key(self, key: str) -> bool:
+        """Return ``True`` if the key exists in the shelf."""
         with self._cursor() as cur:
-            exists = cur.set_key(key.encode())
-
-        keys = [key] if exists else []
-        count = 1 if exists else 0
-
-        self.result = KeysResult(
-            keys=keys,
-            count=count,
-        )
-
-        return self
+            return cast(bool, cur.set_key(key.encode()))
 
     def _cursor(self) -> lmdb.Cursor:
-        """Create an LMDB cursor for this shelf.
-
-        Returns
-        -------
-        lmdb.Cursor
-            Cursor over the current shelf.
-        """
+        """Create an LMDB cursor for this shelf."""
         return self._tx.cursor(db=self._shelf)
 
-    def keys(self, limit: int | None = None) -> Shelf:
-        """Prepare iteration over keys in the shelf.
-
-        Parameters
-        ----------
-        limit : int | None, optional
-            Maximum number of keys to include. If ``None``, all keys are
-            included.
-
-        Returns
-        -------
-        Shelf
-            Current shelf instance with key results stored in ``result``.
-        """
-
-        def _iter() -> Generator[str, None, None]:
-            with self._cursor() as cur:
-                count = 0
-                for key, _ in cur.iternext():
-                    if limit is not None and count >= limit:
-                        break
-                    yield key.decode()
-                    count += 1
-
-        self.result = KeysResult(
-            keys=_iter(),
-        )
-        return self
+    def keys(self, limit: int | None = None) -> Generator[str, None, None]:
+        """Iterate over keys in the shelf."""
+        with self._cursor() as cur:
+            count = 0
+            for key, _ in cur.iternext():
+                if limit is not None and count >= limit:
+                    break
+                yield key.decode()
+                count += 1
 
     def keys_range(
         self,
         start: str,
         stop: str | None = None,
-    ) -> Shelf:
-        """Prepare iteration over keys in a key range.
-
-        Parameters
-        ----------
-        start : str
-            Inclusive lower bound key.
-        stop : str | None, optional
-            Exclusive upper bound key. If ``None``, iteration continues to the
-            end of the shelf.
-
-        Returns
-        -------
-        Shelf
-            Current shelf instance with key results stored in ``result``.
-        """
+    ) -> Generator[str, None, None]:
+        """Iterate over keys in a key range."""
         start_b = start.encode()
         stop_b = stop.encode() if stop is not None else None
 
-        def _iter() -> Generator[str, None, None]:
-            with self._cursor() as cur:
-                if not cur.set_range(start_b):
-                    return
-                for key, _ in cur:
-                    if stop_b is not None and key >= stop_b:
-                        break
-                    yield key.decode()
+        with self._cursor() as cur:
+            if not cur.set_range(start_b):
+                return
+            for key, _ in cur:
+                if stop_b is not None and key >= stop_b:
+                    break
+                yield key.decode()
 
-        self.result = KeysResult(
-            keys=_iter(),
-        )
-        return self
-
-    def key_first(self) -> Shelf:
-        """Get the first key in the shelf.
-
-        Returns
-        -------
-        Shelf
-            Current shelf instance with the first-key result stored in
-            ``result``.
-        """
-        key = None
+    def key_first(self) -> str | None:
+        """Return the first key in the shelf, if any."""
         with self._cursor() as cur:
             if cur.first():
-                key = cur.key().decode()
+                return cast(bytes, cur.key()).decode()
+        return None
 
-        count = 1 if key else 0
-
-        self.result = KeysResult(
-            keys=[key],
-            count=count,
-        )
-        return self
-
-    def key_last(self) -> Shelf:
-        """Get the last key in the shelf.
-
-        Returns
-        -------
-        Shelf
-            Current shelf instance with the last-key result stored in
-            ``result``.
-        """
-        key = None
+    def key_last(self) -> str | None:
+        """Return the last key in the shelf, if any."""
         with self._cursor() as cur:
             if cur.last():
-                key = cur.key().decode()
-        count = 1 if key is not None else 0
-
-        self.result = KeysResult(
-            keys=[key] if key is not None else [],
-            count=count,
-        )
-        return self
+                return cast(bytes, cur.key()).decode()
+        return None
 
     def keys_count(self) -> int:
-        """Count keys in the shelf.
-
-        Returns
-        -------
-        int
-            Total number of keys in the shelf.
-        """
+        """Count keys in the shelf."""
         return cast(int, self._tx.stat(db=self._shelf)["entries"])
 
-    def delete(self) -> Shelf:
-        """Delete keys currently stored in ``result``.
-
-        Returns
-        -------
-        Shelf
-            Current shelf instance with deletion results stored in ``result``.
-        """
+    def delete(self, keys: Iterable[str]) -> list[MutationResult]:
+        """Delete multiple keys from the shelf."""
         results: list[MutationResult] = []
-        for key in self.result:
+        for key in keys:
             ok = cast(bool, self._tx.delete(key.encode(), db=self._shelf))
-            results.append(MutationResult(key, ok))
+            results.append(MutationResult(key=key, ok=ok))
+        return results
 
-        self.result = results
-        return self
-
-    def items(self) -> Iterable[Item]:
-        """Iterate over all key/value pairs in the shelf.
-
-        Returns
-        -------
-        Iterable[Item]
-            Iterable of decoded ``(key, value)`` items.
-        """
-
+    def items(self) -> Generator[Item, None, None]:
+        """Iterate over all key/value pairs in the shelf."""
         with self._cursor() as cur:
-            self.result = (
-                Item(key.decode(), unpackb(value)) for key, value in cur.iternext()
-            )
-
-        return self.result
+            for key, value in cur.iternext():
+                yield Item(key.decode(), unpackb(value))

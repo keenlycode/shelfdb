@@ -13,7 +13,14 @@ MessagePack (`msgpack`) using ``use_bin_type=True`` and deserialized with
 
 from __future__ import annotations
 
-from typing import Any, NewType, Iterable, Generator, cast
+from typing import (
+    Any,
+    NewType,
+    Iterable,
+    Generator,
+    cast,
+    NamedTuple,
+)
 import logging
 
 import lmdb
@@ -34,6 +41,10 @@ Notes
 - ``key`` is a string key in the shelf.
 - ``value`` is the corresponding Python object.
 """
+
+class PutManyResult(NamedTuple):
+    key: str
+    ok: bool
 
 
 def packb(value: Any) -> bytes:
@@ -291,8 +302,9 @@ class Shelf:
             shelf.encode(),
             txn=tx,
         )
+        self.result: Any = None
 
-    def put(self, key: str, value: Any) -> bool:
+    def put(self, key: str, value: Any) -> Shelf:
         """Store a single key/value pair.
 
         Parameters
@@ -304,16 +316,17 @@ class Shelf:
 
         Returns
         -------
-        bool
-            ``True`` if the value was written successfully.
+        Shelf
         """
-        return self._tx.put(
+        self.result = self._tx.put(
             key.encode(),
             msgpack.packb(value, use_bin_type=True),
             db=self._shelf,
         )
+        self.result = cast(bool, self.result)
+        return self
 
-    def put_many(self, items: Iterable[Item]) -> int:
+    def put_many(self, items: Iterable[Item]) -> Shelf:
         """Store multiple key/value pairs.
 
         Parameters
@@ -326,15 +339,18 @@ class Shelf:
         int
             Number of successful writes.
         """
-        count = 0
+
+        results: list[PutManyResult] = []
         for key, value in items:
-            if self._tx.put(
+            ok = self._tx.put(
                 key.encode(),
                 msgpack.packb(value, use_bin_type=True),
                 db=self._shelf,
-            ):
-                count += 1
-        return count
+            )
+            result = PutManyResult(key, ok)
+            results.append((key, ok))
+
+        return self
 
     def get(self, key: str) -> Item | None:
         """Retrieve a value by key.
@@ -376,4 +392,105 @@ class Shelf:
             for key, value in cur.iternext():
                 yield cast(Item, (key.decode(), unpackb(value)))
 
-    def get_many
+    def get_many(self, keys: Iterable[str]) -> Generator[Item, None, None]:
+        """Retrieve multiple values by key.
+
+        Parameters
+        ----------
+        keys : Iterable[str]
+            Keys to retrieve.
+
+        Yields
+        ------
+        Item
+            ``(key, value)`` tuples for keys found in the shelf.
+        """
+        for key in keys:
+            value = self._tx.get(key.encode(), db=self._shelf)
+            if value is not None:
+                yield cast(Item, (key, unpackb(value)))
+
+    def get_range(
+        self,
+        start: str,
+        stop: str | None = None,
+    ) -> Generator[Item, None, None]:
+        """Iterate over key/value pairs in a key range.
+
+        Parameters
+        ----------
+        start : str
+            Inclusive lower bound key.
+        stop : str | None, optional
+            Exclusive upper bound key. If ``None``, iteration continues to the
+            end of the shelf.
+
+        Yields
+        ------
+        Item
+            Decoded ``(key, value)`` tuples whose keys are in the specified
+            range.
+        """
+        start_b = start.encode()
+        stop_b = stop.encode() if stop is not None else None
+
+        with self.cursor() as cur:
+            if not cur.set_range(start_b):
+                return
+            for key, value in cur:
+                if stop_b is not None and key >= stop_b:
+                    break
+                yield cast(Item, (key.decode(), unpackb(value)))
+
+    def delete(shelf: Shelf, key: str) -> bool:
+        """Delete a key from a shelf.
+
+        Parameters
+        ----------
+        shelf : Shelf
+            Target shelf.
+        key : str
+            Key to delete.
+
+        Returns
+        -------
+        bool
+            ``True`` if the key existed and was deleted, otherwise ``False``.
+        """
+        return shelf._tx.delete(key.encode(), db=shelf._shelf)
+
+
+    def keys(shelf: Shelf) -> Generator[str, None, None]:
+        """Iterate over all keys in a shelf.
+
+        Parameters
+        ----------
+        shelf : Shelf
+            Target shelf.
+
+        Yields
+        ------
+        str
+            Decoded string keys.
+        """
+        with shelf.cursor() as cur:
+            for key, _ in cur.iternext():
+                yield key.decode()
+
+
+    def values(shelf: Shelf) -> Generator[Any, None, None]:
+        """Iterate over all values in a shelf.
+
+        Parameters
+        ----------
+        shelf : Shelf
+            Target shelf.
+
+        Yields
+        ------
+        Any
+            Decoded values.
+        """
+        with shelf.cursor() as cur:
+            for _, value in cur.iternext():
+                yield unpackb(value)

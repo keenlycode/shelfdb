@@ -16,7 +16,7 @@ MessagePack (`msgpack`) using ``use_bin_type=True`` and deserialized with
 # lib: built-in
 from __future__ import annotations
 
-from typing import Any, Generator, Iterable, cast
+from typing import Any, Generator, Iterable, cast, Callable
 
 # lib: external
 import lmdb
@@ -147,3 +147,16 @@ class Shelf:
         with self._cursor() as cur:
             for key, value in cur.iternext():
                 yield Item(key.decode(), unpackb(value))
+
+    def filter_items(
+        self,
+        keys: Iterable[str],
+        fn: Callable[[Item], bool],
+    ) -> Generator[Item, None, None]:
+        """Yield items for input ``keys`` when ``fn(item)`` evaluates to ``True``."""
+        with self._cursor() as cur:
+            for key in keys:
+                if cast(bool, cur.set_key(key.encode())):
+                    item = Item(key, unpackb(cast(bytes, cur.value())))
+                    if fn(item):
+                        yield item

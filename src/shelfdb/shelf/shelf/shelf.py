@@ -2,10 +2,6 @@
 
 Classes
 -------
-Item
-    Decoded key/value pair returned by shelf reads.
-PutManyResult
-    Status record for a single item written by ``put_many``.
 Shelf
     Named-database wrapper that provides shelf-level key/value operations.
 
@@ -23,41 +19,12 @@ from typing import (
     Iterable,
     Generator,
     cast,
-    NamedTuple,
 )
 
 import lmdb
 import msgpack
 
-
-class Item(NamedTuple):
-    """Shelf key/value pair.
-
-    Attributes
-    ----------
-    key : str
-        String key in the shelf.
-    value : Any
-        Python value stored for the key.
-    """
-
-    key: str
-    value: Any
-
-
-class PutManyResult(NamedTuple):
-    """Result for a single ``put_many`` write operation.
-
-    Attributes
-    ----------
-    key : str
-        Key that was written.
-    ok : bool
-        ``True`` if the write succeeded, otherwise ``False``.
-    """
-
-    key: str
-    ok: bool
+from .schema import Item, PutManyResult
 
 
 def packb(value: Any) -> bytes:

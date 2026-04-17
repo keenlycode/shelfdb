@@ -4,6 +4,9 @@ from typing import (
     Any,
     cast,
     NewType,
+    Iterable,
+    Generator,
+    Iterator,
 )
 import logging
 
@@ -16,6 +19,12 @@ logger = logging.getLogger(__name__)
 
 
 Item = NewType('Item', tuple[str, Any])
+
+def packb(value):
+    return msgpack.packb(value, use_bin_type=True)
+
+def unpackb(value):
+    return msgpack.unpackb(value, raw=False)
 
 class DB:
     def __init__(
@@ -95,12 +104,31 @@ class Transaction:
         value = self.tx.get(key.encode(), db=self._shelf)
         if value is None:
             return None
-        return cast(Item, (key, msgpack.unpackb(value, raw=False)))
+        return cast(Item, (key, unpackb(value)))
 
-    def put(self, key: str, value: Any):
-        self.tx.put(key.encode(), msgpack.packb(value, use_bin_type=True), db=self._shelf)
+    def put(self, key: str, value: Any) -> bool:
+        return self.tx.put(
+            key.encode(),
+            msgpack.packb(value, use_bin_type=True),
+            db=self._shelf
+        )
 
-    def items(self):
-        with self.tx.cursor(db=self._shelf) as cur:
+    def cursor(self) -> lmdb.Cursor:
+        return self.tx.cursor(db=self._shelf)
+
+    def items(self) -> Generator[Item, None, None]:
+        with self.cursor() as cur:
             for key, value in cur.iternext():
-                return cast(Item, (key, msgpack.unpackb(value)))
+                yield cast(Item, (key, unpackb(value)))
+
+    def get_many(self, keys: Iterable[str]) -> Iterator[Item]:
+        with self.cursor() as cur:
+             for key in keys:
+                 value = cur.get(key.encode())
+                 if value is None:
+                     yield cast(Item, (key, None))
+                 yield cast(Item, (key, unpackb(value)))
+
+# class Shelf:
+
+#     def __init__()

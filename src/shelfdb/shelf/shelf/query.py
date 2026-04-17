@@ -132,6 +132,10 @@ class ShelfQuery:
             return reduce(fn_reduce, items)
         raise ValueError("expected fn_map, fn_reduce, or both")
 
+    def update(self, fn: Callable[[Item], Any]) -> list[MutationResult]:
+        """Update the currently selected items using ``fn``."""
+        return self._shelf.put_many(Item(item.key, fn(item)) for item in self.items())
+
     def delete(self) -> list[MutationResult]:
         """Delete the currently selected keys."""
         return self._shelf.delete(self._clone_keys())

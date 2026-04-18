@@ -142,8 +142,16 @@ class Shelf:
             results.append(MutationResult(key=key, ok=ok))
         return results
 
-    def items(self) -> Generator[Item, None, None]:
+    def items(self, reverse: bool = False) -> Generator[Item, None, None]:
         """Iterate over all key/value pairs in the shelf."""
         with self._cursor() as cur:
+            if reverse:
+                if not cur.last():
+                    return
+                yield Item(cast(bytes, cur.key()).decode(), unpackb(cast(bytes, cur.value())))
+                while cur.prev():
+                    yield Item(cast(bytes, cur.key()).decode(), unpackb(cast(bytes, cur.value())))
+                return
+
             for key, value in cur.iternext():
                 yield Item(key.decode(), unpackb(value))

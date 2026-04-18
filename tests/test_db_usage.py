@@ -120,6 +120,40 @@ def test_shelf_query_inspection_and_selection_helpers(tmp_path):
             ]
 
 
+def test_shelf_query_desc_iterates_in_reverse_order(tmp_path):
+    db_path = tmp_path / "shelfdb"
+
+    with DB(str(db_path)) as db:
+        with db.transaction(write=True) as tx:
+            users = tx.shelf("users")
+            users.put_many(
+                [
+                    Item("alice", {"age": 30}),
+                    Item("bob", {"age": 25}),
+                    Item("carol", {"age": 20}),
+                ]
+            )
+
+            assert list(ShelfQuery(users).desc()) == [
+                Item("carol", {"age": 20}),
+                Item("bob", {"age": 25}),
+                Item("alice", {"age": 30}),
+            ]
+            assert list(ShelfQuery(users).desc().keys()) == [
+                Item("carol", UNDEF),
+                Item("bob", UNDEF),
+                Item("alice", UNDEF),
+            ]
+            assert list(
+                ShelfQuery(users)
+                .filter(lambda item: item.value["age"] >= 25)
+                .desc()
+            ) == [
+                Item("bob", {"age": 25}),
+                Item("alice", {"age": 30}),
+            ]
+
+
 def test_shelf_query_update(tmp_path):
     db_path = tmp_path / "shelfdb"
 

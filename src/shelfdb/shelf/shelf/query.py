@@ -36,7 +36,7 @@ class ShelfQuery:
     def _new(self, source: Callable[[], Iterator[Item]]) -> ShelfQuery:
         return ShelfQuery(self._shelf, source)
 
-    def _resolve(self, item: Item) -> Item | None:
+    def _load(self, item: Item) -> Item | None:
         if item.value is UNDEF:
             return self._shelf.item(item.key)
         return item
@@ -152,25 +152,10 @@ class ShelfQuery:
             raise ValueError("expected exactly one selected item, found many")
         return first
 
-    def map_reduce(
-        self,
-        fn_map: Callable[[Item], Any] | None = None,
-        fn_reduce: Callable[[Any, Any], Any] | None = None,
-    ) -> Any:
-        """Compatibility helper for mapping and/or reducing selected items."""
-        items = self.items()
-        if fn_map is not None and fn_reduce is not None:
-            return reduce(fn_reduce, (fn_map(item) for item in items))
-        if fn_map is not None:
-            return (fn_map(item) for item in items)
-        if fn_reduce is not None:
-            return reduce(fn_reduce, items)
-        raise ValueError("expected fn_map, fn_reduce, or both")
-
     def items(self) -> Iterator[Item]:
         """Iterate over the selected items, loading values when needed."""
         for item in self._source():
-            if (resolved := self._resolve(item)) is not None:
+            if (resolved := self._load(item)) is not None:
                 yield resolved
 
     def update(self, fn: Callable[[Item], Any]) -> list[MutationResult]:

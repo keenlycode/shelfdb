@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from builtins import filter as bfilter
 from collections.abc import Callable, Iterator
-from functools import reduce
 from itertools import islice
 from typing import Any
 
@@ -29,9 +28,9 @@ class ShelfQuery:
         """Delegate missing attributes to the wrapped shelf."""
         return getattr(self._shelf, name)
 
-    def __iter__(self) -> Iterator[str]:
-        """Iterate over selected keys."""
-        return (item.key for item in self._source())
+    def __iter__(self) -> Iterator[Item]:
+        """Iterate over selected items."""
+        return (item for item in self._source())
 
     def _new(self, source: Callable[[], Iterator[Item]]) -> ShelfQuery:
         return ShelfQuery(self._shelf, source)

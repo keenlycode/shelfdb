@@ -1,3 +1,5 @@
+from dictify import UNDEF
+
 from shelfdb.shelf import DB, ShelfQuery
 from shelfdb.shelf.shelf import Item, MutationResult
 
@@ -110,17 +112,11 @@ def test_shelf_query_inspection_and_selection_helpers(tmp_path):
                 Item("carol", {"age": 20}),
             ]
             assert ShelfQuery(users).key("alice").item() == Item("alice", {"age": 30})
-            assert (
-                query.map_reduce(
-                    fn_map=lambda item: item.value["age"],
-                    fn_reduce=lambda acc, age: acc + age,
-                )
-                == 75
-            )
+            assert sum(item.value["age"] for item in query.items()) == 75
 
             assert list(ShelfQuery(users).keys().sort(reverse=True).slice(0, 2)) == [
-                "carol",
-                "bob",
+                Item("carol", {"age": 20}),
+                Item("bob", {"age": 25}),
             ]
 
 
@@ -177,7 +173,7 @@ def test_shelf_query_keys_range_delete_chain(tmp_path):
 
         with db.transaction(write=False) as tx:
             users = tx.shelf("users")
-            assert list(users.keys()) == ["alice"]
+            assert list(users.keys()) == [Item("alice", UNDEF)]
 
 
 def test_shelf_query_keys_count(tmp_path):
@@ -195,7 +191,11 @@ def test_shelf_query_keys_count(tmp_path):
             )
 
             query = ShelfQuery(users).keys()
-            assert list(query) == ["alice", "bob", "carol"]
+            assert list(query) == [
+                Item("alice", UNDEF),
+                Item("bob", UNDEF),
+                Item("carol", UNDEF),
+            ]
             assert query.count() == 3
 
             assert ShelfQuery(users).keys_range("bob", "d").count() == 2
@@ -229,4 +229,4 @@ def test_shelf_query_filter_chain(tmp_path):
 
         with db.transaction(write=False) as tx:
             users = tx.shelf("users")
-            assert list(users.keys()) == ["carol"]
+            assert list(users.keys()) == [Item("carol", UNDEF)]

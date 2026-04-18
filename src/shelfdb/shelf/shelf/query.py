@@ -1,54 +1,74 @@
-"""Chainable query helpers built on top of ``Shelf``."""
+"""Chainable lazy query helpers built on top of ``Shelf``."""
 
 from __future__ import annotations
 
+from builtins import filter as bfilter
+from collections.abc import Callable, Iterator
 from functools import reduce
-from itertools import islice, tee
-from typing import Any, Callable, Iterable, Iterator
+from itertools import islice
+from typing import Any
+
+from dictify import UNDEF
 
 from .schema import Item, MutationResult
 from .shelf import Shelf
 
 
 class ShelfQuery:
-    """Chainable key-query operations for a ``Shelf`` instance."""
+    """Immutable lazy query wrapper for a ``Shelf`` instance."""
 
-    def __init__(self, shelf: Shelf):
+    def __init__(
+        self,
+        shelf: Shelf | ShelfQuery,
+        source: Callable[[], Iterator[Item]] | None = None,
+    ):
         self._shelf = shelf._shelf if isinstance(shelf, ShelfQuery) else shelf
-        self._keys: Iterable[str] = ()
+        self._source = source if source is not None else self._shelf.items
 
     def __getattr__(self, name: str) -> Any:
         """Delegate missing attributes to the wrapped shelf."""
         return getattr(self._shelf, name)
 
     def __iter__(self) -> Iterator[str]:
-        """Iterate over the currently selected keys."""
-        self._keys, keys = tee(self._keys)
-        return iter(keys)
+        """Iterate over selected keys."""
+        return (item.key for item in self._source())
 
-    def _set_keys(self, keys: Any) -> None:
-        self._keys = keys
+    def _new(self, source: Callable[[], Iterator[Item]]) -> ShelfQuery:
+        return ShelfQuery(self._shelf, source)
 
-    def _clone_keys(self) -> Iterator[str]:
-        """Clone the current keys iterator and keep the original usable."""
-        self._keys, keys = tee(self._keys)
-        return keys
+    def _resolve(self, item: Item) -> Item | None:
+        if item.value is UNDEF:
+            return self._shelf.item(item.key)
+        return item
 
     def key(self, key: str) -> ShelfQuery:
-        """Select a single key if it exists."""
-        exists = self._shelf.key(key)
-        self._set_keys((key,) if exists else ())
-        return self
+        """Select a single key if it exists in the current query."""
+        return self._new(
+            lambda: bfilter(lambda item: item.key == key, self._source())
+        )
 
     def keys(self, limit: int | None = None) -> ShelfQuery:
-        """Select keys from the shelf."""
-        self._set_keys(self._shelf.keys(limit=limit))
-        return self
+        """Project the current query to key-only items."""
+
+        def source() -> Iterator[Item]:
+            items = self._source()
+            if limit is not None:
+                items = islice(items, limit)
+            yield from (Item(item.key, UNDEF) for item in items)
+
+        return self._new(source)
 
     def keys_range(self, start: str, stop: str | None = None) -> ShelfQuery:
-        """Select keys in a key range."""
-        self._set_keys(self._shelf.keys_range(start=start, stop=stop))
-        return self
+        """Select items whose keys fall within the requested range."""
+
+        def in_range(item: Item) -> bool:
+            if item.key < start:
+                return False
+            if stop is not None and item.key >= stop:
+                return False
+            return True
+
+        return self._new(lambda: bfilter(in_range, self._source()))
 
     def slice(
         self,
@@ -56,49 +76,65 @@ class ShelfQuery:
         stop: int | None = None,
         step: int | None = None,
     ) -> ShelfQuery:
-        """Slice the currently selected keys."""
-        self._set_keys(islice(self._keys, start, stop, step))
-        return self
+        """Slice the current query results."""
+
+        def source() -> Iterator[Item]:
+            items = self._source()
+            if step is None:
+                yield from islice(items, start, stop)
+            else:
+                yield from islice(items, start, stop, step)
+
+        return self._new(source)
 
     def sort(
         self,
-        key: Callable[[str], Any] | None = None,
+        key: Callable[[Item], Any] | None = None,
         reverse: bool = False,
     ) -> ShelfQuery:
-        """Sort the currently selected keys."""
-        self._set_keys(tuple(sorted(self._keys, key=key, reverse=reverse)))
-        return self
+        """Sort the current query results."""
+
+        def source() -> Iterator[Item]:
+            items = tuple(self.items())
+            if key is None:
+                yield from sorted(items, key=lambda item: item.key, reverse=reverse)
+            else:
+                yield from sorted(items, key=key, reverse=reverse)
+
+        return self._new(source)
 
     def filter(self, fn: Callable[[Item], bool]) -> ShelfQuery:
-        """Filter the currently selected keys by item predicate."""
-        self._set_keys(
-            (
-                item.key
-                for key in self._clone_keys()
-                if (item := self._shelf.item(key)) is not None and fn(item)
-            )
-        )
-        return self
+        """Filter the current query results by ``fn``."""
+        return self._new(lambda: bfilter(fn, self.items()))
 
     def key_first(self) -> ShelfQuery:
-        """Select the first key, if any."""
-        key = self._shelf.key_first()
-        self._set_keys((key,) if key is not None else ())
-        return self
+        """Select the first item from the current query, if any."""
+
+        def source() -> Iterator[Item]:
+            if (item := next(self._source(), None)) is not None:
+                yield item
+
+        return self._new(source)
 
     def key_last(self) -> ShelfQuery:
-        """Select the last key, if any."""
-        key = self._shelf.key_last()
-        self._set_keys((key,) if key is not None else ())
-        return self
+        """Select the last item from the current query, if any."""
+
+        def source() -> Iterator[Item]:
+            last: Item | None = None
+            for item in self._source():
+                last = item
+            if last is not None:
+                yield last
+
+        return self._new(source)
 
     def count(self) -> int:
-        """Return the number of currently selected keys."""
-        return sum(1 for _ in self._clone_keys())
+        """Return the number of selected items."""
+        return sum(1 for _ in self._source())
 
     def exists(self) -> bool:
-        """Return ``True`` when at least one key is selected."""
-        return next(self._clone_keys(), None) is not None
+        """Return ``True`` when at least one item is selected."""
+        return next(self._source(), None) is not None
 
     def item(self) -> Item:
         """Return the single selected item.
@@ -106,33 +142,22 @@ class ShelfQuery:
         Raises
         ------
         ValueError
-            If zero or more than one key is selected.
+            If zero or more than one item is selected.
         """
-        keys = self._clone_keys()
-        first = next(keys, None)
+        items = self.items()
+        first = next(items, None)
         if first is None:
             raise ValueError("expected exactly one selected item, found none")
-        if next(keys, None) is not None:
+        if next(items, None) is not None:
             raise ValueError("expected exactly one selected item, found many")
-        item = self._shelf.item(first)
-        if item is None:
-            raise ValueError(f"selected key does not exist: {first}")
-        return item
-
-    def items(self) -> Iterable[Item]:
-        """Iterate over the currently selected items."""
-        return (
-            item
-            for key in self._clone_keys()
-            if (item := self._shelf.item(key)) is not None
-        )
+        return first
 
     def map_reduce(
         self,
         fn_map: Callable[[Item], Any] | None = None,
         fn_reduce: Callable[[Any, Any], Any] | None = None,
     ) -> Any:
-        """Map and/or reduce the currently selected items."""
+        """Compatibility helper for mapping and/or reducing selected items."""
         items = self.items()
         if fn_map is not None and fn_reduce is not None:
             return reduce(fn_reduce, (fn_map(item) for item in items))
@@ -142,10 +167,24 @@ class ShelfQuery:
             return reduce(fn_reduce, items)
         raise ValueError("expected fn_map, fn_reduce, or both")
 
+    def items(self) -> Iterator[Item]:
+        """Iterate over the selected items, loading values when needed."""
+        for item in self._source():
+            if (resolved := self._resolve(item)) is not None:
+                yield resolved
+
     def update(self, fn: Callable[[Item], Any]) -> list[MutationResult]:
-        """Update the currently selected items using ``fn``."""
-        return self._shelf.put_many(Item(item.key, fn(item)) for item in self.items())
+        """Update the selected items using ``fn``."""
+        results: list[MutationResult] = []
+        keys = tuple(item.key for item in self._source())
+        for key in keys:
+            item = self._shelf.item(key)
+            if item is None:
+                continue
+            results.append(self._shelf.put(key, fn(item)))
+        return results
 
     def delete(self) -> list[MutationResult]:
-        """Delete the currently selected keys."""
-        return self._shelf.delete(self._clone_keys())
+        """Delete the selected items."""
+        keys = tuple(item.key for item in self._source())
+        return self._shelf.delete(keys)

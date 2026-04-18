@@ -23,7 +23,7 @@ class ShelfQuery:
         descending: bool = False,
     ):
         self._shelf = shelf._shelf if isinstance(shelf, ShelfQuery) else shelf
-        self._source = source if source is not None else self._shelf.items
+        self._source = source if source is not None else self._source_keys
         self._descending = descending
 
     def __getattr__(self, name: str) -> Any:
@@ -31,7 +31,7 @@ class ShelfQuery:
         return getattr(self._shelf, name)
 
     def __iter__(self) -> Iterator[Item]:
-        """Iterate over selected items."""
+        """Iterate over the current query source."""
         return self._source(self._descending)
 
     def _new(
@@ -47,6 +47,9 @@ class ShelfQuery:
 
     def _source_items(self, reverse: bool) -> Iterator[Item]:
         return self._source(reverse)
+
+    def _source_keys(self, reverse: bool) -> Iterator[Item]:
+        yield from (Item(key, UNDEF) for key in self._shelf.keys(reverse=reverse))
 
     def _items(self, reverse: bool) -> Iterator[Item]:
         for item in self._source_items(reverse):
@@ -65,7 +68,10 @@ class ShelfQuery:
     def key(self, key: str) -> ShelfQuery:
         """Select a single key if it exists in the current query."""
         return self._new(
-            lambda reverse: bfilter(lambda item: item.key == key, self._source_items(reverse))
+            lambda reverse: bfilter(
+                lambda item: item.key == key,
+                self._source_items(reverse),
+            )
         )
 
     def keys(self, limit: int | None = None) -> ShelfQuery:
@@ -89,7 +95,9 @@ class ShelfQuery:
                 return False
             return True
 
-        return self._new(lambda reverse: bfilter(in_range, self._source_items(reverse)))
+        return self._new(
+            lambda reverse: bfilter(in_range, self._source_items(reverse))
+        )
 
     def slice(
         self,

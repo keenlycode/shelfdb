@@ -89,10 +89,26 @@ class Shelf:
         """Create an LMDB cursor for this shelf."""
         return self._tx.cursor(db=self._shelf)
 
-    def keys(self, limit: int | None = None) -> Generator[str, None, None]:
+    def keys(
+        self,
+        limit: int | None = None,
+        reverse: bool = False,
+    ) -> Generator[str, None, None]:
         """Iterate over keys in the shelf."""
         with self._cursor() as cur:
             count = 0
+            if reverse:
+                if not cur.last():
+                    return
+                while True:
+                    if limit is not None and count >= limit:
+                        break
+                    yield cast(bytes, cur.key()).decode()
+                    count += 1
+                    if not cur.prev():
+                        break
+                return
+
             for key, _ in cur.iternext():
                 if limit is not None and count >= limit:
                     break

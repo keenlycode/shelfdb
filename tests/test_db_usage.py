@@ -135,14 +135,14 @@ def test_shelf_query_desc_iterates_in_reverse_order(tmp_path):
             )
 
             assert list(ShelfQuery(users).desc()) == [
-                Item("carol", {"age": 20}),
-                Item("bob", {"age": 25}),
-                Item("alice", {"age": 30}),
-            ]
-            assert list(ShelfQuery(users).desc().keys()) == [
                 Item("carol", UNDEF),
                 Item("bob", UNDEF),
                 Item("alice", UNDEF),
+            ]
+            assert list(ShelfQuery(users).desc().items()) == [
+                Item("carol", {"age": 20}),
+                Item("bob", {"age": 25}),
+                Item("alice", {"age": 30}),
             ]
             assert list(
                 ShelfQuery(users)

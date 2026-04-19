@@ -74,14 +74,11 @@ class ShelfQuery:
             )
         )
 
-    def keys(self, limit: int | None = None) -> ShelfQuery:
+    def keys(self) -> ShelfQuery:
         """Project the current query to key-only items."""
 
         def source(reverse: bool) -> Iterator[Item]:
-            items = self._source_items(reverse)
-            if limit is not None:
-                items = islice(items, limit)
-            yield from (Item(item.key, UNDEF) for item in items)
+            yield from (Item(item.key, UNDEF) for item in self._source_items(reverse))
 
         return self._new(source)
 

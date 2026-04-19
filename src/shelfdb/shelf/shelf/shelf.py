@@ -103,7 +103,7 @@ class Shelf:
                 while True:
                     if limit is not None and count >= limit:
                         break
-                    yield cast(bytes, cur.key()).decode()
+                    yield cur.key().decode()
                     count += 1
                     if not cur.prev():
                         break

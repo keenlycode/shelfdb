@@ -61,8 +61,8 @@ class ShelfQuery:
             return self._shelf.item(item.key)
         return item
 
-    def desc(self) -> ShelfQuery:
-        """Return the query in descending iteration order."""
+    def reverse(self) -> ShelfQuery:
+        """Return the query in reverse iteration order."""
         return self._new(self._source, descending=True)
 
     def key(self, key: str) -> ShelfQuery:

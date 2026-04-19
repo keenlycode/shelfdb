@@ -13,7 +13,7 @@ from .schema import Item, MutationResult
 from .shelf import Shelf
 
 
-def _default_key_source(shelf: Shelf, reverse: bool) -> Iterator[Item]:
+def _default_iter_items(shelf: Shelf, reverse: bool) -> Iterator[Item]:
     yield from (Item(key, UNDEF) for key in shelf.keys(reverse=reverse))
 
 
@@ -30,7 +30,7 @@ class ShelfQuery:
         self._iter_items = (
             source
             if source is not None
-            else lambda reverse: _default_key_source(self._shelf, reverse)
+            else lambda reverse: _default_iter_items(self._shelf, reverse)
         )
         self._descending = descending
 

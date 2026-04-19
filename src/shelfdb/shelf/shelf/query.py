@@ -13,6 +13,10 @@ from .schema import Item, MutationResult
 from .shelf import Shelf
 
 
+def _default_key_source(shelf: Shelf, reverse: bool) -> Iterator[Item]:
+    yield from (Item(key, UNDEF) for key in shelf.keys(reverse=reverse))
+
+
 class ShelfQuery:
     """Immutable lazy query wrapper for a ``Shelf`` instance."""
 
@@ -23,7 +27,11 @@ class ShelfQuery:
         descending: bool = False,
     ):
         self._shelf = shelf._shelf if isinstance(shelf, ShelfQuery) else shelf
-        self._source = source if source is not None else self._source_keys
+        self._source = (
+            source
+            if source is not None
+            else lambda reverse: _default_key_source(self._shelf, reverse)
+        )
         self._descending = descending
 
     def __getattr__(self, name: str) -> Any:
@@ -46,13 +54,7 @@ class ShelfQuery:
         )
 
     def _source_items(self, reverse: bool) -> Iterator[Item]:
-        return self._source(reverse)
-
-    def _source_keys(self, reverse: bool) -> Iterator[Item]:
-        yield from (Item(key, UNDEF) for key in self._shelf.keys(reverse=reverse))
-
-    def _items(self, reverse: bool) -> Iterator[Item]:
-        for item in self._source_items(reverse):
+        for item in self._source(reverse):
             if (resolved := self._load(item)) is not None:
                 yield resolved
 
@@ -61,16 +63,20 @@ class ShelfQuery:
             return self._shelf.item(item.key)
         return item
 
-    def reverse(self) -> ShelfQuery:
-        """Return the query in reverse iteration order."""
+    def desc(self) -> ShelfQuery:
+        """Return the query in descending iteration order."""
         return self._new(self._source, descending=True)
+
+    def asc(self) -> ShelfQuery:
+        """Return the query in ascending iteration order."""
+        return self._new(self._source, descending=False)
 
     def key(self, key: str) -> ShelfQuery:
         """Select a single key if it exists in the current query."""
         return self._new(
             lambda reverse: bfilter(
                 lambda item: item.key == key,
-                self._source_items(reverse),
+                self._source(reverse),
             )
         )
 
@@ -78,7 +84,7 @@ class ShelfQuery:
         """Project the current query to key-only items."""
 
         def source(reverse: bool) -> Iterator[Item]:
-            yield from (Item(item.key, UNDEF) for item in self._source_items(reverse))
+            yield from (Item(item.key, UNDEF) for item in self._source(reverse))
 
         return self._new(source)
 
@@ -93,7 +99,7 @@ class ShelfQuery:
             return True
 
         return self._new(
-            lambda reverse: bfilter(in_range, self._source_items(reverse))
+            lambda reverse: bfilter(in_range, self._source(reverse))
         )
 
     def slice(
@@ -105,7 +111,7 @@ class ShelfQuery:
         """Slice the current query results."""
 
         def source(reverse: bool) -> Iterator[Item]:
-            items = self._source_items(reverse)
+            items = self._source(reverse)
             if step is None:
                 yield from islice(items, start, stop)
             else:
@@ -121,7 +127,7 @@ class ShelfQuery:
         """Sort the current query results."""
 
         def source(scan_reverse: bool) -> Iterator[Item]:
-            items = tuple(self._items(scan_reverse))
+            items = tuple(self._source_items(scan_reverse))
             if key is None:
                 yield from sorted(items, key=lambda item: item.key, reverse=reverse)
             else:
@@ -131,13 +137,13 @@ class ShelfQuery:
 
     def filter(self, fn: Callable[[Item], bool]) -> ShelfQuery:
         """Filter the current query results by ``fn``."""
-        return self._new(lambda reverse: bfilter(fn, self._items(reverse)))
+        return self._new(lambda reverse: bfilter(fn, self._source_items(reverse)))
 
     def key_first(self) -> ShelfQuery:
         """Select the first item from the current query, if any."""
 
         def source(reverse: bool) -> Iterator[Item]:
-            if (item := next(self._source_items(reverse), None)) is not None:
+            if (item := next(self._source(reverse), None)) is not None:
                 yield item
 
         return self._new(source)
@@ -147,7 +153,7 @@ class ShelfQuery:
 
         def source(reverse: bool) -> Iterator[Item]:
             last: Item | None = None
-            for item in self._source_items(reverse):
+            for item in self._source(reverse):
                 last = item
             if last is not None:
                 yield last
@@ -156,11 +162,11 @@ class ShelfQuery:
 
     def count(self) -> int:
         """Return the number of selected items."""
-        return sum(1 for _ in self._source_items(self._descending))
+        return sum(1 for _ in self._source(self._descending))
 
     def exists(self) -> bool:
         """Return ``True`` when at least one item is selected."""
-        return next(self._source_items(self._descending), None) is not None
+        return next(self._source(self._descending), None) is not None
 
     def item(self) -> Item:
         """Return the single selected item.
@@ -180,7 +186,7 @@ class ShelfQuery:
 
     def items(self) -> Iterator[Item]:
         """Iterate over the selected items, loading values when needed."""
-        return self._items(self._descending)
+        return self._source_items(self._descending)
 
     def update(self, fn: Callable[[Item], Any]) -> list[MutationResult]:
         """Update the selected items using ``fn``."""
@@ -195,5 +201,5 @@ class ShelfQuery:
 
     def delete(self) -> list[MutationResult]:
         """Delete the selected items."""
-        keys = tuple(item.key for item in self._source_items(self._descending))
+        keys = tuple(item.key for item in self._source(self._descending))
         return self._shelf.delete(keys)

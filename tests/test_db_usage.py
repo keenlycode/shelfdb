@@ -120,7 +120,7 @@ def test_shelf_query_inspection_and_selection_helpers(tmp_path):
             ]
 
 
-def test_shelf_query_desc_iterates_in_reverse_order(tmp_path):
+def test_shelf_query_desc_and_asc_iterate_in_expected_order(tmp_path):
     db_path = tmp_path / "shelfdb"
 
     with DB(str(db_path)) as db:
@@ -134,20 +134,25 @@ def test_shelf_query_desc_iterates_in_reverse_order(tmp_path):
                 ]
             )
 
-            assert list(ShelfQuery(users).reverse()) == [
+            assert list(ShelfQuery(users).desc()) == [
                 Item("carol", UNDEF),
                 Item("bob", UNDEF),
                 Item("alice", UNDEF),
             ]
-            assert list(ShelfQuery(users).reverse().items()) == [
+            assert list(ShelfQuery(users).desc().items()) == [
                 Item("carol", {"age": 20}),
                 Item("bob", {"age": 25}),
                 Item("alice", {"age": 30}),
             ]
+            assert list(ShelfQuery(users).desc().asc()) == [
+                Item("alice", UNDEF),
+                Item("bob", UNDEF),
+                Item("carol", UNDEF),
+            ]
             assert list(
                 ShelfQuery(users)
                 .filter(lambda item: item.value["age"] >= 25)
-                .reverse()
+                .desc()
             ) == [
                 Item("bob", {"age": 25}),
                 Item("alice", {"age": 30}),

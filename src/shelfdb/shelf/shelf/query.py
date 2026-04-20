@@ -1,8 +1,13 @@
-"""Chainable lazy query helpers built on top of ``Shelf``.
+"""High-level lazy query composition on top of ``Shelf``.
 
-`key()` and `keys_range()` configure the base LMDB key scan. They narrow the
-cursor-backed scan before post-scan transforms like `filter()`, `slice()`, and
-`sort()` are applied.
+This module defines `ShelfQuery`, which builds query behavior from two layers:
+
+- scan selectors such as `key()`, `keys_range()`, `asc()`, and `desc()`
+- post-scan transforms such as `keys()`, `filter()`, `slice()`, and `sort()`
+
+`ShelfQuery` does not manage LMDB cursors directly. Instead, it describes query
+semantics and delegates storage access to `Shelf`, loading item values only when
+needed.
 """
 
 from __future__ import annotations
@@ -90,12 +95,23 @@ class _Scan:
         if self.empty:
             return
 
-        yield from shelf._scan_keys(
-            exact_key=self.exact_key,
-            start=self.start,
-            stop=self.stop,
-            reverse=self.descending,
-        )
+        if self.exact_key is not None:
+            if shelf.key(self.exact_key):
+                yield Item(self.exact_key, UNDEF)
+            return
+
+        if self.start is not None:
+            yield from (
+                Item(key, UNDEF)
+                for key in shelf.keys_range(
+                    self.start,
+                    self.stop,
+                    reverse=self.descending,
+                )
+            )
+            return
+
+        yield from (Item(key, UNDEF) for key in shelf.keys(reverse=self.descending))
 
 
 class ShelfQuery:

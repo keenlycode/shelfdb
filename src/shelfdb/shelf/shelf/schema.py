@@ -1,4 +1,14 @@
-"""Schema types for shelf-level data exchange."""
+"""Shared shelf-layer data definitions.
+
+This module defines the lightweight value objects shared by the shelf and query
+layers:
+
+- `UNDEF` as the package-local sentinel for key-only items
+- `Item` as the common key/value pair shape
+- `MutationResult` as the common mutation result shape
+
+It does not contain LMDB access logic or query behavior.
+"""
 
 from __future__ import annotations
 

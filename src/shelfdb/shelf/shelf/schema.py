@@ -5,6 +5,16 @@ from __future__ import annotations
 from typing import Any, NamedTuple
 
 
+class _UndefType:
+    __slots__ = ()
+
+    def __repr__(self) -> str:
+        return "UNDEF"
+
+
+UNDEF = _UndefType()
+
+
 class Item(NamedTuple):
     """Shelf key/value pair.
 

@@ -1,8 +1,6 @@
 import pytest
 
-from dictify import UNDEF
-
-from shelfdb.shelf import DB, ShelfQuery
+from shelfdb.shelf import DB, UNDEF, ShelfQuery
 from shelfdb.shelf.shelf import Item, MutationResult
 
 

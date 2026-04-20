@@ -13,16 +13,10 @@ from dataclasses import dataclass, replace
 from itertools import islice
 from typing import Any
 
-from dictify import UNDEF
-
-from .schema import Item, MutationResult
+from .schema import UNDEF, Item, MutationResult
 from .shelf import Shelf
 
 Transform = Callable[[Iterator[Item]], Iterator[Item]]
-
-
-def _default_iter_items(shelf: Shelf, reverse: bool) -> Iterator[Item]:
-    yield from (Item(key, UNDEF) for key in shelf.keys(reverse=reverse))
 
 
 def _max_key(left: str | None, right: str) -> str:
@@ -96,23 +90,12 @@ class _Scan:
         if self.empty:
             return
 
-        if self.exact_key is not None:
-            if shelf.key(self.exact_key):
-                yield Item(self.exact_key, UNDEF)
-            return
-
-        if self.start is not None:
-            yield from (
-                Item(key, UNDEF)
-                for key in shelf.keys_range(
-                    self.start,
-                    self.stop,
-                    reverse=self.descending,
-                )
-            )
-            return
-
-        yield from _default_iter_items(shelf, self.descending)
+        yield from shelf._scan_keys(
+            exact_key=self.exact_key,
+            start=self.start,
+            stop=self.stop,
+            reverse=self.descending,
+        )
 
 
 class ShelfQuery:

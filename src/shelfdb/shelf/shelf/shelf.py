@@ -23,7 +23,7 @@ import lmdb
 import msgpack
 
 # lib: local
-from .schema import Item, MutationResult
+from .schema import UNDEF, Item, MutationResult
 
 
 def packb(value: Any) -> bytes:
@@ -89,43 +89,38 @@ class Shelf:
         """Create an LMDB cursor for this shelf."""
         return self._tx.cursor(db=self._shelf)
 
-    def keys(
+    def _scan_keys(
         self,
-        limit: int | None = None,
-        reverse: bool = False,
-    ) -> Generator[str, None, None]:
-        """Iterate over keys in the shelf."""
-        with self._cursor() as cur:
-            count = 0
-            if reverse:
-                if not cur.last():
-                    return
-                while True:
-                    if limit is not None and count >= limit:
-                        break
-                    yield cur.key().decode()
-                    count += 1
-                    if not cur.prev():
-                        break
-                return
-
-            for key, _ in cur.iternext():
-                if limit is not None and count >= limit:
-                    break
-                yield key.decode()
-                count += 1
-
-    def keys_range(
-        self,
-        start: str,
+        *,
+        exact_key: str | None = None,
+        start: str | None = None,
         stop: str | None = None,
         reverse: bool = False,
-    ) -> Generator[str, None, None]:
-        """Iterate over keys in a key range."""
-        start_b = start.encode()
-        stop_b = stop.encode() if stop is not None else None
-
+    ) -> Generator[Item, None, None]:
+        """Iterate selected keys as key-only items."""
         with self._cursor() as cur:
+            if exact_key is not None:
+                if cur.set_key(exact_key.encode()):
+                    yield Item(exact_key, UNDEF)
+                return
+
+            if start is None:
+                if reverse:
+                    if not cur.last():
+                        return
+                    while True:
+                        yield Item(cast(bytes, cur.key()).decode(), UNDEF)
+                        if not cur.prev():
+                            break
+                    return
+
+                for key, _ in cur.iternext():
+                    yield Item(key.decode(), UNDEF)
+                return
+
+            start_b = start.encode()
+            stop_b = stop.encode() if stop is not None else None
+
             if reverse:
                 if stop_b is None:
                     if not cur.last():
@@ -140,7 +135,7 @@ class Shelf:
                     key = cast(bytes, cur.key())
                     if key < start_b:
                         break
-                    yield key.decode()
+                    yield Item(key.decode(), UNDEF)
                     if not cur.prev():
                         break
                 return
@@ -150,7 +145,30 @@ class Shelf:
             for key, _ in cur:
                 if stop_b is not None and key >= stop_b:
                     break
-                yield key.decode()
+                yield Item(key.decode(), UNDEF)
+
+    def keys(
+        self,
+        limit: int | None = None,
+        reverse: bool = False,
+    ) -> Generator[str, None, None]:
+        """Iterate over keys in the shelf."""
+        count = 0
+        for item in self._scan_keys(reverse=reverse):
+            if limit is not None and count >= limit:
+                break
+            yield item.key
+            count += 1
+
+    def keys_range(
+        self,
+        start: str,
+        stop: str | None = None,
+        reverse: bool = False,
+    ) -> Generator[str, None, None]:
+        """Iterate over keys in a key range."""
+        for item in self._scan_keys(start=start, stop=stop, reverse=reverse):
+            yield item.key
 
     def key_first(self) -> str | None:
         """Return the first key in the shelf, if any."""

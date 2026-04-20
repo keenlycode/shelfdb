@@ -2,13 +2,12 @@
 
 # lib: built-in
 from __future__ import annotations
-from typing import Any
 
 # lib: external
 import lmdb
 
 # lib: local
-from .shelf import Shelf, ShelfQuery
+from .shelf import Shelf
 
 
 class DB:
@@ -129,7 +128,6 @@ class Transaction:
     ) -> None:
         self._lmdb_env: lmdb.Environment = lmdb_env
         self._tx: lmdb.Transaction = tx
-        self._shelf: Any = None
         self._is_write = write
 
     @property
@@ -195,7 +193,7 @@ class Transaction:
         else:
             self.tx.abort()
 
-    def shelf(self, name: str) -> ShelfQuery:
+    def shelf(self, name: str) -> Shelf:
         """Open a named shelf (LMDB named database) within this transaction.
 
         Parameters
@@ -205,8 +203,8 @@ class Transaction:
 
         Returns
         -------
-        ShelfQuery
-            Query wrapper bound to this transaction's shelf.
+        Shelf
+            Mutable scan-state shelf bound to this transaction.
         """
 
-        return ShelfQuery(Shelf(self._lmdb_env, self.tx, name))
+        return Shelf(self._lmdb_env, self.tx, name)

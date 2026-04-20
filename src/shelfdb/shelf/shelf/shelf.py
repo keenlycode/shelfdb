@@ -1,27 +1,27 @@
-"""Low-level LMDB-backed shelf operations.
+"""Low-level LMDB-backed shelf operations and scan-state management.
 
-This module owns direct access to a named LMDB database:
+`Shelf` is the storage-facing scan session for one named LMDB database inside a
+transaction. It owns mutable scan state such as exact-key selection, key-range
+selection, and scan direction. Each iteration opens a fresh LMDB cursor and
+replays the current scan from that state.
 
-- key existence and point lookup
-- key scanning and ranged key scanning
-- item reads and writes with MessagePack serialization
-- direct mutation helpers such as put/delete
-
-It is intentionally close to the storage layer and does not define higher-level
-query composition semantics.
+Transform composition does not live here. Methods like `filter()`, `slice()`,
+and `sort()` create `ShelfQuery` wrappers so cursor selection and transform
+state stay in separate modules.
 """
 
-# lib: built-in
 from __future__ import annotations
 
-from typing import Any, Generator, Iterable, cast
+from collections.abc import Callable, Generator, Iterable, Iterator
+from typing import TYPE_CHECKING, Any, cast
 
-# lib: external
 import lmdb
 import msgpack
 
-# lib: local
-from .schema import Item, MutationResult
+from .schema import UNDEF, Item, MutationResult
+
+if TYPE_CHECKING:
+    from .query import ShelfQuery
 
 
 def packb(value: Any) -> bytes:
@@ -35,14 +35,26 @@ def unpackb(value: bytes) -> Any:
 
 
 class Shelf:
-    """High-level direct key/value operations for an LMDB named database."""
+    """Named-database wrapper with mutable scan state and direct mutations."""
 
     def __init__(self, lmdb_env: lmdb.Environment, tx: lmdb.Transaction, shelf: str):
         self._tx = tx
-        self._shelf = lmdb_env.open_db(
-            shelf.encode(),
-            txn=tx,
-        )
+        self._shelf = lmdb_env.open_db(shelf.encode(), txn=tx)
+        self._exact_key: str | None = None
+        self._start: str | None = None
+        self._stop: str | None = None
+        self._descending = False
+
+    def _cursor(self) -> lmdb.Cursor:
+        """Create an LMDB cursor for this shelf."""
+        return self._tx.cursor(db=self._shelf)
+
+    def get(self, key: str) -> Item | None:
+        """Retrieve a value by key without changing scan state."""
+        value = self._tx.get(key.encode(), db=self._shelf)
+        if value is None:
+            return None
+        return Item(key, unpackb(value))
 
     def put(self, key: str, value: Any) -> MutationResult:
         """Store a single key/value pair."""
@@ -71,60 +83,64 @@ class Shelf:
             results.append(MutationResult(key=key, ok=ok))
         return results
 
-    def item(self, key: str) -> Item | None:
-        """Retrieve a value by key."""
-        value = self._tx.get(key.encode(), db=self._shelf)
-        if value is None:
-            return None
-        return Item(key, unpackb(value))
+    def _delete_keys(self, keys: Iterable[str]) -> list[MutationResult]:
+        """Delete multiple keys without changing scan state."""
+        results: list[MutationResult] = []
+        for key in keys:
+            ok = cast(bool, self._tx.delete(key.encode(), db=self._shelf))
+            results.append(MutationResult(key=key, ok=ok))
+        return results
 
-    def key(self, key: str) -> bool:
-        """Return ``True`` if the key exists in the shelf."""
+    def asc(self) -> Shelf:
+        """Set ascending scan order."""
+        self._descending = False
+        return self
+
+    def desc(self) -> Shelf:
+        """Set descending scan order."""
+        self._descending = True
+        return self
+
+    def key(self, key: str) -> Shelf:
+        """Select a single key from the shelf."""
+        self._exact_key = key
+        self._start = None
+        self._stop = None
+        return self
+
+    def keys_range(self, start: str, stop: str | None = None) -> Shelf:
+        """Select keys in the range ``[start, stop)``."""
+        self._exact_key = None
+        self._start = start
+        self._stop = stop
+        return self
+
+    def keys(self) -> Generator[str, None, None]:
+        """Iterate selected keys from the current scan state."""
         with self._cursor() as cur:
-            return cast(bool, cur.set_key(key.encode()))
-
-    def _cursor(self) -> lmdb.Cursor:
-        """Create an LMDB cursor for this shelf."""
-        return self._tx.cursor(db=self._shelf)
-
-    def keys(
-        self,
-        limit: int | None = None,
-        reverse: bool = False,
-    ) -> Generator[str, None, None]:
-        """Iterate over keys in the shelf."""
-        with self._cursor() as cur:
-            count = 0
-            if reverse:
-                if not cur.last():
-                    return
-                while True:
-                    if limit is not None and count >= limit:
-                        break
-                    yield cast(bytes, cur.key()).decode()
-                    count += 1
-                    if not cur.prev():
-                        break
+            if self._exact_key is not None:
+                if cur.set_key(self._exact_key.encode()):
+                    yield self._exact_key
                 return
 
-            for key, _ in cur.iternext():
-                if limit is not None and count >= limit:
-                    break
-                yield key.decode()
-                count += 1
+            if self._start is None:
+                if self._descending:
+                    if not cur.last():
+                        return
+                    while True:
+                        yield cast(bytes, cur.key()).decode()
+                        if not cur.prev():
+                            break
+                    return
 
-    def keys_range(
-        self,
-        start: str,
-        stop: str | None = None,
-        reverse: bool = False,
-    ) -> Generator[str, None, None]:
-        """Iterate over keys in a key range."""
-        start_b = start.encode()
-        stop_b = stop.encode() if stop is not None else None
+                for key, _ in cur.iternext():
+                    yield key.decode()
+                return
 
-        with self._cursor() as cur:
-            if reverse:
+            start_b = self._start.encode()
+            stop_b = self._stop.encode() if self._stop is not None else None
+
+            if self._descending:
                 if stop_b is None:
                     if not cur.last():
                         return
@@ -150,42 +166,69 @@ class Shelf:
                     break
                 yield key.decode()
 
-    def key_first(self) -> str | None:
-        """Return the first key in the shelf, if any."""
-        with self._cursor() as cur:
-            if cur.first():
-                return cast(bytes, cur.key()).decode()
-        return None
+    def __iter__(self) -> Iterator[Item]:
+        """Iterate the current scan as key-only items."""
+        yield from (Item(key, UNDEF) for key in self.keys())
 
-    def key_last(self) -> str | None:
-        """Return the last key in the shelf, if any."""
-        with self._cursor() as cur:
-            if cur.last():
-                return cast(bytes, cur.key()).decode()
-        return None
+    def filter(self, fn: Callable[[Item], bool]) -> ShelfQuery:
+        """Create a filtered query over the current scan."""
+        from .query import ShelfQuery
+
+        return ShelfQuery(self).filter(fn)
+
+    def slice(
+        self,
+        start: int | None = None,
+        stop: int | None = None,
+        step: int | None = None,
+    ) -> ShelfQuery:
+        """Create a sliced query over the current scan."""
+        from .query import ShelfQuery
+
+        return ShelfQuery(self).slice(start, stop, step)
+
+    def sort(
+        self,
+        key: Callable[[Item], Any] | None = None,
+        reverse: bool = False,
+    ) -> ShelfQuery:
+        """Create a sorted query over the current scan."""
+        from .query import ShelfQuery
+
+        return ShelfQuery(self).sort(key=key, reverse=reverse)
 
     def count(self) -> int:
-        """Count keys in the shelf."""
-        return cast(int, self._tx.stat(db=self._shelf)["entries"])
+        """Return the number of selected items."""
+        from .query import ShelfQuery
 
-    def delete(self, keys: Iterable[str]) -> list[MutationResult]:
-        """Delete multiple keys from the shelf."""
-        results: list[MutationResult] = []
-        for key in keys:
-            ok = cast(bool, self._tx.delete(key.encode(), db=self._shelf))
-            results.append(MutationResult(key=key, ok=ok))
-        return results
+        return ShelfQuery(self).count()
 
-    def items(self, reverse: bool = False) -> Generator[Item, None, None]:
-        """Iterate over all key/value pairs in the shelf."""
-        with self._cursor() as cur:
-            if reverse:
-                if not cur.last():
-                    return
-                yield Item(cast(bytes, cur.key()).decode(), unpackb(cast(bytes, cur.value())))
-                while cur.prev():
-                    yield Item(cast(bytes, cur.key()).decode(), unpackb(cast(bytes, cur.value())))
-                return
+    def exists(self) -> bool:
+        """Return ``True`` when at least one item is selected."""
+        from .query import ShelfQuery
 
-            for key, value in cur.iternext():
-                yield Item(key.decode(), unpackb(value))
+        return ShelfQuery(self).exists()
+
+    def item(self) -> Item:
+        """Return the single selected item with its loaded value."""
+        from .query import ShelfQuery
+
+        return ShelfQuery(self).item()
+
+    def items(self) -> ShelfQuery:
+        """Create a query that loads selected items as key/value pairs."""
+        from .query import ShelfQuery
+
+        return ShelfQuery(self).items()
+
+    def update(self, fn: Callable[[Item], Any]) -> list[MutationResult]:
+        """Update the selected items using ``fn``."""
+        from .query import ShelfQuery
+
+        return ShelfQuery(self).update(fn)
+
+    def delete(self) -> list[MutationResult]:
+        """Delete the currently selected items."""
+        from .query import ShelfQuery
+
+        return ShelfQuery(self).delete()

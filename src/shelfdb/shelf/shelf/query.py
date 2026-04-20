@@ -1,4 +1,15 @@
-"""Chainable lazy query helpers built on top of ``Shelf``."""
+"""Public fluent query API built on top of ``Shelf``.
+
+`ShelfQuery` combines two layers cleanly:
+
+- selector methods (`key()`, `keys_range()`, `asc()`, `desc()`) copy the wrapped
+  shelf scan state
+- transform methods (`keys()`, `items()`, `filter()`, `slice()`, `sort()`) wrap
+  the selected stream without mutating cursor state
+
+Iteration starts from the copied shelf scan, yields key-only `Item(key, UNDEF)`
+entries by default, and then applies transforms.
+"""
 
 from __future__ import annotations
 
@@ -7,99 +18,99 @@ from collections.abc import Callable, Iterator
 from itertools import islice
 from typing import Any
 
-from dictify import UNDEF
-
-from .schema import Item, MutationResult
+from .schema import UNDEF, Item, MutationResult
 from .shelf import Shelf
 
-
-def _default_iter_items(shelf: Shelf, reverse: bool) -> Iterator[Item]:
-    yield from (Item(key, UNDEF) for key in shelf.keys(reverse=reverse))
+type Transform = Callable[[Iterator[Item]], Iterator[Item]]
 
 
 class ShelfQuery:
-    """Immutable lazy query wrapper for a ``Shelf`` instance."""
+    """Immutable public query wrapper over a copied shelf scan plus transforms.
+
+    Selector methods return new queries with copied shelf scan state. Transform
+    methods return new queries with the same base scan plus an appended transform
+    pipeline. This keeps built queries independent while still allowing fluent
+    selector-after-transform usage.
+    """
 
     def __init__(
         self,
         shelf: Shelf | ShelfQuery,
-        source: Callable[[bool], Iterator[Item]] | None = None,
-        descending: bool = False,
+        transforms: tuple[Transform, ...] | None = None,
     ):
-        self._shelf = shelf._shelf if isinstance(shelf, ShelfQuery) else shelf
-        self._iter_items = (
-            source
-            if source is not None
-            else lambda reverse: _default_iter_items(self._shelf, reverse)
-        )
-        self._descending = descending
+        if isinstance(shelf, ShelfQuery):
+            self._shelf = shelf._shelf
+            self._transforms = shelf._transforms if transforms is None else transforms
+            return
+
+        self._shelf = shelf
+        self._transforms = () if transforms is None else transforms
 
     def __getattr__(self, name: str) -> Any:
-        """Delegate missing attributes to the wrapped shelf."""
+        """Delegate direct shelf operations to the wrapped shelf."""
         return getattr(self._shelf, name)
 
     def __iter__(self) -> Iterator[Item]:
-        """Iterate over the current query source."""
-        return self._iter_items(self._descending)
+        """Iterate the current base scan, then apply transforms."""
+        items: Iterator[Item] = (Item(key, UNDEF) for key in self._shelf.keys())
+        for transform in self._transforms:
+            items = transform(items)
+        return items
 
     def _new(
         self,
-        source: Callable[[bool], Iterator[Item]],
-        descending: bool | None = None,
+        *,
+        shelf: Shelf | None = None,
+        transforms: tuple[Transform, ...] | None = None,
     ) -> ShelfQuery:
         return ShelfQuery(
-            self._shelf,
-            source,
-            self._descending if descending is None else descending,
+            self._shelf if shelf is None else shelf,
+            self._transforms if transforms is None else transforms,
         )
 
-    def _load_items(self, reverse: bool) -> Iterator[Item]:
-        for item in self._iter_items(reverse):
-            if (resolved := self._load(item)) is not None:
-                yield resolved
+    def _append_transform(self, transform: Transform) -> ShelfQuery:
+        return self._new(transforms=self._transforms + (transform,))
 
-    def _load(self, item: Item) -> Item | None:
-        if item.value is UNDEF:
-            return self._shelf.item(item.key)
-        return item
-
-    def desc(self) -> ShelfQuery:
-        """Return the query in descending iteration order."""
-        return self._new(self._iter_items, descending=True)
+    def _load_items(self, items: Iterator[Item]) -> Iterator[Item]:
+        for item in items:
+            if item.value is UNDEF:
+                if (loaded := self._shelf.get(item.key)) is not None:
+                    yield loaded
+            else:
+                yield item
 
     def asc(self) -> ShelfQuery:
-        """Return the query in ascending iteration order."""
-        return self._new(self._iter_items, descending=False)
+        """Return the query with ascending base scan order."""
+        return self._new(shelf=self._shelf.asc())
+
+    def desc(self) -> ShelfQuery:
+        """Return the query with descending base scan order."""
+        return self._new(shelf=self._shelf.desc())
 
     def key(self, key: str) -> ShelfQuery:
-        """Select a single key if it exists in the current query."""
-        return self._new(
-            lambda reverse: bfilter(
-                lambda item: item.key == key,
-                self._iter_items(reverse),
-            )
-        )
+        """Return the query narrowed to one key."""
+        return self._new(shelf=self._shelf.select_key(key))
+
+    def keys_range(self, start: str, stop: str | None = None) -> ShelfQuery:
+        """Return the query narrowed to keys in ``[start, stop)``."""
+        return self._new(shelf=self._shelf.select_keys_range(start, stop))
 
     def keys(self) -> ShelfQuery:
         """Project the current query to key-only items."""
 
-        def source(reverse: bool) -> Iterator[Item]:
-            yield from (Item(item.key, UNDEF) for item in self._iter_items(reverse))
+        def transform(items: Iterator[Item]) -> Iterator[Item]:
+            yield from (Item(item.key, UNDEF) for item in items)
 
-        return self._new(source)
+        return self._append_transform(transform)
 
-    def keys_range(self, start: str, stop: str | None = None) -> ShelfQuery:
-        """Select items whose keys fall within the requested range."""
+    def items(self) -> ShelfQuery:
+        """Project the current query to loaded key/value items."""
+        return self._append_transform(self._load_items)
 
-        def in_range(item: Item) -> bool:
-            if item.key < start:
-                return False
-            if stop is not None and item.key >= stop:
-                return False
-            return True
-
-        return self._new(
-            lambda reverse: bfilter(in_range, self._iter_items(reverse))
+    def filter(self, fn: Callable[[Item], bool]) -> ShelfQuery:
+        """Filter the current query results."""
+        return self._append_transform(
+            lambda items: bfilter(fn, self._load_items(items))
         )
 
     def slice(
@@ -110,14 +121,13 @@ class ShelfQuery:
     ) -> ShelfQuery:
         """Slice the current query results."""
 
-        def source(reverse: bool) -> Iterator[Item]:
-            items = self._iter_items(reverse)
+        def transform(items: Iterator[Item]) -> Iterator[Item]:
             if step is None:
                 yield from islice(items, start, stop)
             else:
                 yield from islice(items, start, stop, step)
 
-        return self._new(source)
+        return self._append_transform(transform)
 
     def sort(
         self,
@@ -126,47 +136,26 @@ class ShelfQuery:
     ) -> ShelfQuery:
         """Sort the current query results."""
 
-        def source(scan_reverse: bool) -> Iterator[Item]:
-            items = tuple(self._load_items(scan_reverse))
+        def transform(items: Iterator[Item]) -> Iterator[Item]:
+            loaded_items = tuple(self._load_items(items))
             if key is None:
-                yield from sorted(items, key=lambda item: item.key, reverse=reverse)
+                yield from sorted(
+                    loaded_items,
+                    key=lambda item: item.key,
+                    reverse=reverse,
+                )
             else:
-                yield from sorted(items, key=key, reverse=reverse)
+                yield from sorted(loaded_items, key=key, reverse=reverse)
 
-        return self._new(source)
-
-    def filter(self, fn: Callable[[Item], bool]) -> ShelfQuery:
-        """Filter the current query results by ``fn``."""
-        return self._new(lambda reverse: bfilter(fn, self._load_items(reverse)))
-
-    def key_first(self) -> ShelfQuery:
-        """Select the first item from the current query, if any."""
-
-        def source(reverse: bool) -> Iterator[Item]:
-            if (item := next(self._iter_items(reverse), None)) is not None:
-                yield item
-
-        return self._new(source)
-
-    def key_last(self) -> ShelfQuery:
-        """Select the last item from the current query, if any."""
-
-        def source(reverse: bool) -> Iterator[Item]:
-            last: Item | None = None
-            for item in self._iter_items(reverse):
-                last = item
-            if last is not None:
-                yield last
-
-        return self._new(source)
+        return self._append_transform(transform)
 
     def count(self) -> int:
         """Return the number of selected items."""
-        return sum(1 for _ in self._iter_items(self._descending))
+        return sum(1 for _ in self)
 
     def exists(self) -> bool:
         """Return ``True`` when at least one item is selected."""
-        return next(self._iter_items(self._descending), None) is not None
+        return next(iter(self), None) is not None
 
     def item(self) -> Item:
         """Return the single selected item.
@@ -176,7 +165,7 @@ class ShelfQuery:
         ValueError
             If zero or more than one item is selected.
         """
-        items = self.items()
+        items = iter(self.items())
         first = next(items, None)
         if first is None:
             raise ValueError("expected exactly one selected item, found none")
@@ -184,16 +173,12 @@ class ShelfQuery:
             raise ValueError("expected exactly one selected item, found many")
         return first
 
-    def items(self) -> Iterator[Item]:
-        """Iterate over the selected items, loading values when needed."""
-        return self._load_items(self._descending)
-
     def update(self, fn: Callable[[Item], Any]) -> list[MutationResult]:
         """Update the selected items using ``fn``."""
         results: list[MutationResult] = []
-        keys = tuple(item.key for item in self._load_items(self._descending))
+        keys = tuple(item.key for item in self.items())
         for key in keys:
-            item = self._shelf.item(key)
+            item = self._shelf.get(key)
             if item is None:
                 continue
             results.append(self._shelf.put(key, fn(item)))
@@ -201,5 +186,5 @@ class ShelfQuery:
 
     def delete(self) -> list[MutationResult]:
         """Delete the selected items."""
-        keys = tuple(item.key for item in self._iter_items(self._descending))
-        return self._shelf.delete(keys)
+        keys = tuple(item.key for item in self)
+        return self._shelf._delete_keys(keys)

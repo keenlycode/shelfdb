@@ -2,13 +2,13 @@
 
 # lib: built-in
 from __future__ import annotations
-from typing import Any
 
 # lib: external
 import lmdb
 
 # lib: local
-from .shelf import Shelf, ShelfQuery
+from .shelf.query import ShelfQuery
+from .shelf.shelf import Shelf
 
 
 class DB:
@@ -129,7 +129,6 @@ class Transaction:
     ) -> None:
         self._lmdb_env: lmdb.Environment = lmdb_env
         self._tx: lmdb.Transaction = tx
-        self._shelf: Any = None
         self._is_write = write
 
     @property
@@ -206,7 +205,7 @@ class Transaction:
         Returns
         -------
         ShelfQuery
-            Query wrapper bound to this transaction's shelf.
+            Query wrapper bound to this transaction's named shelf.
         """
 
         return ShelfQuery(Shelf(self._lmdb_env, self.tx, name))

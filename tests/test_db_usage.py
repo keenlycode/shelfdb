@@ -1,3 +1,5 @@
+import pytest
+
 from dictify import UNDEF
 
 from shelfdb.shelf import DB, ShelfQuery
@@ -159,6 +161,35 @@ def test_shelf_query_desc_and_asc_iterate_in_expected_order(tmp_path):
             ]
 
 
+def test_shelf_query_keys_range_honors_desc_scan_order(tmp_path):
+    db_path = tmp_path / "shelfdb"
+
+    with DB(str(db_path)) as db:
+        with db.transaction(write=True) as tx:
+            users = tx.shelf("users")
+            users.put_many(
+                [
+                    Item("alice", {"age": 30}),
+                    Item("bob", {"age": 25}),
+                    Item("carol", {"age": 20}),
+                ]
+            )
+
+            assert list(ShelfQuery(users).keys_range("bob", "d").desc()) == [
+                Item("carol", UNDEF),
+                Item("bob", UNDEF),
+            ]
+            assert list(ShelfQuery(users).keys_range("bob", "d").desc().items()) == [
+                Item("carol", {"age": 20}),
+                Item("bob", {"age": 25}),
+            ]
+            assert list(ShelfQuery(users).keys_range("bob").desc()) == [
+                Item("carol", UNDEF),
+                Item("bob", UNDEF),
+            ]
+            assert list(ShelfQuery(users).keys_range("bob", "bob")) == []
+
+
 def test_shelf_query_update(tmp_path):
     db_path = tmp_path / "shelfdb"
 
@@ -269,3 +300,56 @@ def test_shelf_query_filter_chain(tmp_path):
         with db.transaction(write=False) as tx:
             users = tx.shelf("users")
             assert list(users.keys()) == [Item("carol", UNDEF)]
+
+
+def test_shelf_query_selectors_narrow_base_scan_before_slice(tmp_path):
+    db_path = tmp_path / "shelfdb"
+
+    with DB(str(db_path)) as db:
+        with db.transaction(write=True) as tx:
+            users = tx.shelf("users")
+            users.put_many(
+                [
+                    Item("alice", {"age": 30}),
+                    Item("bob", {"age": 25}),
+                    Item("carol", {"age": 20}),
+                ]
+            )
+
+            assert list(ShelfQuery(users).slice(0, 1).key("bob")) == [
+                Item("bob", UNDEF)
+            ]
+            assert list(ShelfQuery(users).desc().slice(0, 1).key("carol")) == [
+                Item("carol", UNDEF)
+            ]
+            assert list(ShelfQuery(users).slice(0, 2).keys_range("bob", "d")) == [
+                Item("bob", UNDEF),
+                Item("carol", UNDEF),
+            ]
+
+
+def test_shelf_query_selector_intersections_and_removed_helpers(tmp_path):
+    db_path = tmp_path / "shelfdb"
+
+    with DB(str(db_path)) as db:
+        with db.transaction(write=True) as tx:
+            users = tx.shelf("users")
+            users.put_many(
+                [
+                    Item("alice", {"age": 30}),
+                    Item("bob", {"age": 25}),
+                    Item("carol", {"age": 20}),
+                ]
+            )
+
+            assert list(ShelfQuery(users).key("alice").key("bob")) == []
+            assert list(ShelfQuery(users).key("bob").keys_range("a", "c")) == [
+                Item("bob", UNDEF)
+            ]
+            assert list(ShelfQuery(users).keys_range("c", "d").key("bob")) == []
+
+            with pytest.raises(AttributeError):
+                ShelfQuery(users).key_first()
+
+            with pytest.raises(AttributeError):
+                ShelfQuery(users).key_last()

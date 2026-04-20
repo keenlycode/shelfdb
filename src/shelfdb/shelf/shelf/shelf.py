@@ -119,12 +119,32 @@ class Shelf:
         self,
         start: str,
         stop: str | None = None,
+        reverse: bool = False,
     ) -> Generator[str, None, None]:
         """Iterate over keys in a key range."""
         start_b = start.encode()
         stop_b = stop.encode() if stop is not None else None
 
         with self._cursor() as cur:
+            if reverse:
+                if stop_b is None:
+                    if not cur.last():
+                        return
+                elif not cur.set_range(stop_b):
+                    if not cur.last():
+                        return
+                elif not cur.prev():
+                    return
+
+                while True:
+                    key = cast(bytes, cur.key())
+                    if key < start_b:
+                        break
+                    yield key.decode()
+                    if not cur.prev():
+                        break
+                return
+
             if not cur.set_range(start_b):
                 return
             for key, _ in cur:

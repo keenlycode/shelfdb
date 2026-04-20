@@ -142,53 +142,53 @@ class Shelf:
             results.append(MutationResult(key=key, ok=ok))
         return results
 
+    def _position_cursor(self, cur: lmdb.Cursor) -> bool:
+        """Position ``cur`` at the first key for the current scan."""
+        if self._exact_key is not None:
+            return cast(bool, cur.set_key(self._exact_key.encode()))
+
+        if self._start is None:
+            if self._descending:
+                return cast(bool, cur.last())
+            return cast(bool, cur.first())
+
+        if not self._descending:
+            return cast(bool, cur.set_range(self._start.encode()))
+
+        if self._stop is None:
+            return cast(bool, cur.last())
+
+        if not cur.set_range(self._stop.encode()):
+            return cast(bool, cur.last())
+        return cast(bool, cur.prev())
+
+    def _key_in_bounds(self, key: bytes) -> bool:
+        """Return ``True`` when ``key`` still belongs to the current scan."""
+        if self._exact_key is not None:
+            return key == self._exact_key.encode()
+        if self._descending:
+            return self._start is None or key >= self._start.encode()
+        return self._stop is None or key < self._stop.encode()
+
+    def _advance_cursor(self, cur: lmdb.Cursor) -> bool:
+        """Advance ``cur`` according to the current scan direction."""
+        if self._descending:
+            return cast(bool, cur.prev())
+        return cast(bool, cur.next())
+
+    def _iter_keys(self, cur: lmdb.Cursor) -> Generator[str, None, None]:
+        """Yield keys from ``cur`` until the current scan goes out of bounds."""
+        while True:
+            key = cast(bytes, cur.key())
+            if not self._key_in_bounds(key):
+                break
+            yield key.decode()
+            if not self._advance_cursor(cur):
+                break
+
     def keys(self) -> Generator[str, None, None]:
         """Iterate keys selected by the current scan state."""
         with self._cursor() as cur:
-            if self._exact_key is not None:
-                if cur.set_key(self._exact_key.encode()):
-                    yield self._exact_key
+            if not self._position_cursor(cur):
                 return
-
-            if self._start is None:
-                if self._descending:
-                    if not cur.last():
-                        return
-                    while True:
-                        yield cast(bytes, cur.key()).decode()
-                        if not cur.prev():
-                            break
-                    return
-
-                for key, _ in cur.iternext():
-                    yield key.decode()
-                return
-
-            start_b = self._start.encode()
-            stop_b = self._stop.encode() if self._stop is not None else None
-
-            if self._descending:
-                if stop_b is None:
-                    if not cur.last():
-                        return
-                elif not cur.set_range(stop_b):
-                    if not cur.last():
-                        return
-                elif not cur.prev():
-                    return
-
-                while True:
-                    key = cast(bytes, cur.key())
-                    if key < start_b:
-                        break
-                    yield key.decode()
-                    if not cur.prev():
-                        break
-                return
-
-            if not cur.set_range(start_b):
-                return
-            for key, _ in cur:
-                if stop_b is not None and key >= stop_b:
-                    break
-                yield key.decode()
+            yield from self._iter_keys(cur)

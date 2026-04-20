@@ -4,6 +4,28 @@ from shelfdb.shelf import DB, UNDEF, ShelfQuery
 from shelfdb.shelf.shelf import Item, MutationResult
 
 
+def _seed_users(users) -> None:
+    users.put_many(
+        [
+            Item("alice", {"age": 30, "role": "admin"}),
+            Item("bob", {"age": 25, "role": "user"}),
+            Item("carol", {"age": 20, "role": "user"}),
+            Item("dave", {"age": 35, "role": "admin"}),
+        ]
+    )
+
+
+def test_transaction_shelf_returns_query_wrapper(tmp_path):
+    db_path = tmp_path / "shelfdb"
+
+    with DB(str(db_path)) as db:
+        with db.transaction(write=True) as tx:
+            tx.shelf("users")
+
+        with db.transaction(write=False) as tx:
+            assert isinstance(tx.shelf("users"), ShelfQuery)
+
+
 def test_db_shelf_happy_path_put_get_and_items(tmp_path):
     db_path = tmp_path / "shelfdb"
 
@@ -18,14 +40,15 @@ def test_db_shelf_happy_path_put_get_and_items(tmp_path):
             )
 
         with db.transaction(write=False) as tx:
-            assert tx.shelf("users").key("alice").item() == Item(
+            users = tx.shelf("users")
+            assert users.key("alice").item() == Item(
                 "alice", {"name": "Alice", "age": 30}
             )
-            assert list(tx.shelf("users")) == [
+            assert list(users) == [
                 Item("alice", UNDEF),
                 Item("bob", UNDEF),
             ]
-            assert list(tx.shelf("users").items()) == [
+            assert list(users.items()) == [
                 Item("alice", {"name": "Alice", "age": 30}),
                 Item("bob", {"name": "Bob", "age": 25}),
             ]
@@ -48,104 +71,118 @@ def test_db_keeps_named_shelves_isolated(tmp_path):
             assert tx.shelf("posts").key("alice").exists() is False
 
 
-def test_successful_write_transaction_persists_between_transactions(tmp_path):
+def test_selector_queries_are_independent_snapshots(tmp_path):
     db_path = tmp_path / "shelfdb"
 
     with DB(str(db_path)) as db:
         with db.transaction(write=True) as tx:
-            tx.shelf("settings").put("theme", {"mode": "dark"})
+            _seed_users(tx.shelf("users"))
 
         with db.transaction(write=False) as tx:
-            assert tx.shelf("settings").key("theme").item() == Item(
-                "theme", {"mode": "dark"}
-            )
+            base = tx.shelf("users")
+            q1 = base.keys_range("bob", "d")
+            q2 = base.key("alice")
 
-
-def test_shelf_scan_state_controls_key_iteration(tmp_path):
-    db_path = tmp_path / "shelfdb"
-
-    with DB(str(db_path)) as db:
-        with db.transaction(write=True) as tx:
-            tx.shelf("users").put_many(
-                [
-                    Item("alice", {"age": 30}),
-                    Item("bob", {"age": 25}),
-                    Item("carol", {"age": 20}),
-                ]
-            )
-
-        with db.transaction(write=False) as tx:
-            assert list(tx.shelf("users").keys()) == ["alice", "bob", "carol"]
-            assert list(tx.shelf("users").desc().keys()) == ["carol", "bob", "alice"]
-            assert list(tx.shelf("users").keys_range("bob", "d").keys()) == [
-                "bob",
-                "carol",
+            assert list(base) == [
+                Item("alice", UNDEF),
+                Item("bob", UNDEF),
+                Item("carol", UNDEF),
+                Item("dave", UNDEF),
             ]
-            assert list(tx.shelf("users").keys_range("bob", "d").desc()) == [
+            assert list(q1) == [Item("bob", UNDEF), Item("carol", UNDEF)]
+            assert list(q2) == [Item("alice", UNDEF)]
+
+
+def test_desc_and_keys_range_control_base_scan(tmp_path):
+    db_path = tmp_path / "shelfdb"
+
+    with DB(str(db_path)) as db:
+        with db.transaction(write=True) as tx:
+            _seed_users(tx.shelf("users"))
+
+        with db.transaction(write=False) as tx:
+            users = tx.shelf("users")
+            assert list(users.desc()) == [
+                Item("dave", UNDEF),
+                Item("carol", UNDEF),
+                Item("bob", UNDEF),
+                Item("alice", UNDEF),
+            ]
+            assert list(users.keys_range("bob", "d").desc()) == [
+                Item("carol", UNDEF),
+                Item("bob", UNDEF),
+            ]
+            assert list(users.keys_range("bob").desc()) == [
+                Item("dave", UNDEF),
                 Item("carol", UNDEF),
                 Item("bob", UNDEF),
             ]
 
 
-def test_shelf_item_count_and_exists_use_current_scan_state(tmp_path):
+def test_selector_after_transform_still_narrows_base_scan(tmp_path):
     db_path = tmp_path / "shelfdb"
 
     with DB(str(db_path)) as db:
         with db.transaction(write=True) as tx:
-            tx.shelf("users").put_many(
-                [
-                    Item("alice", {"age": 30}),
-                    Item("bob", {"age": 25}),
-                    Item("carol", {"age": 20}),
-                ]
-            )
+            _seed_users(tx.shelf("users"))
 
         with db.transaction(write=False) as tx:
-            assert tx.shelf("users").count() == 3
-            assert tx.shelf("users").key("alice").exists() is True
-            assert tx.shelf("users").key("missing").exists() is False
-            assert tx.shelf("users").key("alice").item() == Item("alice", {"age": 30})
+            users = tx.shelf("users")
 
+            def fn(item):
+                return item.value["age"] >= 25
 
-def test_shelf_filter_returns_transform_query(tmp_path):
-    db_path = tmp_path / "shelfdb"
-
-    with DB(str(db_path)) as db:
-        with db.transaction(write=True) as tx:
-            tx.shelf("users").put_many(
-                [
-                    Item("alice", {"age": 30}),
-                    Item("bob", {"age": 25}),
-                    Item("carol", {"age": 20}),
-                ]
-            )
-
-        with db.transaction(write=False) as tx:
-            query = tx.shelf("users").filter(lambda item: item.value["age"] >= 25)
-            assert isinstance(query, ShelfQuery)
-            assert list(query) == [
-                Item("alice", {"age": 30}),
-                Item("bob", {"age": 25}),
+            assert list(users.filter(fn).keys_range("bob", "d").items()) == [
+                Item("bob", {"age": 25, "role": "user"}),
             ]
-            assert list(query.keys()) == [
-                Item("alice", UNDEF),
+            assert list(users.slice(0, 2).key("bob")) == [Item("bob", UNDEF)]
+
+
+def test_keys_and_items_are_transforms_only(tmp_path):
+    db_path = tmp_path / "shelfdb"
+
+    with DB(str(db_path)) as db:
+        with db.transaction(write=True) as tx:
+            _seed_users(tx.shelf("users"))
+
+        with db.transaction(write=False) as tx:
+            users = tx.shelf("users").keys_range("bob", "d")
+
+            assert list(users.items()) == [
+                Item("bob", {"age": 25, "role": "user"}),
+                Item("carol", {"age": 20, "role": "user"}),
+            ]
+            assert list(users.items().keys()) == [
                 Item("bob", UNDEF),
+                Item("carol", UNDEF),
+            ]
+            assert list(users.filter(lambda item: item.value["age"] >= 20).keys()) == [
+                Item("bob", UNDEF),
+                Item("carol", UNDEF),
             ]
 
 
-def test_repeated_transforms_replay_from_same_shelf_scan_state(tmp_path):
+def test_filter_can_be_called_directly_on_transaction_shelf(tmp_path):
     db_path = tmp_path / "shelfdb"
 
     with DB(str(db_path)) as db:
         with db.transaction(write=True) as tx:
-            tx.shelf("users").put_many(
-                [
-                    Item("alice", {"age": 30}),
-                    Item("bob", {"age": 25}),
-                    Item("carol", {"age": 20}),
-                    Item("dave", {"age": 35}),
-                ]
-            )
+            _seed_users(tx.shelf("users"))
+
+        with db.transaction(write=False) as tx:
+            query = tx.shelf("users").filter(lambda item: item.value["role"] == "admin")
+            assert list(query) == [
+                Item("alice", {"age": 30, "role": "admin"}),
+                Item("dave", {"age": 35, "role": "admin"}),
+            ]
+
+
+def test_repeated_transforms_replay_from_same_base_query(tmp_path):
+    db_path = tmp_path / "shelfdb"
+
+    with DB(str(db_path)) as db:
+        with db.transaction(write=True) as tx:
+            _seed_users(tx.shelf("users"))
 
         with db.transaction(write=False) as tx:
             users = tx.shelf("users").keys_range("bob")
@@ -157,69 +194,38 @@ def test_repeated_transforms_replay_from_same_shelf_scan_state(tmp_path):
             second = list(users.filter(fn))
 
             assert first == second == [
-                Item("bob", {"age": 25}),
-                Item("dave", {"age": 35}),
+                Item("bob", {"age": 25, "role": "user"}),
+                Item("dave", {"age": 35, "role": "admin"}),
             ]
 
 
-def test_shelfquery_is_live_view_of_current_shelf_scan_state(tmp_path):
+def test_sort_slice_count_exists_and_item(tmp_path):
     db_path = tmp_path / "shelfdb"
 
     with DB(str(db_path)) as db:
         with db.transaction(write=True) as tx:
-            tx.shelf("users").put_many(
-                [
-                    Item("alice", {"age": 30}),
-                    Item("bob", {"age": 25}),
-                    Item("carol", {"age": 20}),
-                ]
-            )
+            _seed_users(tx.shelf("users"))
 
         with db.transaction(write=False) as tx:
             users = tx.shelf("users")
-            query = users.filter(lambda item: item.value["age"] >= 20).keys()
-
-            users.key("bob")
-
-            assert list(query) == [Item("bob", UNDEF)]
-
-
-def test_shelf_query_sort_and_slice_are_transform_only(tmp_path):
-    db_path = tmp_path / "shelfdb"
-
-    with DB(str(db_path)) as db:
-        with db.transaction(write=True) as tx:
-            tx.shelf("users").put_many(
-                [
-                    Item("alice", {"age": 30}),
-                    Item("bob", {"age": 25}),
-                    Item("carol", {"age": 20}),
-                ]
+            assert users.count() == 4
+            assert users.key("alice").exists() is True
+            assert users.key("missing").exists() is False
+            assert users.key("alice").item() == Item(
+                "alice", {"age": 30, "role": "admin"}
             )
-
-        with db.transaction(write=False) as tx:
-            query = tx.shelf("users").sort(reverse=True).slice(0, 2)
-            assert list(query) == [
-                Item("carol", {"age": 20}),
-                Item("bob", {"age": 25}),
+            assert list(users.sort(reverse=True).slice(0, 2)) == [
+                Item("dave", {"age": 35, "role": "admin"}),
+                Item("carol", {"age": 20, "role": "user"}),
             ]
 
-            with pytest.raises(AttributeError):
-                query.key("alice")
 
-
-def test_shelf_update_uses_selected_scan_state(tmp_path):
+def test_update_and_delete_use_current_selection(tmp_path):
     db_path = tmp_path / "shelfdb"
 
     with DB(str(db_path)) as db:
         with db.transaction(write=True) as tx:
-            tx.shelf("users").put_many(
-                [
-                    Item("alice", {"age": 30}),
-                    Item("bob", {"age": 25}),
-                    Item("carol", {"age": 20}),
-                ]
-            )
+            _seed_users(tx.shelf("users"))
 
             updated = tx.shelf("users").keys_range("bob", "d").update(
                 lambda item: {**item.value, "age": item.value["age"] + 1}
@@ -229,57 +235,33 @@ def test_shelf_update_uses_selected_scan_state(tmp_path):
                 MutationResult("carol", True),
             ]
 
+            deleted = tx.shelf("users").key("dave").delete()
+            assert deleted == [MutationResult("dave", True)]
+
         with db.transaction(write=False) as tx:
-            assert tx.shelf("users").key("alice").item() == Item("alice", {"age": 30})
-            assert tx.shelf("users").key("bob").item() == Item("bob", {"age": 26})
-            assert tx.shelf("users").key("carol").item() == Item("carol", {"age": 21})
+            users = tx.shelf("users")
+            assert users.key("alice").item() == Item(
+                "alice", {"age": 30, "role": "admin"}
+            )
+            assert users.key("bob").item() == Item(
+                "bob", {"age": 26, "role": "user"}
+            )
+            assert users.key("carol").item() == Item(
+                "carol", {"age": 21, "role": "user"}
+            )
+            assert users.key("dave").exists() is False
 
 
-def test_shelf_delete_uses_selected_scan_state(tmp_path):
+def test_item_raises_for_zero_or_many_results(tmp_path):
     db_path = tmp_path / "shelfdb"
 
     with DB(str(db_path)) as db:
         with db.transaction(write=True) as tx:
-            tx.shelf("users").put_many(
-                [
-                    Item("alice", {"age": 30}),
-                    Item("bob", {"age": 25}),
-                    Item("carol", {"age": 20}),
-                ]
-            )
-
-            deleted = tx.shelf("users").keys_range("bob", "d").delete()
-            assert deleted == [
-                MutationResult("bob", True),
-                MutationResult("carol", True),
-            ]
+            _seed_users(tx.shelf("users"))
 
         with db.transaction(write=False) as tx:
-            assert list(tx.shelf("users")) == [Item("alice", UNDEF)]
+            with pytest.raises(ValueError):
+                tx.shelf("users").key("missing").item()
 
-
-def test_shelfquery_keys_is_transform_not_cursor_mutation(tmp_path):
-    db_path = tmp_path / "shelfdb"
-
-    with DB(str(db_path)) as db:
-        with db.transaction(write=True) as tx:
-            tx.shelf("users").put_many(
-                [
-                    Item("alice", {"age": 30}),
-                    Item("bob", {"age": 25}),
-                    Item("carol", {"age": 20}),
-                ]
-            )
-
-        with db.transaction(write=False) as tx:
-            users = tx.shelf("users").keys_range("bob")
-            query = users.filter(lambda item: item.value["age"] >= 20).keys()
-
-            assert list(query) == [
-                Item("bob", UNDEF),
-                Item("carol", UNDEF),
-            ]
-            assert list(users) == [
-                Item("bob", UNDEF),
-                Item("carol", UNDEF),
-            ]
+            with pytest.raises(ValueError):
+                tx.shelf("users").item()

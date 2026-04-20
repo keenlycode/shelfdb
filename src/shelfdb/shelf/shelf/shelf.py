@@ -1,27 +1,27 @@
-"""Low-level LMDB-backed shelf operations and scan-state management.
+"""Low-level LMDB-backed shelf scan engine.
 
-`Shelf` is the storage-facing scan session for one named LMDB database inside a
-transaction. It owns mutable scan state such as exact-key selection, key-range
-selection, and scan direction. Each iteration opens a fresh LMDB cursor and
-replays the current scan from that state.
+`Shelf` is an internal helper used by `ShelfQuery`. It owns only storage-facing
+concerns:
 
-Transform composition does not live here. Methods like `filter()`, `slice()`,
-and `sort()` create `ShelfQuery` wrappers so cursor selection and transform
-state stay in separate modules.
+- direct key/value reads and writes
+- cursor-backed key scanning
+- copied scan state for exact-key, range, and direction selection
+
+It does not define query transforms such as `filter()`, `slice()`, `sort()`,
+`keys()`, or `items()`.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable, Generator, Iterable, Iterator
-from typing import TYPE_CHECKING, Any, cast
+from collections.abc import Generator, Iterable
+from typing import Any, cast
 
 import lmdb
 import msgpack
 
-from .schema import UNDEF, Item, MutationResult
+from .schema import Item, MutationResult
 
-if TYPE_CHECKING:
-    from .query import ShelfQuery
+_KEEP = object()
 
 
 def packb(value: Any) -> bytes:
@@ -35,15 +35,60 @@ def unpackb(value: bytes) -> Any:
 
 
 class Shelf:
-    """Named-database wrapper with mutable scan state and direct mutations."""
+    """Internal shelf state used to execute copied key scans."""
 
-    def __init__(self, lmdb_env: lmdb.Environment, tx: lmdb.Transaction, shelf: str):
+    def __init__(
+        self,
+        lmdb_env: lmdb.Environment,
+        tx: lmdb.Transaction,
+        shelf: str,
+        *,
+        exact_key: str | None = None,
+        start: str | None = None,
+        stop: str | None = None,
+        descending: bool = False,
+    ):
         self._tx = tx
         self._shelf = lmdb_env.open_db(shelf.encode(), txn=tx)
-        self._exact_key: str | None = None
-        self._start: str | None = None
-        self._stop: str | None = None
-        self._descending = False
+        self._exact_key = exact_key
+        self._start = start
+        self._stop = stop
+        self._descending = descending
+
+    def _copy(
+        self,
+        *,
+        exact_key: str | None | object = _KEEP,
+        start: str | None | object = _KEEP,
+        stop: str | None | object = _KEEP,
+        descending: bool | object = _KEEP,
+    ) -> Shelf:
+        shelf = object.__new__(Shelf)
+        shelf._tx = self._tx
+        shelf._shelf = self._shelf
+        shelf._exact_key = self._exact_key if exact_key is _KEEP else exact_key
+        shelf._start = self._start if start is _KEEP else start
+        shelf._stop = self._stop if stop is _KEEP else stop
+        shelf._descending = (
+            self._descending if descending is _KEEP else cast(bool, descending)
+        )
+        return shelf
+
+    def asc(self) -> Shelf:
+        """Return a copied shelf scan with ascending order."""
+        return self._copy(descending=False)
+
+    def desc(self) -> Shelf:
+        """Return a copied shelf scan with descending order."""
+        return self._copy(descending=True)
+
+    def select_key(self, key: str) -> Shelf:
+        """Return a copied shelf scan narrowed to one key."""
+        return self._copy(exact_key=key, start=None, stop=None)
+
+    def select_keys_range(self, start: str, stop: str | None = None) -> Shelf:
+        """Return a copied shelf scan narrowed to ``[start, stop)``."""
+        return self._copy(exact_key=None, start=start, stop=stop)
 
     def _cursor(self) -> lmdb.Cursor:
         """Create an LMDB cursor for this shelf."""
@@ -91,32 +136,8 @@ class Shelf:
             results.append(MutationResult(key=key, ok=ok))
         return results
 
-    def asc(self) -> Shelf:
-        """Set ascending scan order."""
-        self._descending = False
-        return self
-
-    def desc(self) -> Shelf:
-        """Set descending scan order."""
-        self._descending = True
-        return self
-
-    def key(self, key: str) -> Shelf:
-        """Select a single key from the shelf."""
-        self._exact_key = key
-        self._start = None
-        self._stop = None
-        return self
-
-    def keys_range(self, start: str, stop: str | None = None) -> Shelf:
-        """Select keys in the range ``[start, stop)``."""
-        self._exact_key = None
-        self._start = start
-        self._stop = stop
-        return self
-
     def keys(self) -> Generator[str, None, None]:
-        """Iterate selected keys from the current scan state."""
+        """Iterate keys selected by the current scan state."""
         with self._cursor() as cur:
             if self._exact_key is not None:
                 if cur.set_key(self._exact_key.encode()):
@@ -165,70 +186,3 @@ class Shelf:
                 if stop_b is not None and key >= stop_b:
                     break
                 yield key.decode()
-
-    def __iter__(self) -> Iterator[Item]:
-        """Iterate the current scan as key-only items."""
-        yield from (Item(key, UNDEF) for key in self.keys())
-
-    def filter(self, fn: Callable[[Item], bool]) -> ShelfQuery:
-        """Create a filtered query over the current scan."""
-        from .query import ShelfQuery
-
-        return ShelfQuery(self).filter(fn)
-
-    def slice(
-        self,
-        start: int | None = None,
-        stop: int | None = None,
-        step: int | None = None,
-    ) -> ShelfQuery:
-        """Create a sliced query over the current scan."""
-        from .query import ShelfQuery
-
-        return ShelfQuery(self).slice(start, stop, step)
-
-    def sort(
-        self,
-        key: Callable[[Item], Any] | None = None,
-        reverse: bool = False,
-    ) -> ShelfQuery:
-        """Create a sorted query over the current scan."""
-        from .query import ShelfQuery
-
-        return ShelfQuery(self).sort(key=key, reverse=reverse)
-
-    def count(self) -> int:
-        """Return the number of selected items."""
-        from .query import ShelfQuery
-
-        return ShelfQuery(self).count()
-
-    def exists(self) -> bool:
-        """Return ``True`` when at least one item is selected."""
-        from .query import ShelfQuery
-
-        return ShelfQuery(self).exists()
-
-    def item(self) -> Item:
-        """Return the single selected item with its loaded value."""
-        from .query import ShelfQuery
-
-        return ShelfQuery(self).item()
-
-    def items(self) -> ShelfQuery:
-        """Create a query that loads selected items as key/value pairs."""
-        from .query import ShelfQuery
-
-        return ShelfQuery(self).items()
-
-    def update(self, fn: Callable[[Item], Any]) -> list[MutationResult]:
-        """Update the selected items using ``fn``."""
-        from .query import ShelfQuery
-
-        return ShelfQuery(self).update(fn)
-
-    def delete(self) -> list[MutationResult]:
-        """Delete the currently selected items."""
-        from .query import ShelfQuery
-
-        return ShelfQuery(self).delete()

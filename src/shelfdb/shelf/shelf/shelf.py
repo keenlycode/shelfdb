@@ -85,10 +85,6 @@ class ShelfCursor:
         )
         return shelf
 
-    def io(self) -> ShelfIO:
-        """Return the low-level I/O helper for this shelf."""
-        return ShelfIO(self._handle)
-
     def asc(self) -> ShelfCursor:
         """Return a copied shelf scan with ascending order."""
         return self._copy(descending=False)
@@ -164,8 +160,13 @@ class ShelfCursor:
 class ShelfIO:
     """Internal direct LMDB read/write helper for one shelf."""
 
-    def __init__(self, handle: _ShelfHandle):
-        self._handle = handle
+    def __init__(
+        self,
+        lmdb_env: lmdb.Environment,
+        tx: lmdb.Transaction,
+        shelf: str,
+    ):
+        self._handle = _ShelfHandle(lmdb_env, tx, shelf)
 
     def get(self, key: str) -> Item | None:
         """Retrieve a value by key without changing scan state."""

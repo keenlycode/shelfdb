@@ -67,13 +67,11 @@ class ShelfQuery:
 
     def _load_items(self, items: Iterator[Item]) -> Iterator[Item]:
         for item in items:
-            if (loaded := self._load(item)) is not None:
-                yield loaded
-
-    def _load(self, item: Item) -> Item | None:
-        if item.value is UNDEF:
-            return self._shelf.get(item.key)
-        return item
+            if item.value is UNDEF:
+                if (loaded := self._shelf.get(item.key)) is not None:
+                    yield loaded
+            else:
+                yield item
 
     def asc(self) -> ShelfQuery:
         """Return the query with ascending base scan order."""

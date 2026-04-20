@@ -25,7 +25,13 @@ type Transform = Callable[[Iterator[Item]], Iterator[Item]]
 
 
 class ShelfQuery:
-    """Immutable query wrapper over a copied shelf scan plus transforms."""
+    """Immutable public query wrapper over a copied shelf scan plus transforms.
+
+    Selector methods return new queries with copied shelf scan state. Transform
+    methods return new queries with the same base scan plus an appended transform
+    pipeline. This keeps built queries independent while still allowing fluent
+    selector-after-transform usage.
+    """
 
     def __init__(
         self,
@@ -45,7 +51,7 @@ class ShelfQuery:
         return getattr(self._shelf, name)
 
     def __iter__(self) -> Iterator[Item]:
-        """Iterate over the current query."""
+        """Iterate the current base scan, then apply transforms."""
         items: Iterator[Item] = (Item(key, UNDEF) for key in self._shelf.keys())
         for transform in self._transforms:
             items = transform(items)

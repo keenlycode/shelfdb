@@ -35,7 +35,13 @@ def unpackb(value: bytes) -> Any:
 
 
 class Shelf:
-    """Internal shelf state used to execute copied key scans."""
+    """Internal copied scan state plus low-level storage operations.
+
+    A `Shelf` instance captures one LMDB named database together with one scan
+    configuration (`exact_key`, range bounds, and direction). Selector methods do
+    not mutate in place; they return copied `Shelf` instances with updated scan
+    state. Iteration always opens a fresh cursor and replays the configured scan.
+    """
 
     def __init__(
         self,

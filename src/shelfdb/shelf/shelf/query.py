@@ -1,4 +1,4 @@
-"""Public fluent query API built on top of ``ShelfCursor`` and ``ShelfIO``.
+"""Public fluent query API built on top of ``ShelfCursor`` and ``ShelfStore``.
 
 `ShelfQuery` combines two layers cleanly:
 
@@ -6,8 +6,7 @@
   cursor scan state
 - transform methods (`keys()`, `items()`, `filter()`, `slice()`, `sort()`) wrap
   the selected stream without mutating cursor state
-- write helpers (`put()`, `put_many()`, `update()`, `delete()`) delegate to the
-  internal LMDB I/O helper
+- read/write helpers delegate to the internal store helper
 
 Iteration starts from the copied shelf scan, yields key-only `Item(key, UNDEF)`
 entries by default, and then applies transforms.
@@ -21,7 +20,7 @@ from itertools import islice
 from typing import Any
 
 from .schema import UNDEF, Item, MutationResult
-from .shelf import ShelfCursor, ShelfIO
+from .shelf import ShelfCursor, ShelfStore
 
 type Transform = Callable[[Iterator[Item]], Iterator[Item]]
 
@@ -31,7 +30,7 @@ class ShelfQuery:
 
     Selector methods return new queries with copied shelf scan state. Transform
     methods return new queries with the same base scan plus an appended transform
-    pipeline. Write helpers delegate to the shared internal I/O helper. This
+    pipeline. Read/write helpers delegate to the shared internal store helper. This
     keeps built queries independent while still allowing fluent selector-after-
     transform usage.
     """
@@ -39,20 +38,20 @@ class ShelfQuery:
     def __init__(
         self,
         cursor: ShelfCursor | ShelfQuery,
-        io: ShelfIO | None = None,
+        store: ShelfStore | None = None,
         transforms: tuple[Transform, ...] | None = None,
     ):
         if isinstance(cursor, ShelfQuery):
             self._cursor = cursor._cursor
-            self._io = cursor._io
+            self._store = cursor._store
             self._transforms = cursor._transforms if transforms is None else transforms
             return
 
-        if io is None:
-            raise TypeError("ShelfQuery requires ShelfIO")
+        if store is None:
+            raise TypeError("ShelfQuery requires ShelfStore")
 
         self._cursor = cursor
-        self._io = io
+        self._store = store
         self._transforms = () if transforms is None else transforms
 
     def __iter__(self) -> Iterator[Item]:
@@ -66,12 +65,12 @@ class ShelfQuery:
         self,
         *,
         cursor: ShelfCursor | None = None,
-        io: ShelfIO | None = None,
+        store: ShelfStore | None = None,
         transforms: tuple[Transform, ...] | None = None,
     ) -> ShelfQuery:
         return ShelfQuery(
             self._cursor if cursor is None else cursor,
-            self._io if io is None else io,
+            self._store if store is None else store,
             self._transforms if transforms is None else transforms,
         )
 
@@ -81,8 +80,8 @@ class ShelfQuery:
     def _load_items(self, items: Iterator[Item]) -> Iterator[Item]:
         for item in items:
             if item.value is UNDEF:
-                if (loaded := self._io.get(item.key)) is not None:
-                    yield loaded
+                if (value := self._store.get(item.key)) is not None:
+                    yield Item(item.key, value)
             else:
                 yield item
 
@@ -116,11 +115,11 @@ class ShelfQuery:
 
     def put(self, key: str, value: Any) -> MutationResult:
         """Store a single key/value pair in the current shelf."""
-        return self._io.put(key, value)
+        return self._store.put(key, value)
 
     def put_many(self, items: Iterable[Item]) -> list[MutationResult]:
         """Store multiple key/value pairs in the current shelf."""
-        return self._io.put_many(items)
+        return self._store.put_many(items)
 
     def filter(self, fn: Callable[[Item], bool]) -> ShelfQuery:
         """Filter the current query results."""
@@ -192,10 +191,10 @@ class ShelfQuery:
         """Update the selected items using ``fn``."""
         results: list[MutationResult] = []
         for item in self.items():
-            results.append(self._io.put(item.key, fn(item)))
+            results.append(self._store.put(item.key, fn(item)))
         return results
 
     def delete(self) -> list[MutationResult]:
         """Delete the selected items."""
         keys = tuple(item.key for item in self)
-        return self._io.delete(keys)
+        return self._store.delete(keys)

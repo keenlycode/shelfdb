@@ -1,9 +1,9 @@
-"""Low-level LMDB-backed shelf cursor and I/O helpers.
+"""Low-level LMDB-backed shelf cursor and store helpers.
 
 `ShelfCursor` is an internal helper used by `ShelfQuery`. It owns copied scan
 state plus cursor-backed key scanning.
 
-`ShelfIO` owns direct key/value reads and writes for the same shelf.
+`ShelfStore` owns point reads and writes for the same shelf.
 
 Neither helper defines query transforms such as `filter()`, `slice()`,
 `sort()`, `keys()`, or `items()`.
@@ -12,7 +12,7 @@ Neither helper defines query transforms such as `filter()`, `slice()`,
 from __future__ import annotations
 
 from collections.abc import Generator, Iterable
-from typing import Any, cast
+from typing import Any, NamedTuple, cast
 
 import lmdb
 import msgpack
@@ -32,12 +32,11 @@ def unpackb(value: bytes) -> Any:
     return msgpack.unpackb(value, raw=False)
 
 
-class _ShelfHandle:
-    """Shared LMDB transaction + named database handle."""
+class _ShelfHandle(NamedTuple):
+    """Shared LMDB transaction plus opened named database handle."""
 
-    def __init__(self, lmdb_env: lmdb.Environment, tx: lmdb.Transaction, shelf: str):
-        self.tx = tx
-        self.db = lmdb_env.open_db(shelf.encode(), txn=tx)
+    tx: lmdb.Transaction
+    db: Any
 
 
 class ShelfCursor:
@@ -52,16 +51,15 @@ class ShelfCursor:
 
     def __init__(
         self,
-        lmdb_env: lmdb.Environment,
         tx: lmdb.Transaction,
-        shelf: str,
+        db: Any,
         *,
         exact_key: str | None = None,
         start: str | None = None,
         stop: str | None = None,
         descending: bool = False,
     ):
-        self._handle = _ShelfHandle(lmdb_env, tx, shelf)
+        self._handle = _ShelfHandle(tx, db)
         self._exact_key = exact_key
         self._start = start
         self._stop = stop
@@ -157,23 +155,22 @@ class ShelfCursor:
             yield from self._iter_keys(cur)
 
 
-class ShelfIO:
-    """Internal direct LMDB read/write helper for one shelf."""
+class ShelfStore:
+    """Internal direct LMDB point read/write helper for one shelf."""
 
     def __init__(
         self,
-        lmdb_env: lmdb.Environment,
         tx: lmdb.Transaction,
-        shelf: str,
+        db: Any,
     ):
-        self._handle = _ShelfHandle(lmdb_env, tx, shelf)
+        self._handle = _ShelfHandle(tx, db)
 
-    def get(self, key: str) -> Item | None:
-        """Retrieve a value by key without changing scan state."""
+    def get(self, key: str) -> Any | None:
+        """Return the unpacked value for ``key`` when present."""
         value = self._handle.tx.get(key.encode(), db=self._handle.db)
         if value is None:
             return None
-        return Item(key, unpackb(value))
+        return unpackb(value)
 
     def put(self, key: str, value: Any) -> MutationResult:
         """Store a single key/value pair."""

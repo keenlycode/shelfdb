@@ -1,14 +1,12 @@
-"""Low-level LMDB-backed shelf scan engine.
+"""Low-level LMDB-backed shelf cursor and I/O helpers.
 
-`Shelf` is an internal helper used by `ShelfQuery`. It owns only storage-facing
-concerns:
+`ShelfCursor` is an internal helper used by `ShelfQuery`. It owns copied scan
+state plus cursor-backed key scanning.
 
-- direct key/value reads and writes
-- cursor-backed key scanning
-- copied scan state for exact-key, range, and direction selection
+`ShelfIO` owns direct key/value reads and writes for the same shelf.
 
-It does not define query transforms such as `filter()`, `slice()`, `sort()`,
-`keys()`, or `items()`.
+Neither helper defines query transforms such as `filter()`, `slice()`,
+`sort()`, `keys()`, or `items()`.
 """
 
 from __future__ import annotations
@@ -34,13 +32,22 @@ def unpackb(value: bytes) -> Any:
     return msgpack.unpackb(value, raw=False)
 
 
-class Shelf:
-    """Internal copied scan state plus low-level storage operations.
+class _ShelfHandle:
+    """Shared LMDB transaction + named database handle."""
 
-    A `Shelf` instance captures one LMDB named database together with one scan
-    configuration (`exact_key`, range bounds, and direction). Selector methods do
-    not mutate in place; they return copied `Shelf` instances with updated scan
-    state. Iteration always opens a fresh cursor and replays the configured scan.
+    def __init__(self, lmdb_env: lmdb.Environment, tx: lmdb.Transaction, shelf: str):
+        self.tx = tx
+        self.db = lmdb_env.open_db(shelf.encode(), txn=tx)
+
+
+class ShelfCursor:
+    """Internal copied scan state plus cursor-backed iteration.
+
+    A `ShelfCursor` instance captures one LMDB named database together with one
+    scan configuration (`exact_key`, range bounds, and direction). Selector
+    methods do not mutate in place; they return copied `ShelfCursor` instances
+    with updated scan state. Iteration always opens a fresh cursor and replays
+    the configured scan.
     """
 
     def __init__(
@@ -54,8 +61,7 @@ class Shelf:
         stop: str | None = None,
         descending: bool = False,
     ):
-        self._tx = tx
-        self._shelf = lmdb_env.open_db(shelf.encode(), txn=tx)
+        self._handle = _ShelfHandle(lmdb_env, tx, shelf)
         self._exact_key = exact_key
         self._start = start
         self._stop = stop
@@ -68,10 +74,9 @@ class Shelf:
         start: str | None | object = _KEEP,
         stop: str | None | object = _KEEP,
         descending: bool | object = _KEEP,
-    ) -> Shelf:
-        shelf = object.__new__(Shelf)
-        shelf._tx = self._tx
-        shelf._shelf = self._shelf
+    ) -> ShelfCursor:
+        shelf = object.__new__(ShelfCursor)
+        shelf._handle = self._handle
         shelf._exact_key = self._exact_key if exact_key is _KEEP else exact_key
         shelf._start = self._start if start is _KEEP else start
         shelf._stop = self._stop if stop is _KEEP else stop
@@ -80,67 +85,29 @@ class Shelf:
         )
         return shelf
 
-    def asc(self) -> Shelf:
+    def io(self) -> ShelfIO:
+        """Return the low-level I/O helper for this shelf."""
+        return ShelfIO(self._handle)
+
+    def asc(self) -> ShelfCursor:
         """Return a copied shelf scan with ascending order."""
         return self._copy(descending=False)
 
-    def desc(self) -> Shelf:
+    def desc(self) -> ShelfCursor:
         """Return a copied shelf scan with descending order."""
         return self._copy(descending=True)
 
-    def select_key(self, key: str) -> Shelf:
+    def select_key(self, key: str) -> ShelfCursor:
         """Return a copied shelf scan narrowed to one key."""
         return self._copy(exact_key=key, start=None, stop=None)
 
-    def select_keys_range(self, start: str, stop: str | None = None) -> Shelf:
+    def select_keys_range(self, start: str, stop: str | None = None) -> ShelfCursor:
         """Return a copied shelf scan narrowed to ``[start, stop)``."""
         return self._copy(exact_key=None, start=start, stop=stop)
 
     def _cursor(self) -> lmdb.Cursor:
         """Create an LMDB cursor for this shelf."""
-        return self._tx.cursor(db=self._shelf)
-
-    def get(self, key: str) -> Item | None:
-        """Retrieve a value by key without changing scan state."""
-        value = self._tx.get(key.encode(), db=self._shelf)
-        if value is None:
-            return None
-        return Item(key, unpackb(value))
-
-    def put(self, key: str, value: Any) -> MutationResult:
-        """Store a single key/value pair."""
-        ok = cast(
-            bool,
-            self._tx.put(
-                key.encode(),
-                packb(value),
-                db=self._shelf,
-            ),
-        )
-        return MutationResult(key=key, ok=ok)
-
-    def put_many(self, items: Iterable[Item]) -> list[MutationResult]:
-        """Store multiple key/value pairs."""
-        results: list[MutationResult] = []
-        for key, value in items:
-            ok = cast(
-                bool,
-                self._tx.put(
-                    key.encode(),
-                    packb(value),
-                    db=self._shelf,
-                ),
-            )
-            results.append(MutationResult(key=key, ok=ok))
-        return results
-
-    def _delete_keys(self, keys: Iterable[str]) -> list[MutationResult]:
-        """Delete multiple keys without changing scan state."""
-        results: list[MutationResult] = []
-        for key in keys:
-            ok = cast(bool, self._tx.delete(key.encode(), db=self._shelf))
-            results.append(MutationResult(key=key, ok=ok))
-        return results
+        return self._handle.tx.cursor(db=self._handle.db)
 
     def _position_cursor(self, cur: lmdb.Cursor) -> bool:
         """Position ``cur`` at the first key for the current scan."""
@@ -192,3 +159,52 @@ class Shelf:
             if not self._position_cursor(cur):
                 return
             yield from self._iter_keys(cur)
+
+
+class ShelfIO:
+    """Internal direct LMDB read/write helper for one shelf."""
+
+    def __init__(self, handle: _ShelfHandle):
+        self._handle = handle
+
+    def get(self, key: str) -> Item | None:
+        """Retrieve a value by key without changing scan state."""
+        value = self._handle.tx.get(key.encode(), db=self._handle.db)
+        if value is None:
+            return None
+        return Item(key, unpackb(value))
+
+    def put(self, key: str, value: Any) -> MutationResult:
+        """Store a single key/value pair."""
+        ok = cast(
+            bool,
+            self._handle.tx.put(
+                key.encode(),
+                packb(value),
+                db=self._handle.db,
+            ),
+        )
+        return MutationResult(key=key, ok=ok)
+
+    def put_many(self, items: Iterable[Item]) -> list[MutationResult]:
+        """Store multiple key/value pairs."""
+        results: list[MutationResult] = []
+        for key, value in items:
+            ok = cast(
+                bool,
+                self._handle.tx.put(
+                    key.encode(),
+                    packb(value),
+                    db=self._handle.db,
+                ),
+            )
+            results.append(MutationResult(key=key, ok=ok))
+        return results
+
+    def delete(self, keys: Iterable[str]) -> list[MutationResult]:
+        """Delete multiple keys without changing scan state."""
+        results: list[MutationResult] = []
+        for key in keys:
+            ok = cast(bool, self._handle.tx.delete(key.encode(), db=self._handle.db))
+            results.append(MutationResult(key=key, ok=ok))
+        return results

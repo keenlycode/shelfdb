@@ -8,7 +8,7 @@ import lmdb
 
 # lib: local
 from .shelf.query import ShelfQuery
-from .shelf.shelf import Shelf
+from .shelf.shelf import ShelfCursor
 
 
 class DB:
@@ -208,4 +208,5 @@ class Transaction:
             Query wrapper bound to this transaction's named shelf.
         """
 
-        return ShelfQuery(Shelf(self._lmdb_env, self.tx, name))
+        cursor = ShelfCursor(self._lmdb_env, self.tx, name)
+        return ShelfQuery(cursor, cursor.io())

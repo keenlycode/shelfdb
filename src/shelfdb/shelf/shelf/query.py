@@ -1,11 +1,13 @@
-"""Public fluent query API built on top of ``Shelf``.
+"""Public fluent query API built on top of ``ShelfCursor`` and ``ShelfIO``.
 
 `ShelfQuery` combines two layers cleanly:
 
 - selector methods (`key()`, `keys_range()`, `asc()`, `desc()`) copy the wrapped
-  shelf scan state
+  cursor scan state
 - transform methods (`keys()`, `items()`, `filter()`, `slice()`, `sort()`) wrap
   the selected stream without mutating cursor state
+- write helpers (`put()`, `put_many()`, `update()`, `delete()`) delegate to the
+  internal LMDB I/O helper
 
 Iteration starts from the copied shelf scan, yields key-only `Item(key, UNDEF)`
 entries by default, and then applies transforms.
@@ -14,12 +16,12 @@ entries by default, and then applies transforms.
 from __future__ import annotations
 
 from builtins import filter as bfilter
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from itertools import islice
 from typing import Any
 
 from .schema import UNDEF, Item, MutationResult
-from .shelf import Shelf
+from .shelf import ShelfCursor, ShelfIO
 
 type Transform = Callable[[Iterator[Item]], Iterator[Item]]
 
@@ -29,30 +31,33 @@ class ShelfQuery:
 
     Selector methods return new queries with copied shelf scan state. Transform
     methods return new queries with the same base scan plus an appended transform
-    pipeline. This keeps built queries independent while still allowing fluent
-    selector-after-transform usage.
+    pipeline. Write helpers delegate to the shared internal I/O helper. This
+    keeps built queries independent while still allowing fluent selector-after-
+    transform usage.
     """
 
     def __init__(
         self,
-        shelf: Shelf | ShelfQuery,
+        cursor: ShelfCursor | ShelfQuery,
+        io: ShelfIO | None = None,
         transforms: tuple[Transform, ...] | None = None,
     ):
-        if isinstance(shelf, ShelfQuery):
-            self._shelf = shelf._shelf
-            self._transforms = shelf._transforms if transforms is None else transforms
+        if isinstance(cursor, ShelfQuery):
+            self._cursor = cursor._cursor
+            self._io = cursor._io
+            self._transforms = cursor._transforms if transforms is None else transforms
             return
 
-        self._shelf = shelf
-        self._transforms = () if transforms is None else transforms
+        if io is None:
+            raise TypeError("ShelfQuery requires ShelfIO")
 
-    def __getattr__(self, name: str) -> Any:
-        """Delegate direct shelf operations to the wrapped shelf."""
-        return getattr(self._shelf, name)
+        self._cursor = cursor
+        self._io = io
+        self._transforms = () if transforms is None else transforms
 
     def __iter__(self) -> Iterator[Item]:
         """Iterate the current base scan, then apply transforms."""
-        items: Iterator[Item] = (Item(key, UNDEF) for key in self._shelf.keys())
+        items: Iterator[Item] = (Item(key, UNDEF) for key in self._cursor.keys())
         for transform in self._transforms:
             items = transform(items)
         return items
@@ -60,11 +65,13 @@ class ShelfQuery:
     def _new(
         self,
         *,
-        shelf: Shelf | None = None,
+        cursor: ShelfCursor | None = None,
+        io: ShelfIO | None = None,
         transforms: tuple[Transform, ...] | None = None,
     ) -> ShelfQuery:
         return ShelfQuery(
-            self._shelf if shelf is None else shelf,
+            self._cursor if cursor is None else cursor,
+            self._io if io is None else io,
             self._transforms if transforms is None else transforms,
         )
 
@@ -74,26 +81,26 @@ class ShelfQuery:
     def _load_items(self, items: Iterator[Item]) -> Iterator[Item]:
         for item in items:
             if item.value is UNDEF:
-                if (loaded := self._shelf.get(item.key)) is not None:
+                if (loaded := self._io.get(item.key)) is not None:
                     yield loaded
             else:
                 yield item
 
     def asc(self) -> ShelfQuery:
         """Return the query with ascending base scan order."""
-        return self._new(shelf=self._shelf.asc())
+        return self._new(cursor=self._cursor.asc())
 
     def desc(self) -> ShelfQuery:
         """Return the query with descending base scan order."""
-        return self._new(shelf=self._shelf.desc())
+        return self._new(cursor=self._cursor.desc())
 
     def key(self, key: str) -> ShelfQuery:
         """Return the query narrowed to one key."""
-        return self._new(shelf=self._shelf.select_key(key))
+        return self._new(cursor=self._cursor.select_key(key))
 
     def keys_range(self, start: str, stop: str | None = None) -> ShelfQuery:
         """Return the query narrowed to keys in ``[start, stop)``."""
-        return self._new(shelf=self._shelf.select_keys_range(start, stop))
+        return self._new(cursor=self._cursor.select_keys_range(start, stop))
 
     def keys(self) -> ShelfQuery:
         """Project the current query to key-only items."""
@@ -106,6 +113,14 @@ class ShelfQuery:
     def items(self) -> ShelfQuery:
         """Project the current query to loaded key/value items."""
         return self._append_transform(self._load_items)
+
+    def put(self, key: str, value: Any) -> MutationResult:
+        """Store a single key/value pair in the current shelf."""
+        return self._io.put(key, value)
+
+    def put_many(self, items: Iterable[Item]) -> list[MutationResult]:
+        """Store multiple key/value pairs in the current shelf."""
+        return self._io.put_many(items)
 
     def filter(self, fn: Callable[[Item], bool]) -> ShelfQuery:
         """Filter the current query results."""
@@ -176,15 +191,11 @@ class ShelfQuery:
     def update(self, fn: Callable[[Item], Any]) -> list[MutationResult]:
         """Update the selected items using ``fn``."""
         results: list[MutationResult] = []
-        keys = tuple(item.key for item in self.items())
-        for key in keys:
-            item = self._shelf.get(key)
-            if item is None:
-                continue
-            results.append(self._shelf.put(key, fn(item)))
+        for item in self.items():
+            results.append(self._io.put(item.key, fn(item)))
         return results
 
     def delete(self) -> list[MutationResult]:
         """Delete the selected items."""
         keys = tuple(item.key for item in self)
-        return self._shelf._delete_keys(keys)
+        return self._io.delete(keys)

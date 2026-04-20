@@ -26,6 +26,17 @@ def test_transaction_shelf_returns_query_wrapper(tmp_path):
             assert isinstance(tx.shelf("users"), ShelfQuery)
 
 
+def test_query_does_not_delegate_get(tmp_path):
+    db_path = tmp_path / "shelfdb"
+
+    with DB(str(db_path)) as db:
+        with db.transaction(write=True) as tx:
+            tx.shelf("users").put("alice", {"age": 30})
+
+        with db.transaction(write=False) as tx:
+            assert hasattr(tx.shelf("users"), "get") is False
+
+
 def test_db_shelf_happy_path_put_get_and_items(tmp_path):
     db_path = tmp_path / "shelfdb"
 

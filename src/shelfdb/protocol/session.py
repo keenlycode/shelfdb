@@ -150,7 +150,7 @@ class Session:
 
     def _apply_query_action(self, query: Any, action: dict[str, Any]) -> Any:
         name = action["op"]
-        if name == "collect":
+        if name == "query":
             return list(query)
         if name not in {
             "count",

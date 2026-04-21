@@ -143,7 +143,7 @@ def test_session_query_supports_remote_style_operations(tmp_path):
                     {"op": "filter", "args": [lambda item: item.value["role"] == "admin"], "kwargs": {}},
                     {"op": "sort", "args": [], "kwargs": {"reverse": True}},
                 ],
-                "action": {"op": "collect", "args": [], "kwargs": {}},
+                "action": {"op": "query", "args": [], "kwargs": {}},
             }
         )
 
@@ -160,7 +160,7 @@ def test_session_query_supports_remote_style_operations(tmp_path):
                 "cmd": "query",
                 "shelf": "users",
                 "ops": [{"op": "keys_range", "args": ["bob", "d"], "kwargs": {}}],
-                "action": {"op": "collect", "args": [], "kwargs": {}},
+                "action": {"op": "query", "args": [], "kwargs": {}},
             }
         )
         assert result == {

@@ -49,7 +49,7 @@ try:
         alice = await users.key("alice").item()
         admins = await users.filter(
             lambda item: item.value["role"] == "admin"
-        ).sort(reverse=True).all()
+        ).sort(reverse=True).query()
 
     async with client.transaction("write") as tx:
         users = tx.shelf("users")

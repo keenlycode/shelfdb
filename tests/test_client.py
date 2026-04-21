@@ -207,7 +207,7 @@ def test_client_remote_query_read_api(tmp_path):
                         assert await users.key("alice").item() == Item(
                             "alice", {"age": 30, "role": "admin"}
                         )
-                        assert await users.keys_range("bob", "d").all() == [
+                        assert await users.keys_range("bob", "d").query() == [
                             Item("bob", UNDEF),
                             Item("carol", UNDEF),
                         ]
@@ -216,7 +216,7 @@ def test_client_remote_query_read_api(tmp_path):
                                 lambda item: item.value["role"] == "admin"
                             )
                             .sort(reverse=True)
-                            .all()
+                            .query()
                         ) == [
                             Item("dave", {"age": 35, "role": "admin"}),
                             Item("alice", {"age": 30, "role": "admin"}),

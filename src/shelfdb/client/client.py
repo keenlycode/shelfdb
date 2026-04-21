@@ -183,8 +183,8 @@ class RemoteShelfQuery:
     def sort(self, key=None, reverse: bool = False) -> RemoteShelfQuery:
         return self._new("sort", key, reverse=reverse)
 
-    async def all(self) -> list[Item]:
-        return await self._run("collect")
+    async def query(self) -> list[Item]:
+        return await self._run("query")
 
     async def put(self, key: str, value: Any) -> MutationResult:
         return await self._run("put", key, value)

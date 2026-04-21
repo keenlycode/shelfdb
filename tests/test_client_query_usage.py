@@ -57,28 +57,28 @@ async def _remote_read_snapshot(target: str) -> dict:
             q_admins = base.filter(lambda item: item.value["role"] == "admin")
 
             return {
-                "base": await base.all(),
-                "range": await q_range.all(),
-                "admins_desc": await q_admins.sort(reverse=True).all(),
-                "items_then_keys": await q_range.items().keys().all(),
-                "slice_then_key": await base.slice(0, 2).key("bob").all(),
+                "base": await base.query(),
+                "range": await q_range.query(),
+                "admins_desc": await q_admins.sort(reverse=True).query(),
+                "items_then_keys": await q_range.items().keys().query(),
+                "slice_then_key": await base.slice(0, 2).key("bob").query(),
                 "selector_after_transform": await base.filter(
                     lambda item: item.value["age"] >= 25
                 )
                 .keys_range("bob", "d")
                 .items()
-                .all(),
+                .query(),
                 "repeated_first": await base.keys_range("bob").filter(
                     lambda item: item.value["age"] >= 25
-                ).all(),
+                ).query(),
                 "repeated_second": await base.keys_range("bob").filter(
                     lambda item: item.value["age"] >= 25
-                ).all(),
+                ).query(),
                 "count": await users.count(),
                 "exists_alice": await users.key("alice").exists(),
                 "exists_missing": await users.key("missing").exists(),
                 "alice": await users.key("alice").item(),
-                "sorted_slice": await users.sort(reverse=True).slice(0, 2).all(),
+                "sorted_slice": await users.sort(reverse=True).slice(0, 2).query(),
             }
     finally:
         await client.close()
@@ -148,14 +148,14 @@ def test_remote_query_builder_is_immutable_and_queries_are_independent(tmp_path)
                         q1 = base.keys_range("bob", "d")
                         q2 = base.key("alice")
 
-                        assert await base.all() == [
+                        assert await base.query() == [
                             Item("alice", UNDEF),
                             Item("bob", UNDEF),
                             Item("carol", UNDEF),
                             Item("dave", UNDEF),
                         ]
-                        assert await q1.all() == [Item("bob", UNDEF), Item("carol", UNDEF)]
-                        assert await q2.all() == [Item("alice", UNDEF)]
+                        assert await q1.query() == [Item("bob", UNDEF), Item("carol", UNDEF)]
+                        assert await q2.query() == [Item("alice", UNDEF)]
                 finally:
                     await client.close()
             finally:

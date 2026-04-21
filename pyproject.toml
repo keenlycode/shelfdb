@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "shelfdb"
-version = "2.1.0.dev0"
+version = "2.1.0rc1"
 description = "A tiny database for Python"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -28,6 +28,9 @@ dependencies = [
     "uvloop>=0.22.0,<0.23; platform_system == 'Linux'",
 ]
 
+[project.scripts]
+shelfdb = "shelfdb.cli:main"
+
 [dependency-groups]
 dev = [
     "dictify>=4.0.0,<4.1",
@@ -35,11 +38,16 @@ dev = [
     "mkdocs>=1.6.1,<2",
     "mkdocs-shadcn>=0.10.4,<0.11",
     "mkdocstrings[python]>=0.29.0,<0.30",
+    "pytest-cov>=7.0.0,<8",
     "pymdown-extensions>=10.16.1,<11",
     "pytest>=9.0.0,<10",
+    "ruff>=0.13.0,<0.14",
     "tinydb>=4.8.2,<5",
+    "ty>=0.0.1a17,<0.0.2",
 ]
 
 [tool.uv.build-backend]
 module-name = "shelfdb"
 module-root = "src"
+data = { data = "ai-skill" }
+source-include = ["ai-skill/**"]

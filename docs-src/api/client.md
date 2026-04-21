@@ -30,14 +30,14 @@ from shelfdb.client import Client
 client = await Client.connect("tcp://127.0.0.1:31337")
 ```
 
-## `client.transaction(mode: str) -> ClientTransaction`
+## `client.transaction(*, write: bool = False) -> ClientTransaction`
 
 Open a remote transaction.
 
-Use `"read"` for read-only work and `"write"` for mutations.
+Use the default `write=False` for read-only work. Use `write=True` for mutations.
 
 ```python
-async with client.transaction("read") as tx:
+async with client.transaction() as tx:
     users = tx.shelf("users")
     count = await users.count().query()
 ```

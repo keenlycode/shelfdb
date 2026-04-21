@@ -22,10 +22,10 @@ async def run_demo(db_path: str) -> dict[str, Any]:
 
         client = await Client.connect(host, port)
         try:
-            async with client.transaction("write") as tx:
+            async with client.transaction(write=True) as tx:
                 written = await tx.put("note", "a", {"name": "hello"})
 
-            async with client.transaction("read") as tx:
+            async with client.transaction() as tx:
                 item = await tx.get("note", "a")
         finally:
             await client.close()

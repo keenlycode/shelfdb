@@ -50,7 +50,7 @@ def _local_read_snapshot(db_path: str) -> dict:
 async def _remote_read_snapshot(target: str) -> dict:
     client = await Client.connect(target)
     try:
-        async with client.transaction("read") as tx:
+        async with client.transaction() as tx:
             users = tx.shelf("users")
             base = users
             q_range = base.keys_range("bob", "d")
@@ -143,7 +143,7 @@ def test_remote_query_builder_is_immutable_and_queries_are_independent(tmp_path)
             try:
                 client = await Client.connect(f"tcp://{host}:{port}")
                 try:
-                    async with client.transaction("read") as tx:
+                    async with client.transaction() as tx:
                         base = tx.shelf("users")
                         q1 = base.keys_range("bob", "d")
                         q2 = base.key("alice")
@@ -178,7 +178,7 @@ def test_remote_query_item_raises_for_zero_or_many_results(tmp_path):
             try:
                 client = await Client.connect(f"tcp://{host}:{port}")
                 try:
-                    async with client.transaction("read") as tx:
+                    async with client.transaction() as tx:
                         with pytest.raises(Exception) as missing:
                             await tx.shelf("users").key("missing").item().query()
                         assert "expected exactly one selected item, found none" in str(missing.value)
@@ -208,7 +208,7 @@ def test_remote_query_update_and_delete_match_local_outcome(tmp_path):
             try:
                 client = await Client.connect(f"tcp://{host}:{port}")
                 try:
-                    async with client.transaction("write") as tx:
+                    async with client.transaction(write=True) as tx:
                         users = tx.shelf("users")
                         updated = await users.keys_range("bob", "d").update(
                             lambda item: {**item.value, "age": item.value["age"] + 1}

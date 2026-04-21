@@ -63,8 +63,8 @@ class Client:
     def query(self, shelf: str) -> RemoteShelfQuery:
         return RemoteShelfQuery(self, shelf)
 
-    def transaction(self, mode: str) -> ClientTransaction:
-        return ClientTransaction(self, mode)
+    def transaction(self, *, write: bool = False) -> ClientTransaction:
+        return ClientTransaction(self, write=write)
 
     async def _result(self, command: dict[str, Any]) -> dict[str, Any]:
         response = await self.send(command)
@@ -76,13 +76,13 @@ class Client:
 class ClientTransaction:
     """Async context wrapper around one client transaction."""
 
-    def __init__(self, client: Client, mode: str):
+    def __init__(self, client: Client, *, write: bool = False):
         self._client = client
-        self._mode = mode
+        self._write = write
         self._active = False
 
     async def __aenter__(self) -> ClientTransaction:
-        await self._client.begin(self._mode)
+        await self._client.begin("write" if self._write else "read")
         self._active = True
         return self
 
@@ -91,7 +91,7 @@ class ClientTransaction:
             return
 
         if exc_type is None:
-            if self._mode == "write":
+            if self._write:
                 await self.commit()
             else:
                 await self.rollback()

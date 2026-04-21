@@ -42,7 +42,7 @@ from shelfdb.client import Client
 client = await Client.connect("tcp://127.0.0.1:31337")
 
 try:
-    async with client.transaction("read") as tx:
+    async with client.transaction() as tx:
         users = tx.shelf("users")
 
         count = await users.count().query()
@@ -51,7 +51,7 @@ try:
             lambda item: item.value["role"] == "admin"
         ).sort(reverse=True).query()
 
-    async with client.transaction("write") as tx:
+    async with client.transaction(write=True) as tx:
         users = tx.shelf("users")
 
         await users.put("eve", {"role": "user"}).query()

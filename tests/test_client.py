@@ -54,13 +54,13 @@ def test_client_transaction_context_wrapper(tmp_path):
             try:
                 client = await Client.connect(f"tcp://{host}:{port}")
                 try:
-                    async with client.transaction("write") as tx:
+                    async with client.transaction(write=True) as tx:
                         assert await tx.put("note", "a", {"name": "hello"}) == {
                             "key": "a",
                             "ok": True,
                         }
 
-                    async with client.transaction("read") as tx:
+                    async with client.transaction() as tx:
                         assert await tx.get("note", "a") == {
                             "key": "a",
                             "value": {"name": "hello"},
@@ -199,7 +199,7 @@ def test_client_remote_query_read_api(tmp_path):
             try:
                 client = await Client.connect(f"tcp://{host}:{port}")
                 try:
-                    async with client.transaction("read") as tx:
+                    async with client.transaction() as tx:
                         users = tx.shelf("users")
                         assert await users.count().query() == 4
                         assert await users.key("alice").exists().query() is True
@@ -241,7 +241,7 @@ def test_client_remote_query_write_api(tmp_path):
             try:
                 client = await Client.connect(f"tcp://{host}:{port}")
                 try:
-                    async with client.transaction("write") as tx:
+                    async with client.transaction(write=True) as tx:
                         users = tx.shelf("users")
                         assert await users.put_many(
                             [

@@ -38,7 +38,7 @@ from shelfdb.client import Client
 client = await Client.connect("tcp://127.0.0.1:31337")
 
 try:
-    async with client.transaction("read") as tx:
+    async with client.transaction() as tx:
         users = tx.shelf("users")
 
         count = await users.count().query()
@@ -58,7 +58,7 @@ from shelfdb.client import Client
 client = await Client.connect("tcp://127.0.0.1:31337")
 
 try:
-    async with client.transaction("write") as tx:
+    async with client.transaction(write=True) as tx:
         users = tx.shelf("users")
 
         await users.put("eve", {"role": "user", "age": 22}).query()
@@ -127,7 +127,7 @@ from shelfdb.client import Client
 client = await Client.connect("tcp://127.0.0.1:31337")
 
 try:
-    async with client.transaction("write") as tx:
+    async with client.transaction(write=True) as tx:
         users = tx.shelf("users")
 
         await users.put("eve", {"role": "user", "age": 22}).query()
@@ -156,7 +156,7 @@ This means:
 Use the return value from each awaited `.query()` call directly:
 
 ```python
-async with client.transaction("read") as tx:
+async with client.transaction() as tx:
     users = tx.shelf("users")
 
     result = await users.items().query()
@@ -168,8 +168,8 @@ Here, `result` and `alice` are the values returned by the server for that transa
 ## Notes
 
 - `Client.connect(...)` accepts URL-style targets only.
-- Use `client.transaction("read")` for reads.
-- Use `client.transaction("write")` for mutations.
+- Use `client.transaction()` for reads.
+- Use `client.transaction(write=True)` for mutations.
 - `.query()` is the only terminal method on the remote client.
 - `await users.query()` returns the current selection as-is, while `await users.items().query()` loads values first.
 - `await users.count().query()` returns an `int`, `await users.key("alice").exists().query()` returns a `bool`, and `await users.key("alice").item().query()` returns one `Item`.

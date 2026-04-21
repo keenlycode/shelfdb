@@ -201,10 +201,10 @@ def test_client_remote_query_read_api(tmp_path):
                 try:
                     async with client.transaction("read") as tx:
                         users = tx.shelf("users")
-                        assert await users.count() == 4
-                        assert await users.key("alice").exists() is True
-                        assert await users.key("missing").exists() is False
-                        assert await users.key("alice").item() == Item(
+                        assert await users.count().query() == 4
+                        assert await users.key("alice").exists().query() is True
+                        assert await users.key("missing").exists().query() is False
+                        assert await users.key("alice").item().query() == Item(
                             "alice", {"age": 30, "role": "admin"}
                         )
                         assert await users.keys_range("bob", "d").query() == [
@@ -249,15 +249,15 @@ def test_client_remote_query_write_api(tmp_path):
                                 Item("bob", {"age": 25, "role": "user"}),
                                 Item("carol", {"age": 20, "role": "user"}),
                             ]
-                        ) == [
+                        ).query() == [
                             MutationResult("alice", True),
                             MutationResult("bob", True),
                             MutationResult("carol", True),
                         ]
                         assert await users.key("alice").update(
                             lambda item: {**item.value, "age": item.value["age"] + 1}
-                        ) == [MutationResult("alice", True)]
-                        assert await users.key("bob").delete() == [
+                        ).query() == [MutationResult("alice", True)]
+                        assert await users.key("bob").delete().query() == [
                             MutationResult("bob", True)
                         ]
                 finally:

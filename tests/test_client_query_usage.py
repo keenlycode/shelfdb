@@ -74,10 +74,10 @@ async def _remote_read_snapshot(target: str) -> dict:
                 "repeated_second": await base.keys_range("bob").filter(
                     lambda item: item.value["age"] >= 25
                 ).query(),
-                "count": await users.count(),
-                "exists_alice": await users.key("alice").exists(),
-                "exists_missing": await users.key("missing").exists(),
-                "alice": await users.key("alice").item(),
+                "count": await users.count().query(),
+                "exists_alice": await users.key("alice").exists().query(),
+                "exists_missing": await users.key("missing").exists().query(),
+                "alice": await users.key("alice").item().query(),
                 "sorted_slice": await users.sort(reverse=True).slice(0, 2).query(),
             }
     finally:
@@ -180,11 +180,11 @@ def test_remote_query_item_raises_for_zero_or_many_results(tmp_path):
                 try:
                     async with client.transaction("read") as tx:
                         with pytest.raises(Exception) as missing:
-                            await tx.shelf("users").key("missing").item()
+                            await tx.shelf("users").key("missing").item().query()
                         assert "expected exactly one selected item, found none" in str(missing.value)
 
                         with pytest.raises(Exception) as many:
-                            await tx.shelf("users").item()
+                            await tx.shelf("users").item().query()
                         assert "expected exactly one selected item, found many" in str(many.value)
                 finally:
                     await client.close()
@@ -212,8 +212,8 @@ def test_remote_query_update_and_delete_match_local_outcome(tmp_path):
                         users = tx.shelf("users")
                         updated = await users.keys_range("bob", "d").update(
                             lambda item: {**item.value, "age": item.value["age"] + 1}
-                        )
-                        deleted = await users.key("dave").delete()
+                        ).query()
+                        deleted = await users.key("dave").delete().query()
                         return updated, deleted
                 finally:
                     await client.close()

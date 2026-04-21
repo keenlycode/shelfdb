@@ -45,8 +45,8 @@ try:
     async with client.transaction("read") as tx:
         users = tx.shelf("users")
 
-        count = await users.count()
-        alice = await users.key("alice").item()
+        count = await users.count().query()
+        alice = await users.key("alice").item().query()
         admins = await users.filter(
             lambda item: item.value["role"] == "admin"
         ).sort(reverse=True).query()
@@ -54,10 +54,10 @@ try:
     async with client.transaction("write") as tx:
         users = tx.shelf("users")
 
-        await users.put("eve", {"role": "user"})
+        await users.put("eve", {"role": "user"}).query()
         await users.key("eve").update(
             lambda item: {**item.value, "role": "admin"}
-        )
+        ).query()
 finally:
     await client.close()
 ```

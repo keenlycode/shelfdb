@@ -8,7 +8,7 @@ from typing import Any
 
 from shelfdb.protocol import read_response, write_request
 from shelfdb.protocol.query_result import denormalize_query_result
-from shelfdb.shelf import Item, MutationResult
+from shelfdb.shelf import Item
 from shelfdb.target import parse_target, parse_tcp_location, parse_unix_location
 
 
@@ -121,32 +121,48 @@ class ClientTransaction:
 
 
 class RemoteShelfQuery:
-    """Immutable remote query builder executed over the protocol."""
+    """Immutable remote query builder with `.query()` as the only terminal."""
 
     def __init__(
         self,
         client: Client,
         shelf: str,
         ops: tuple[dict[str, Any], ...] = (),
+        action: dict[str, Any] | None = None,
     ):
         self._client = client
         self._shelf = shelf
         self._ops = ops
+        self._action = action
+
+    def _ensure_no_action(self) -> None:
+        if self._action is not None:
+            raise ValueError("query action already selected; call .query() to execute")
 
     def _new(self, op: str, *args: Any, **kwargs: Any) -> RemoteShelfQuery:
+        self._ensure_no_action()
         return RemoteShelfQuery(
             self._client,
             self._shelf,
             self._ops + ({"op": op, "args": list(args), "kwargs": kwargs},),
         )
 
-    async def _run(self, op: str, *args: Any, **kwargs: Any) -> Any:
+    def _with_action(self, op: str, *args: Any, **kwargs: Any) -> RemoteShelfQuery:
+        self._ensure_no_action()
+        return RemoteShelfQuery(
+            self._client,
+            self._shelf,
+            self._ops,
+            {"op": op, "args": list(args), "kwargs": kwargs},
+        )
+
+    async def _execute(self, action: dict[str, Any]) -> Any:
         response = await self._client._result(
             {
                 "cmd": "query",
                 "shelf": self._shelf,
                 "ops": list(self._ops),
-                "action": {"op": op, "args": list(args), "kwargs": kwargs},
+                "action": action,
             }
         )
         return denormalize_query_result(response)
@@ -183,26 +199,27 @@ class RemoteShelfQuery:
     def sort(self, key=None, reverse: bool = False) -> RemoteShelfQuery:
         return self._new("sort", key, reverse=reverse)
 
-    async def query(self) -> list[Item]:
-        return await self._run("query")
+    async def query(self) -> Any:
+        action = self._action or {"op": "query", "args": [], "kwargs": {}}
+        return await self._execute(action)
 
-    async def put(self, key: str, value: Any) -> MutationResult:
-        return await self._run("put", key, value)
+    def put(self, key: str, value: Any) -> RemoteShelfQuery:
+        return self._with_action("put", key, value)
 
-    async def put_many(self, items: list[Item]) -> list[MutationResult]:
-        return await self._run("put_many", items)
+    def put_many(self, items: list[Item]) -> RemoteShelfQuery:
+        return self._with_action("put_many", items)
 
-    async def count(self) -> int:
-        return await self._run("count")
+    def count(self) -> RemoteShelfQuery:
+        return self._with_action("count")
 
-    async def exists(self) -> bool:
-        return await self._run("exists")
+    def exists(self) -> RemoteShelfQuery:
+        return self._with_action("exists")
 
-    async def item(self) -> Item:
-        return await self._run("item")
+    def item(self) -> RemoteShelfQuery:
+        return self._with_action("item")
 
-    async def update(self, fn) -> list[MutationResult]:
-        return await self._run("update", fn)
+    def update(self, fn) -> RemoteShelfQuery:
+        return self._with_action("update", fn)
 
-    async def delete(self) -> list[MutationResult]:
-        return await self._run("delete")
+    def delete(self) -> RemoteShelfQuery:
+        return self._with_action("delete")

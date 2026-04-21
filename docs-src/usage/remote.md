@@ -37,8 +37,8 @@ try:
     async with client.transaction("read") as tx:
         users = tx.shelf("users")
 
-        count = await users.count()
-        alice = await users.key("alice").item()
+        count = await users.count().query()
+        alice = await users.key("alice").item().query()
         admins = await users.filter(
             lambda item: item.value["role"] == "admin"
         ).sort(reverse=True).query()
@@ -57,10 +57,10 @@ try:
     async with client.transaction("write") as tx:
         users = tx.shelf("users")
 
-        await users.put("eve", {"role": "user", "age": 22})
+        await users.put("eve", {"role": "user", "age": 22}).query()
         await users.key("eve").update(
             lambda item: {**item.value, "role": "admin"}
-        )
+        ).query()
 finally:
     await client.close()
 ```
@@ -69,15 +69,15 @@ finally:
 
 Remote queries are intentionally split into two parts:
 
-- **builder methods** return a new query object immediately
-- **terminal methods** perform the remote request when awaited
+- **all methods before `.query()`** only build query/action state on the client
+- **`.query()`** is the only terminal method and performs the remote request when awaited
 
 Example:
 
 ```python
 users = tx.shelf("users")
-query = users.key("alice")      # no await here
-alice = await query.item()       # request happens here
+query = users.key("alice").item()  # still no await here
+alice = await query.query()         # request happens here
 ```
 
 Useful examples:
@@ -85,19 +85,21 @@ Useful examples:
 ```python
 await users.query()
 await users.items().query()
-await users.count()
-await users.key("alice").exists()
-await users.key("alice").item()
+await users.count().query()
+await users.key("alice").exists().query()
+await users.key("alice").item().query()
 await users.keys_range("bob", "d").query()
 await users.filter(lambda item: item.value["age"] >= 25).query()
 await users.sort(reverse=True).slice(0, 2).query()
+await users.put("eve", {"role": "user"}).query()
+await users.key("eve").update(lambda item: {**item.value, "role": "admin"}).query()
 ```
 
 ## Builder-only expressions do nothing remotely
 
-Builder methods such as `.items()`, `.filter(...)`, `.key(...)`, `.keys_range(...)`, `.slice(...)`, and `.sort(...)` only build a remote query object on the client.
+Builder methods such as `.items()`, `.filter(...)`, `.key(...)`, `.keys_range(...)`, `.slice(...)`, `.sort(...)`, `.count()`, `.exists()`, `.item()`, `.put(...)`, `.put_many(...)`, `.update(...)`, and `.delete()` only build remote query state on the client.
 
-If you do not await a terminal method afterward, nothing is sent to the server.
+If you do not await `.query()` afterward, nothing is sent to the server.
 
 ```python
 tx.shelf("users").items()  # builds a query object, but sends nothing
@@ -111,7 +113,7 @@ In this example, only the second expression sends a request to the server.
 
 ## Getting results back during an active transaction
 
-When you await a terminal method such as `.query()`, `.item()`, `.count()`, or `.exists()`, the server executes that operation inside the current active transaction and returns the result immediately.
+When you await `.query()`, the server executes the built query/action inside the current active transaction and returns the result immediately.
 
 The transaction stays open after the result is returned, so you can continue using the same `tx` object.
 
@@ -124,9 +126,9 @@ try:
     async with client.transaction("write") as tx:
         users = tx.shelf("users")
 
-        await users.put("eve", {"role": "user", "age": 22})
+        await users.put("eve", {"role": "user", "age": 22}).query()
 
-        eve = await users.key("eve").item()
+        eve = await users.key("eve").item().query()
         all_users = await users.items().query()
 
         print(eve)
@@ -134,7 +136,7 @@ try:
 
         await users.key("eve").update(
             lambda item: {**item.value, "role": "admin"}
-        )
+        ).query()
 finally:
     await client.close()
 ```
@@ -145,18 +147,16 @@ This means:
 - the server-side transaction is still active after the result comes back
 - you can read your own uncommitted writes inside the same write transaction
 
-## There is no `tx.result`
+## Use returned values directly
 
-Client transactions do not store query results on `tx`.
-
-Instead, use the return value from each awaited terminal call:
+Use the return value from each awaited `.query()` call directly:
 
 ```python
 async with client.transaction("read") as tx:
     users = tx.shelf("users")
 
     result = await users.items().query()
-    alice = await users.key("alice").item()
+    alice = await users.key("alice").item().query()
 ```
 
 Here, `result` and `alice` are the values returned by the server for that transaction.
@@ -166,6 +166,7 @@ Here, `result` and `alice` are the values returned by the server for that transa
 - `Client.connect(...)` accepts URL-style targets only.
 - Use `client.transaction("read")` for reads.
 - Use `client.transaction("write")` for mutations.
-- Use `.query()` to execute and collect the current remote query.
+- `.query()` is the only terminal method on the remote client.
 - `await users.query()` returns the current selection as-is, while `await users.items().query()` loads values first.
+- `await users.count().query()` returns an `int`, `await users.key("alice").exists().query()` returns a `bool`, and `await users.key("alice").item().query()` returns one `Item`.
 - Always `await client.close()` when finished.

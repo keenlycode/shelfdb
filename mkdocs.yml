@@ -25,10 +25,10 @@ nav:
 markdown_extensions:
   - admonition
   - attr_list
+  - fenced_code
+  - codehilite
   - toc:
       permalink: true
-  - pymdownx.superfences
   - pymdownx.inlinehilite
-  - pymdownx.highlight
   - pymdownx.tabbed:
       alternate_style: true

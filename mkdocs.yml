@@ -23,6 +23,7 @@ nav:
       - Run the server: usage/server.md
       - Remote client usage: usage/remote.md
       - Local database usage: usage/local.md
+      - Benchmark: benchmark.md
   - API Reference:
       - API overview: api/index.md
       - Client API: api/client.md

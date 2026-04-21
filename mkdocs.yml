@@ -1,0 +1,34 @@
+site_name: ShelfDB
+site_description: Usage documentation for ShelfDB
+site_url: https://example.com/shelfdb
+repo_url: https://github.com/umlab/shelfdb
+docs_dir: docs-src
+site_dir: docs
+
+theme:
+  name: shadcn
+  show_title: true
+  show_stargazers: false
+  topbar_sections: true
+  pygments_style:
+    light: shadcn-light
+    dark: github-dark
+  icon: heroicons:circle-stack
+
+nav:
+  - Home: index.md
+  - Installation: usage/installation.md
+  - Run the server: usage/server.md
+  - Local database usage: usage/local.md
+  - Remote client usage: usage/remote.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.highlight
+  - pymdownx.tabbed:
+      alternate_style: true

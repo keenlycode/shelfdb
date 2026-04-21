@@ -134,3 +134,77 @@ def test_docs_serve_mode_supports_livereload_and_port(monkeypatch):
         "cwd": cli.repo_root(),
         "check": True,
     }
+
+
+def test_docs_publish_mode_uses_project_version_and_latest_alias(monkeypatch):
+    captured = {}
+
+    def fake_run(command, cwd, check):
+        captured.update(command=command, cwd=cwd, check=check)
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+    monkeypatch.setattr(cli, "project_version", lambda: "2.1.0rc1")
+
+    cli.main(["docs", "publish"])
+
+    assert captured == {
+        "command": [
+            "uv",
+            "run",
+            "mike",
+            "deploy",
+            "--branch",
+            "docs",
+            "--remote",
+            "origin",
+            "--push",
+            "--update-aliases",
+            "2.1.0rc1",
+            "latest",
+        ],
+        "cwd": cli.repo_root(),
+        "check": True,
+    }
+
+
+def test_docs_publish_mode_supports_custom_target_options(monkeypatch):
+    captured = {}
+
+    def fake_run(command, cwd, check):
+        captured.update(command=command, cwd=cwd, check=check)
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+
+    cli.main(
+        [
+            "docs",
+            "publish",
+            "--publish-version",
+            "3.0.0",
+            "--alias",
+            "stable",
+            "--branch",
+            "gh-pages",
+            "--remote",
+            "upstream",
+        ]
+    )
+
+    assert captured == {
+        "command": [
+            "uv",
+            "run",
+            "mike",
+            "deploy",
+            "--branch",
+            "gh-pages",
+            "--remote",
+            "upstream",
+            "--push",
+            "--update-aliases",
+            "3.0.0",
+            "stable",
+        ],
+        "cwd": cli.repo_root(),
+        "check": True,
+    }

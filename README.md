@@ -2,6 +2,32 @@
 
 Tiny LMDB-backed shelf database utilities.
 
+## Development
+
+Install development dependencies:
+
+```bash
+uv sync --dev
+```
+
+Serve the docs locally:
+
+```bash
+uv run python -m dev docs serve --port 9001 --livereload
+```
+
+Publish the docs with mike to the `docs` branch:
+
+```bash
+uv run python -m dev docs publish
+```
+
+Override the publish target when needed:
+
+```bash
+uv run python -m dev docs publish --publish-version 2.1.0rc1 --alias latest --branch docs --remote origin
+```
+
 ## Server
 
 Run the protocol server:

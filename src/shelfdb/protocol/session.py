@@ -6,6 +6,8 @@ from typing import Any
 
 from shelfdb.shelf import DB, Item, MutationResult
 
+from .query_result import normalize_query_result
+
 
 def _ok(result: Any = None) -> dict[str, Any]:
     response = {"ok": True}
@@ -52,6 +54,18 @@ class Session:
             if self.active:
                 return _error("transaction already active")
             return self._begin(command.get("mode"))
+
+        if name == "query":
+            if not self.active:
+                return _error("no active transaction")
+            try:
+                return self._query(
+                    shelf=command["shelf"],
+                    ops=command.get("ops", []),
+                    action=command["action"],
+                )
+            except Exception as exc:
+                return _error(str(exc))
 
         if name not in {"put", "get", "commit", "rollback"}:
             return _error("unknown command")
@@ -109,6 +123,46 @@ class Session:
         self._tx.tx.abort()
         self._clear_transaction()
         return _ok({"rolled_back": True})
+
+    def _query(self, *, shelf: str, ops: list[dict[str, Any]], action: dict[str, Any]) -> dict[str, Any]:
+        query = self._tx.shelf(shelf)
+        for op in ops:
+            query = self._apply_query_operation(query, op)
+
+        result = self._apply_query_action(query, action)
+        return _ok(normalize_query_result(result))
+
+    def _apply_query_operation(self, query: Any, op: dict[str, Any]) -> Any:
+        name = op["op"]
+        if name not in {
+            "asc",
+            "desc",
+            "key",
+            "keys_range",
+            "keys",
+            "items",
+            "filter",
+            "slice",
+            "sort",
+        }:
+            raise ValueError(f"unsupported query operation: {name}")
+        return getattr(query, name)(*op.get("args", []), **op.get("kwargs", {}))
+
+    def _apply_query_action(self, query: Any, action: dict[str, Any]) -> Any:
+        name = action["op"]
+        if name == "collect":
+            return list(query)
+        if name not in {
+            "count",
+            "exists",
+            "item",
+            "put",
+            "put_many",
+            "update",
+            "delete",
+        }:
+            raise ValueError(f"unsupported query action: {name}")
+        return getattr(query, name)(*action.get("args", []), **action.get("kwargs", {}))
 
     def _clear_transaction(self) -> None:
         self._tx = None

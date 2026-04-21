@@ -1,5 +1,5 @@
 from shelfdb.protocol import Session
-from shelfdb.shelf import DB
+from shelfdb.shelf import DB, Item, MutationResult, UNDEF
 
 
 def test_session_write_commit_and_read_back(tmp_path):
@@ -116,3 +116,137 @@ def test_session_close_rolls_back_uncommitted_write(tmp_path):
 
         with db.transaction(write=True) as tx:
             assert tx.shelf("note").key("a").exists() is False
+
+
+def test_session_query_supports_remote_style_operations(tmp_path):
+    db_path = tmp_path / "shelfdb"
+
+    with DB(str(db_path)) as db:
+        with db.transaction(write=True) as tx:
+            users = tx.shelf("users")
+            users.put("alice", {"age": 30, "role": "admin"})
+            users.put("bob", {"age": 25, "role": "user"})
+            users.put("carol", {"age": 20, "role": "user"})
+            users.put("dave", {"age": 35, "role": "admin"})
+
+        session = Session(db)
+        assert session.handle({"cmd": "begin", "mode": "read"}) == {
+            "ok": True,
+            "result": {"mode": "read"},
+        }
+
+        result = session.handle(
+            {
+                "cmd": "query",
+                "shelf": "users",
+                "ops": [
+                    {"op": "filter", "args": [lambda item: item.value["role"] == "admin"], "kwargs": {}},
+                    {"op": "sort", "args": [], "kwargs": {"reverse": True}},
+                ],
+                "action": {"op": "collect", "args": [], "kwargs": {}},
+            }
+        )
+
+        assert result == {
+            "ok": True,
+            "result": [
+                {"__shelfdb_type__": "item", "key": "dave", "value": {"age": 35, "role": "admin"}},
+                {"__shelfdb_type__": "item", "key": "alice", "value": {"age": 30, "role": "admin"}},
+            ],
+        }
+
+        result = session.handle(
+            {
+                "cmd": "query",
+                "shelf": "users",
+                "ops": [{"op": "keys_range", "args": ["bob", "d"], "kwargs": {}}],
+                "action": {"op": "collect", "args": [], "kwargs": {}},
+            }
+        )
+        assert result == {
+            "ok": True,
+            "result": [
+                {"__shelfdb_type__": "item", "key": "bob", "value": {"__shelfdb_type__": "undef"}},
+                {"__shelfdb_type__": "item", "key": "carol", "value": {"__shelfdb_type__": "undef"}},
+            ],
+        }
+
+        assert session.handle({"cmd": "rollback"}) == {
+            "ok": True,
+            "result": {"rolled_back": True},
+        }
+
+
+def test_session_query_supports_write_actions(tmp_path):
+    db_path = tmp_path / "shelfdb"
+
+    with DB(str(db_path)) as db:
+        session = Session(db)
+        assert session.handle({"cmd": "begin", "mode": "write"}) == {
+            "ok": True,
+            "result": {"mode": "write"},
+        }
+
+        result = session.handle(
+            {
+                "cmd": "query",
+                "shelf": "users",
+                "ops": [],
+                "action": {
+                    "op": "put_many",
+                    "args": [[Item("alice", {"age": 30}), Item("bob", {"age": 25})]],
+                    "kwargs": {},
+                },
+            }
+        )
+        assert result == {
+            "ok": True,
+            "result": [
+                {"__shelfdb_type__": "mutation", "key": "alice", "ok": True},
+                {"__shelfdb_type__": "mutation", "key": "bob", "ok": True},
+            ],
+        }
+
+        result = session.handle(
+            {
+                "cmd": "query",
+                "shelf": "users",
+                "ops": [{"op": "key", "args": ["alice"], "kwargs": {}}],
+                "action": {
+                    "op": "update",
+                    "args": [lambda item: {**item.value, "age": item.value["age"] + 1}],
+                    "kwargs": {},
+                },
+            }
+        )
+        assert result == {
+            "ok": True,
+            "result": [
+                {"__shelfdb_type__": "mutation", "key": "alice", "ok": True},
+            ],
+        }
+
+        result = session.handle(
+            {
+                "cmd": "query",
+                "shelf": "users",
+                "ops": [{"op": "key", "args": ["bob"], "kwargs": {}}],
+                "action": {"op": "delete", "args": [], "kwargs": {}},
+            }
+        )
+        assert result == {
+            "ok": True,
+            "result": [
+                {"__shelfdb_type__": "mutation", "key": "bob", "ok": True},
+            ],
+        }
+
+        assert session.handle({"cmd": "commit"}) == {
+            "ok": True,
+            "result": {"committed": True},
+        }
+
+        with db.transaction(write=False) as tx:
+            users = tx.shelf("users")
+            assert users.key("alice").item() == Item("alice", {"age": 31})
+            assert users.key("bob").exists() is False

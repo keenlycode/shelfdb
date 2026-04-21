@@ -1,3 +1,3 @@
-from .client import Client, ClientError, ClientTransaction
+from .client import Client, ClientError, ClientTransaction, RemoteShelfQuery
 
-__all__ = ["Client", "ClientError", "ClientTransaction"]
+__all__ = ["Client", "ClientError", "ClientTransaction", "RemoteShelfQuery"]

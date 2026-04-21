@@ -3,7 +3,7 @@ from pathlib import Path
 
 from shelfdb.client import Client, ClientError
 from shelfdb.protocol import serve, serve_unix
-from shelfdb.shelf import DB
+from shelfdb.shelf import DB, Item, MutationResult, UNDEF
 
 
 def test_client_write_commit_and_read_back(tmp_path):
@@ -147,5 +147,104 @@ def test_client_connect_rejects_unknown_scheme():
             assert str(exc) == "connection target must use tcp:// or unix://"
         else:
             raise AssertionError("expected invalid target error")
+
+    asyncio.run(run())
+
+
+def test_client_remote_query_read_api(tmp_path):
+    db_path = tmp_path / "shelfdb"
+
+    async def run():
+        with DB(str(db_path)) as db:
+            with db.transaction(write=True) as tx:
+                users = tx.shelf("users")
+                users.put("alice", {"age": 30, "role": "admin"})
+                users.put("bob", {"age": 25, "role": "user"})
+                users.put("carol", {"age": 20, "role": "user"})
+                users.put("dave", {"age": 35, "role": "admin"})
+
+            server = await serve(db, host="127.0.0.1", port=0)
+            host, port = server.sockets[0].getsockname()[:2]
+
+            try:
+                client = await Client.connect(f"tcp://{host}:{port}")
+                try:
+                    async with client.transaction("read") as tx:
+                        users = tx.shelf("users")
+                        assert await users.count() == 4
+                        assert await users.key("alice").exists() is True
+                        assert await users.key("missing").exists() is False
+                        assert await users.key("alice").item() == Item(
+                            "alice", {"age": 30, "role": "admin"}
+                        )
+                        assert await users.keys_range("bob", "d").all() == [
+                            Item("bob", UNDEF),
+                            Item("carol", UNDEF),
+                        ]
+                        assert (
+                            await users.filter(
+                                lambda item: item.value["role"] == "admin"
+                            )
+                            .sort(reverse=True)
+                            .all()
+                        ) == [
+                            Item("dave", {"age": 35, "role": "admin"}),
+                            Item("alice", {"age": 30, "role": "admin"}),
+                        ]
+                finally:
+                    await client.close()
+            finally:
+                server.close()
+                await server.wait_closed()
+
+    asyncio.run(run())
+
+
+def test_client_remote_query_write_api(tmp_path):
+    db_path = tmp_path / "shelfdb"
+
+    async def run():
+        with DB(str(db_path)) as db:
+            server = await serve(db, host="127.0.0.1", port=0)
+            host, port = server.sockets[0].getsockname()[:2]
+
+            try:
+                client = await Client.connect(f"tcp://{host}:{port}")
+                try:
+                    async with client.transaction("write") as tx:
+                        users = tx.shelf("users")
+                        assert await users.put_many(
+                            [
+                                Item("alice", {"age": 30, "role": "admin"}),
+                                Item("bob", {"age": 25, "role": "user"}),
+                                Item("carol", {"age": 20, "role": "user"}),
+                            ]
+                        ) == [
+                            MutationResult("alice", True),
+                            MutationResult("bob", True),
+                            MutationResult("carol", True),
+                        ]
+                        assert await users.key("alice").update(
+                            lambda item: {**item.value, "age": item.value["age"] + 1}
+                        ) == [MutationResult("alice", True)]
+                        assert await users.key("bob").delete() == [
+                            MutationResult("bob", True)
+                        ]
+                finally:
+                    await client.close()
+            finally:
+                server.close()
+                await server.wait_closed()
+
+            with DB(str(db_path)) as reopened:
+                with reopened.transaction(write=False) as tx:
+                    users = tx.shelf("users")
+                    assert users.key("alice").item() == Item(
+                        "alice", {"age": 31, "role": "admin"}
+                    )
+                    assert users.key("bob").exists() is False
+                    assert users.key("carol").item() == Item(
+                        "carol", {"age": 20, "role": "user"}
+                    )
 
     asyncio.run(run())

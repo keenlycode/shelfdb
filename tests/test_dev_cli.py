@@ -109,3 +109,28 @@ def test_docs_build_mode(monkeypatch):
         "cwd": cli.repo_root(),
         "check": True,
     }
+
+
+def test_docs_serve_mode_supports_livereload_and_port(monkeypatch):
+    captured = {}
+
+    def fake_run(command, cwd, check):
+        captured.update(command=command, cwd=cwd, check=check)
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+
+    cli.main(["docs", "serve", "--livereload", "--port", "9001"])
+
+    assert captured == {
+        "command": [
+            "uv",
+            "run",
+            "mkdocs",
+            "serve",
+            "--dev-addr",
+            "127.0.0.1:9001",
+            "--livereload",
+        ],
+        "cwd": cli.repo_root(),
+        "check": True,
+    }

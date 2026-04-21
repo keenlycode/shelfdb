@@ -9,4 +9,5 @@ tmp/
 .pytest_cache
 .ruff_cache
 .opencode
-!src/shelfdb/ai_skill/shelfdb-usage/references/
+agents/
+db/

@@ -1,15 +1,15 @@
 site_name: ShelfDB
 site_description: Usage documentation for ShelfDB
 site_url: https://example.com/shelfdb
-repo_url: https://github.com/umlab/shelfdb
+repo_url: https://github.com/keenlycode/shelfdb
 docs_dir: docs-src
 site_dir: docs
 
 theme:
   name: shadcn
   show_title: true
-  show_stargazers: false
-  topbar_sections: true
+  show_stargazers: true
+  topbar_sections: false
   pygments_style:
     light: shadcn-light
     dark: github-dark

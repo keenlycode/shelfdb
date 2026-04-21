@@ -11,6 +11,7 @@ import statistics
 import subprocess
 import tempfile
 import time
+import tomllib
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
@@ -681,6 +682,12 @@ def repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
+def project_version() -> str:
+    pyproject = repo_root() / "pyproject.toml"
+    data = tomllib.loads(pyproject.read_text())
+    return str(data["project"]["version"])
+
+
 def run_cmd(*args: str) -> None:
     command = [*args]
     print("+", " ".join(command))
@@ -789,11 +796,34 @@ def coverage() -> None:
 
 @app.command
 def docs(
-    mode: Literal["serve", "build"] = "serve",
+    mode: Literal["serve", "build", "publish"] = "serve",
     port: int = 9001,
     livereload: bool = True,
+    publish_version: str | None = None,
+    alias: str = "latest",
+    branch: str = "docs",
+    remote: str = "origin",
 ) -> None:
     """Build or serve project documentation."""
+    if mode == "publish":
+        resolved_version = publish_version or project_version()
+        command = [
+            "uv",
+            "run",
+            "mike",
+            "deploy",
+            "--branch",
+            branch,
+            "--remote",
+            remote,
+            "--push",
+            "--update-aliases",
+            resolved_version,
+            alias,
+        ]
+        run_cmd(*command)
+        return
+
     command = ["uv", "run", "mkdocs", mode]
     if mode == "serve":
         command.extend(["--dev-addr", f"127.0.0.1:{port}"])

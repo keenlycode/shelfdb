@@ -1,4 +1,6 @@
-from shelfdb.cli import main
+from pathlib import Path
+
+from shelfdb.cli import install_ai_skill, main
 
 
 def test_cli_server_defaults(monkeypatch):
@@ -55,3 +57,54 @@ def test_cli_server_accepts_relative_unix_url(monkeypatch):
         "db_path": "db",
         "url": "unix://tmp/shelfdb.sock",
     }
+
+
+def test_cli_ai_skill_install_uses_prompt_default(monkeypatch):
+    installed = {}
+
+    monkeypatch.setattr("builtins.input", lambda prompt: "")
+
+    def fake_install(destination: Path) -> Path:
+        installed["destination"] = destination
+        return destination
+
+    monkeypatch.setattr("shelfdb.cli.install_ai_skill", fake_install)
+
+    main(["ai-skill-install"])
+
+    assert installed == {"destination": Path(".agents/skills/shelfdb-usage")}
+
+
+def test_cli_ai_skill_install_accepts_explicit_path(monkeypatch):
+    installed = {}
+
+    def fake_install(destination: Path) -> Path:
+        installed["destination"] = destination
+        return destination
+
+    monkeypatch.setattr("shelfdb.cli.install_ai_skill", fake_install)
+
+    main(["ai-skill-install", "--path", "/tmp/custom-skill"])
+
+    assert installed == {"destination": Path("/tmp/custom-skill")}
+
+
+def test_install_ai_skill_copies_bundled_files(tmp_path, monkeypatch):
+    source = tmp_path / "src-skill"
+    destination = tmp_path / "dest-skill"
+    source.mkdir()
+    (source / "SKILL.md").write_text("skill")
+    docs = source / "docs"
+    docs.mkdir()
+    (docs / "index.md").write_text("docs")
+    destination.mkdir()
+    (destination / "stale.txt").write_text("stale")
+
+    monkeypatch.setattr("shelfdb.cli.bundled_ai_skill_path", lambda: source)
+
+    installed = install_ai_skill(destination)
+
+    assert installed == destination
+    assert (destination / "SKILL.md").read_text() == "skill"
+    assert (destination / "docs" / "index.md").read_text() == "docs"
+    assert not (destination / "stale.txt").exists()

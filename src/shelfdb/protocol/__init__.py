@@ -12,7 +12,7 @@ from .protocol import (
     write_request,
     write_response,
 )
-from .server import handle_client, serve
+from .server import handle_client, serve, serve_unix
 from .session import Session
 
 __all__ = [
@@ -28,6 +28,7 @@ __all__ = [
     "read_response",
     "Session",
     "serve",
+    "serve_unix",
     "write_payload",
     "write_request",
     "write_response",

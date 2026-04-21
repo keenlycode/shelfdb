@@ -1,11 +1,26 @@
 import asyncio
+from pathlib import Path
 
-from shelfdb.protocol import read_response, serve, write_request
+from shelfdb.protocol import read_response, serve, serve_unix, write_request
 from shelfdb.shelf import DB
 
 
 async def _exchange(host: str, port: int, commands: list[dict]) -> list[dict]:
     reader, writer = await asyncio.open_connection(host, port)
+
+    try:
+        responses = []
+        for command in commands:
+            await write_request(writer, command)
+            responses.append(await read_response(reader))
+        return responses
+    finally:
+        writer.close()
+        await writer.wait_closed()
+
+
+async def _exchange_unix(path: str, commands: list[dict]) -> list[dict]:
+    reader, writer = await asyncio.open_unix_connection(path)
 
     try:
         responses = []
@@ -175,3 +190,53 @@ def test_server_disconnect_rolls_back_uncommitted_write(tmp_path):
                 await server.wait_closed()
 
     asyncio.run(run())
+
+
+def test_server_handles_write_then_read_over_unix_socket(tmp_path):
+    db_path = tmp_path / "shelfdb"
+    socket_path = tmp_path / "shelfdb.sock"
+
+    async def run():
+        with DB(str(db_path)) as db:
+            server = await serve_unix(db, path=str(socket_path))
+
+            try:
+                write_responses = await _exchange_unix(
+                    str(socket_path),
+                    [
+                        {"cmd": "begin", "mode": "write"},
+                        {
+                            "cmd": "put",
+                            "shelf": "note",
+                            "key": "a",
+                            "value": {"name": "hello"},
+                        },
+                        {"cmd": "commit"},
+                    ],
+                )
+                read_responses = await _exchange_unix(
+                    str(socket_path),
+                    [
+                        {"cmd": "begin", "mode": "read"},
+                        {"cmd": "get", "shelf": "note", "key": "a"},
+                        {"cmd": "rollback"},
+                    ],
+                )
+                return write_responses, read_responses
+            finally:
+                server.close()
+                await server.wait_closed()
+
+    write_responses, read_responses = asyncio.run(run())
+
+    assert write_responses == [
+        {"ok": True, "result": {"mode": "write"}},
+        {"ok": True, "result": {"key": "a", "ok": True}},
+        {"ok": True, "result": {"committed": True}},
+    ]
+    assert read_responses == [
+        {"ok": True, "result": {"mode": "read"}},
+        {"ok": True, "result": {"key": "a", "value": {"name": "hello"}}},
+        {"ok": True, "result": {"rolled_back": True}},
+    ]
+    assert Path(socket_path).exists() is False

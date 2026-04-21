@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from contextlib import suppress
 from functools import partial
+from pathlib import Path
 
 from shelfdb.shelf import DB
 
@@ -55,6 +56,18 @@ async def serve(
 ) -> asyncio.Server:
     """Start the minimal ShelfDB protocol server."""
     return await asyncio.start_server(partial(handle_client, db=db), host, port)
+
+
+async def serve_unix(
+    db: DB,
+    *,
+    path: str,
+) -> asyncio.Server:
+    """Start the minimal ShelfDB protocol server on a unix socket."""
+    socket_path = Path(path)
+    with suppress(FileNotFoundError):
+        socket_path.unlink()
+    return await asyncio.start_unix_server(partial(handle_client, db=db), path)
 
 
 async def _write_error(writer: asyncio.StreamWriter, message: str) -> None:

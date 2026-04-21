@@ -1,3 +1,63 @@
 # shelfdb
 
 Tiny LMDB-backed shelf database utilities.
+
+## Server
+
+Run the protocol server:
+
+```bash
+shelfdb server
+```
+
+Run the protocol server on a custom address:
+
+```bash
+shelfdb server --url "tcp://0.0.0.0:17001" --db-path ./db
+```
+
+## Client
+
+Connect a client:
+
+```python
+from shelfdb.client import Client
+
+client = await Client.connect("tcp://127.0.0.1:31337")
+```
+
+Unix sockets also work:
+
+```python
+from shelfdb.client import Client
+
+client = await Client.connect("unix:///tmp/shelfdb.sock")
+```
+
+## Example
+
+```python
+from shelfdb.client import Client
+
+client = await Client.connect("tcp://127.0.0.1:31337")
+
+try:
+    async with client.transaction("read") as tx:
+        users = tx.shelf("users")
+
+        count = await users.count()
+        alice = await users.key("alice").item()
+        admins = await users.filter(
+            lambda item: item.value["role"] == "admin"
+        ).sort(reverse=True).all()
+
+    async with client.transaction("write") as tx:
+        users = tx.shelf("users")
+
+        await users.put("eve", {"role": "user"})
+        await users.key("eve").update(
+            lambda item: {**item.value, "role": "admin"}
+        )
+finally:
+    await client.close()
+```

@@ -9,6 +9,7 @@ from cyclopts import App
 
 from shelfdb.protocol import serve, serve_unix
 from shelfdb.shelf import DB
+from shelfdb.target import parse_target, parse_tcp_location, parse_unix_location
 
 app = App("shelfdb")
 
@@ -16,16 +17,17 @@ app = App("shelfdb")
 async def run_server(
     *,
     db_path: str,
-    host: str = "127.0.0.1",
-    port: int = 31337,
-    unix_path: str | None = None,
+    url: str = "tcp://127.0.0.1:31337",
 ) -> None:
-    socket_path = None if unix_path is None else str(Path(unix_path))
+    scheme, location = parse_target(url)
+    socket_path = None
 
     with DB(db_path) as db:
-        if socket_path is None:
+        if scheme == "tcp":
+            host, port = parse_tcp_location(location)
             server = await serve(db, host=host, port=port)
         else:
+            socket_path = str(Path(parse_unix_location(location)))
             server = await serve_unix(db, path=socket_path)
 
         try:
@@ -41,12 +43,10 @@ async def run_server(
 @app.command
 async def server(
     db_path: str = "db",
-    host: str = "127.0.0.1",
-    port: int = 31337,
-    unix_path: str | None = None,
+    url: str = "tcp://127.0.0.1:31337",
 ) -> None:
     """Run the ShelfDB protocol server."""
-    await run_server(db_path=db_path, host=host, port=port, unix_path=unix_path)
+    await run_server(db_path=db_path, url=url)
 
 
 def main(argv: list[str] | None = None) -> None:

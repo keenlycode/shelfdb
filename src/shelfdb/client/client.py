@@ -5,11 +5,11 @@ from __future__ import annotations
 from asyncio import StreamReader, StreamWriter, open_connection, open_unix_connection
 from contextlib import suppress
 from typing import Any
-from urllib.parse import urlsplit
 
 from shelfdb.protocol import read_response, write_request
 from shelfdb.protocol.query_result import denormalize_query_result
 from shelfdb.shelf import Item, MutationResult
+from shelfdb.target import parse_target, parse_tcp_location, parse_unix_location
 
 
 class ClientError(RuntimeError):
@@ -25,13 +25,13 @@ class Client:
 
     @classmethod
     async def connect(cls, target: str) -> Client:
-        scheme, location = _parse_target(target)
+        scheme, location = parse_target(target)
         if scheme == "tcp":
-            host, port = _parse_tcp_location(location)
+            host, port = parse_tcp_location(location)
             reader, writer = await open_connection(host, port)
             return cls(reader, writer)
 
-        reader, writer = await open_unix_connection(_parse_unix_location(location))
+        reader, writer = await open_unix_connection(parse_unix_location(location))
         return cls(reader, writer)
 
     async def close(self) -> None:
@@ -206,28 +206,3 @@ class RemoteShelfQuery:
 
     async def delete(self) -> list[MutationResult]:
         return await self._run("delete")
-
-
-def _parse_target(target: str) -> tuple[str, str]:
-    parsed = urlsplit(target)
-    if parsed.scheme not in {"tcp", "unix"}:
-        raise ValueError("connection target must use tcp:// or unix://")
-    return parsed.scheme, target[len(f"{parsed.scheme}://") :]
-
-
-def _parse_tcp_location(location: str) -> tuple[str, int]:
-    if not location:
-        raise ValueError("tcp target must include host and port")
-    host, sep, port_text = location.rpartition(":")
-    if sep == "" or not host or not port_text:
-        raise ValueError("tcp target must be in the form tcp://host:port")
-    try:
-        return host, int(port_text)
-    except ValueError as exc:
-        raise ValueError("tcp target port must be an integer") from exc
-
-
-def _parse_unix_location(location: str) -> str:
-    if not location:
-        raise ValueError("unix target must include a socket path")
-    return location

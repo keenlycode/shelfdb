@@ -4,21 +4,21 @@ Tiny LMDB-backed shelf database utilities.
 
 ## Server
 
-Run the protocol server over TCP:
+Run the protocol server:
 
 ```bash
 shelfdb server
 ```
 
-Run the protocol server over a Unix socket:
+Run the protocol server on a custom address:
 
 ```bash
-shelfdb server --unix-path /tmp/shelfdb.sock
+shelfdb server --url "tcp://0.0.0.0:17001" --db-path ./db
 ```
 
 ## Client
 
-Connect over TCP:
+Connect a client:
 
 ```python
 from shelfdb.client import Client
@@ -26,7 +26,7 @@ from shelfdb.client import Client
 client = await Client.connect("tcp://127.0.0.1:31337")
 ```
 
-Connect over a Unix socket:
+Unix sockets also work:
 
 ```python
 from shelfdb.client import Client
@@ -34,7 +34,7 @@ from shelfdb.client import Client
 client = await Client.connect("unix:///tmp/shelfdb.sock")
 ```
 
-## Remote query usage
+## Example
 
 ```python
 from shelfdb.client import Client
@@ -61,26 +61,3 @@ try:
 finally:
     await client.close()
 ```
-
-Supported remote query builder methods:
-
-- `asc()`
-- `desc()`
-- `key(...)`
-- `keys_range(...)`
-- `keys()`
-- `items()`
-- `filter(...)`
-- `slice(...)`
-- `sort(...)`
-
-Supported async terminal methods:
-
-- `await query.all()`
-- `await query.count()`
-- `await query.exists()`
-- `await query.item()`
-- `await query.put(...)`
-- `await query.put_many(...)`
-- `await query.update(...)`
-- `await query.delete()`

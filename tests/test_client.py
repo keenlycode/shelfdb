@@ -151,6 +151,36 @@ def test_client_connect_rejects_unknown_scheme():
     asyncio.run(run())
 
 
+def test_client_connect_supports_relative_unix_path(tmp_path, monkeypatch):
+    db_path = tmp_path / "shelfdb"
+    workdir = tmp_path / "work"
+    workdir.mkdir()
+
+    async def run():
+        with DB(str(db_path)) as db:
+            socket_path = workdir / "tmp" / "shelfdb.sock"
+            socket_path.parent.mkdir()
+            server = await serve_unix(db, path=str(socket_path))
+
+            try:
+                monkeypatch.chdir(workdir)
+                client = await Client.connect("unix://tmp/shelfdb.sock")
+                try:
+                    assert await client.begin("write") == {"mode": "write"}
+                    assert await client.put("note", "a", {"name": "hello"}) == {
+                        "key": "a",
+                        "ok": True,
+                    }
+                    assert await client.commit() == {"committed": True}
+                finally:
+                    await client.close()
+            finally:
+                server.close()
+                await server.wait_closed()
+
+    asyncio.run(run())
+
+
 def test_client_remote_query_read_api(tmp_path):
     db_path = tmp_path / "shelfdb"
 

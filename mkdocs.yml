@@ -16,11 +16,11 @@ theme:
   icon: heroicons:circle-stack
 
 nav:
-  - Home: index.md
+  - ShelfDB: index.md
   - Installation: usage/installation.md
   - Run the server: usage/server.md
-  - Local database usage: usage/local.md
   - Remote client usage: usage/remote.md
+  - Local database usage: usage/local.md
 
 markdown_extensions:
   - admonition

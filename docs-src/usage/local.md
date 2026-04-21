@@ -2,6 +2,8 @@
 
 Use `DB` when your code can access the LMDB environment directly.
 
+This is optional. Prefer the client/server flow when you want a more flexible setup, especially over a Unix socket.
+
 ## Open a database
 
 ```python
@@ -44,6 +46,8 @@ with DB("./db") as db:
 ## Query style
 
 `tx.shelf("users")` returns a `ShelfQuery`, so you can chain selectors and transforms.
+
+The transaction query syntax is a bit different from client usage: local queries run directly, while remote client usage ends with `.query()`.
 
 ```python
 with DB("./db") as db:

@@ -2,13 +2,9 @@
 
 Use the async client when your code talks to a running ShelfDB server.
 
+This is the primary way to use ShelfDB in application code. It works over TCP, and Unix sockets are often the most flexible local deployment option.
+
 ## Connect to the server
-
-```python
-from shelfdb.client import Client
-
-client = await Client.connect("tcp://127.0.0.1:31337")
-```
 
 Unix socket:
 
@@ -16,6 +12,14 @@ Unix socket:
 from shelfdb.client import Client
 
 client = await Client.connect("unix:///tmp/shelfdb.sock")
+```
+
+TCP:
+
+```python
+from shelfdb.client import Client
+
+client = await Client.connect("tcp://127.0.0.1:31337")
 ```
 
 Relative Unix socket path:

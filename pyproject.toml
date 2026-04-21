@@ -28,6 +28,9 @@ dependencies = [
     "uvloop>=0.22.0,<0.23; platform_system == 'Linux'",
 ]
 
+[project.scripts]
+shelfdb = "shelfdb.cli:main"
+
 [dependency-groups]
 dev = [
     "dictify>=4.0.0,<4.1",

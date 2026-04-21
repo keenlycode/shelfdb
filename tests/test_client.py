@@ -1,7 +1,8 @@
 import asyncio
+from pathlib import Path
 
 from shelfdb.client import Client, ClientError
-from shelfdb.protocol import serve
+from shelfdb.protocol import serve, serve_unix
 from shelfdb.shelf import DB
 
 
@@ -95,5 +96,44 @@ def test_client_raises_for_server_error(tmp_path):
             finally:
                 server.close()
                 await server.wait_closed()
+
+    asyncio.run(run())
+
+
+def test_client_connect_unix_write_commit_and_read_back(tmp_path):
+    db_path = tmp_path / "shelfdb"
+    socket_path = tmp_path / "shelfdb.sock"
+
+    async def run():
+        with DB(str(db_path)) as db:
+            server = await serve_unix(db, path=str(socket_path))
+
+            try:
+                client = await Client.connect_unix(str(socket_path))
+                try:
+                    assert await client.begin("write") == {"mode": "write"}
+                    assert await client.put("note", "a", {"name": "hello"}) == {
+                        "key": "a",
+                        "ok": True,
+                    }
+                    assert await client.commit() == {"committed": True}
+                finally:
+                    await client.close()
+
+                client = await Client.connect_unix(str(socket_path))
+                try:
+                    assert await client.begin("read") == {"mode": "read"}
+                    assert await client.get("note", "a") == {
+                        "key": "a",
+                        "value": {"name": "hello"},
+                    }
+                    assert await client.rollback() == {"rolled_back": True}
+                finally:
+                    await client.close()
+            finally:
+                server.close()
+                await server.wait_closed()
+
+            assert Path(socket_path).exists() is False
 
     asyncio.run(run())

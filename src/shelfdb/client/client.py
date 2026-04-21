@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from asyncio import StreamReader, StreamWriter, open_connection
+from asyncio import StreamReader, StreamWriter, open_connection, open_unix_connection
 from contextlib import suppress
 from typing import Any
 
@@ -23,6 +23,11 @@ class Client:
     @classmethod
     async def connect(cls, host: str = "127.0.0.1", port: int = 0) -> Client:
         reader, writer = await open_connection(host, port)
+        return cls(reader, writer)
+
+    @classmethod
+    async def connect_unix(cls, path: str) -> Client:
+        reader, writer = await open_unix_connection(path)
         return cls(reader, writer)
 
     async def close(self) -> None:

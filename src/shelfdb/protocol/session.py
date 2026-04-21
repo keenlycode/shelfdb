@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from shelfdb.shelf.db import Transaction
 from shelfdb.shelf import DB, Item, MutationResult
 
 from .query_result import normalize_query_result
@@ -33,7 +34,7 @@ class Session:
 
     def __init__(self, db: DB):
         self._db = db
-        self._tx: Any | None = None
+        self._tx: Transaction | None = None
         self._mode: str | None = None
 
     @property
@@ -91,8 +92,9 @@ class Session:
             return _error(str(exc))
 
     def close(self) -> None:
-        if self.active:
-            self._tx.tx.abort()
+        tx = self._tx
+        if tx is not None:
+            tx.tx.abort()
             self._clear_transaction()
 
     def _begin(self, mode: str | None) -> dict[str, Any]:
@@ -104,28 +106,29 @@ class Session:
         return _ok({"mode": mode})
 
     def _put(self, *, shelf: str, key: str, value: Any) -> dict[str, Any]:
-        result = self._tx.shelf(shelf).put(key, value)
+        result = self._require_tx().shelf(shelf).put(key, value)
         return _ok(_normalize_result(result))
 
     def _get(self, *, shelf: str, key: str) -> dict[str, Any]:
-        result = self._tx.shelf(shelf).key(key).item()
+        result = self._require_tx().shelf(shelf).key(key).item()
         return _ok(_normalize_result(result))
 
     def _commit(self) -> dict[str, Any]:
-        if self._tx.is_write:
-            self._tx.commit()
+        tx = self._require_tx()
+        if tx.is_write:
+            tx.commit()
         else:
-            self._tx.tx.abort()
+            tx.tx.abort()
         self._clear_transaction()
         return _ok({"committed": True})
 
     def _rollback(self) -> dict[str, Any]:
-        self._tx.tx.abort()
+        self._require_tx().tx.abort()
         self._clear_transaction()
         return _ok({"rolled_back": True})
 
     def _query(self, *, shelf: str, ops: list[dict[str, Any]], action: dict[str, Any]) -> dict[str, Any]:
-        query = self._tx.shelf(shelf)
+        query = self._require_tx().shelf(shelf)
         for op in ops:
             query = self._apply_query_operation(query, op)
 
@@ -167,3 +170,9 @@ class Session:
     def _clear_transaction(self) -> None:
         self._tx = None
         self._mode = None
+
+    def _require_tx(self) -> Transaction:
+        tx = self._tx
+        if tx is None:
+            raise RuntimeError("no active transaction")
+        return tx

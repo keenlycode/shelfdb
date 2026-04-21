@@ -14,12 +14,13 @@ from __future__ import annotations
 from collections.abc import Generator, Iterable
 from typing import Any, NamedTuple, cast
 
-import lmdb
 import msgpack
 
 from .schema import Item, MutationResult
 
 _KEEP = object()
+LmdbTransaction = Any
+LmdbCursor = Any
 
 
 def packb(value: Any) -> bytes:
@@ -35,7 +36,7 @@ def unpackb(value: bytes) -> Any:
 class _ShelfHandle(NamedTuple):
     """Shared LMDB transaction plus opened named database handle."""
 
-    tx: lmdb.Transaction
+    tx: LmdbTransaction
     db: Any
 
 
@@ -51,7 +52,7 @@ class ShelfCursor:
 
     def __init__(
         self,
-        tx: lmdb.Transaction,
+        tx: LmdbTransaction,
         db: Any,
         *,
         exact_key: str | None = None,
@@ -99,29 +100,29 @@ class ShelfCursor:
         """Return a copied shelf scan narrowed to ``[start, stop)``."""
         return self._copy(exact_key=None, start=start, stop=stop)
 
-    def _cursor(self) -> lmdb.Cursor:
+    def _cursor(self) -> LmdbCursor:
         """Create an LMDB cursor for this shelf."""
         return self._handle.tx.cursor(db=self._handle.db)
 
-    def _position_cursor(self, cur: lmdb.Cursor) -> bool:
+    def _position_cursor(self, cur: LmdbCursor) -> bool:
         """Position ``cur`` at the first key for the current scan."""
         if self._exact_key is not None:
-            return cast(bool, cur.set_key(self._exact_key.encode()))
+            return cur.set_key(self._exact_key.encode())
 
         if self._start is None:
             if self._descending:
-                return cast(bool, cur.last())
-            return cast(bool, cur.first())
+                return cur.last()
+            return cur.first()
 
         if not self._descending:
-            return cast(bool, cur.set_range(self._start.encode()))
+            return cur.set_range(self._start.encode())
 
         if self._stop is None:
-            return cast(bool, cur.last())
+            return cur.last()
 
         if not cur.set_range(self._stop.encode()):
-            return cast(bool, cur.last())
-        return cast(bool, cur.prev())
+            return cur.last()
+        return cur.prev()
 
     def _key_in_bounds(self, key: bytes) -> bool:
         """Return ``True`` when ``key`` still belongs to the current scan."""
@@ -131,16 +132,16 @@ class ShelfCursor:
             return self._start is None or key >= self._start.encode()
         return self._stop is None or key < self._stop.encode()
 
-    def _advance_cursor(self, cur: lmdb.Cursor) -> bool:
+    def _advance_cursor(self, cur: LmdbCursor) -> bool:
         """Advance ``cur`` according to the current scan direction."""
         if self._descending:
-            return cast(bool, cur.prev())
-        return cast(bool, cur.next())
+            return cur.prev()
+        return cur.next()
 
-    def _iter_keys(self, cur: lmdb.Cursor) -> Generator[str, None, None]:
+    def _iter_keys(self, cur: LmdbCursor) -> Generator[str, None, None]:
         """Yield keys from ``cur`` until the current scan goes out of bounds."""
         while True:
-            key = cast(bytes, cur.key())
+            key = cur.key()
             if not self._key_in_bounds(key):
                 break
             yield key.decode()
@@ -160,7 +161,7 @@ class ShelfStore:
 
     def __init__(
         self,
-        tx: lmdb.Transaction,
+        tx: LmdbTransaction,
         db: Any,
     ):
         self._handle = _ShelfHandle(tx, db)

@@ -3,12 +3,17 @@
 # lib: built-in
 from __future__ import annotations
 
+from typing import Any
+
 # lib: external
 import lmdb
 
 # lib: local
 from .shelf.query import ShelfQuery
 from .shelf.shelf import ShelfCursor, ShelfStore
+
+LmdbEnvironment = Any
+LmdbTransaction = Any
 
 
 class DB:
@@ -123,16 +128,16 @@ class Transaction:
 
     def __init__(
         self,
-        lmdb_env: lmdb.Environment,
-        tx: lmdb.Transaction,
+        lmdb_env: LmdbEnvironment,
+        tx: LmdbTransaction,
         write: bool = False,
     ) -> None:
-        self._lmdb_env: lmdb.Environment = lmdb_env
-        self._tx: lmdb.Transaction = tx
+        self._lmdb_env: LmdbEnvironment = lmdb_env
+        self._tx: LmdbTransaction = tx
         self._is_write = write
 
     @property
-    def tx(self) -> lmdb.Transaction:
+    def tx(self) -> LmdbTransaction:
         """Return the underlying LMDB transaction.
 
         Returns

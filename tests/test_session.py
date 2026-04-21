@@ -1,5 +1,5 @@
 from shelfdb.protocol import Session
-from shelfdb.shelf import DB, Item, MutationResult, UNDEF
+from shelfdb.shelf import DB, Item
 
 
 def test_session_write_commit_and_read_back(tmp_path):

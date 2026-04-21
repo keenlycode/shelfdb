@@ -3,14 +3,20 @@
 from __future__ import annotations
 
 import struct
-from asyncio import StreamReader, StreamWriter
-from typing import Any, Final
+from asyncio import StreamReader
+from typing import Any, Final, Protocol
 
 import dill
 import msgpack
 
 _FRAME_HEADER: Final = struct.Struct(">I")
 MAX_FRAME_SIZE: Final = 1024 * 1024
+
+
+class WritableStream(Protocol):
+    def write(self, data: bytes) -> None: ...
+
+    async def drain(self) -> None: ...
 
 
 def frame_payload(payload: bytes) -> bytes:
@@ -49,7 +55,7 @@ async def read_payload(reader: StreamReader) -> bytes:
     return await reader.readexactly(size)
 
 
-async def write_payload(writer: StreamWriter, payload: bytes) -> None:
+async def write_payload(writer: WritableStream, payload: bytes) -> None:
     """Write one length-prefixed payload to a stream."""
     writer.write(frame_payload(payload))
     await writer.drain()
@@ -60,7 +66,7 @@ async def read_request(reader: StreamReader) -> Any:
     return decode_request(await read_payload(reader))
 
 
-async def write_request(writer: StreamWriter, obj: Any) -> None:
+async def write_request(writer: WritableStream, obj: Any) -> None:
     """Encode and write one client->server request."""
     await write_payload(writer, encode_request(obj))
 
@@ -70,6 +76,6 @@ async def read_response(reader: StreamReader) -> Any:
     return decode_response(await read_payload(reader))
 
 
-async def write_response(writer: StreamWriter, obj: Any) -> None:
+async def write_response(writer: WritableStream, obj: Any) -> None:
     """Encode and write one server->client response."""
     await write_payload(writer, encode_response(obj))

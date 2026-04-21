@@ -1,18 +1,43 @@
-from shelfdb.cli import build_parser
+from shelfdb.cli import main
 
 
-def test_cli_server_defaults():
-    args = build_parser().parse_args(["server"])
+def test_cli_server_defaults(monkeypatch):
+    captured = {}
 
-    assert args.command == "server"
-    assert args.db_path == "db"
-    assert args.host == "127.0.0.1"
-    assert args.port == 31337
-    assert args.unix_path is None
+    async def fake_run_server(*, db_path, host, port, unix_path):
+        captured.update(
+            db_path=db_path,
+            host=host,
+            port=port,
+            unix_path=unix_path,
+        )
+
+    monkeypatch.setattr("shelfdb.cli.run_server", fake_run_server)
+
+    main(["server"])
+
+    assert captured == {
+        "db_path": "db",
+        "host": "127.0.0.1",
+        "port": 31337,
+        "unix_path": None,
+    }
 
 
-def test_cli_server_accepts_unix_path_and_tcp_options():
-    args = build_parser().parse_args(
+def test_cli_server_accepts_unix_path_and_tcp_options(monkeypatch):
+    captured = {}
+
+    async def fake_run_server(*, db_path, host, port, unix_path):
+        captured.update(
+            db_path=db_path,
+            host=host,
+            port=port,
+            unix_path=unix_path,
+        )
+
+    monkeypatch.setattr("shelfdb.cli.run_server", fake_run_server)
+
+    main(
         [
             "server",
             "--db-path",
@@ -26,8 +51,9 @@ def test_cli_server_accepts_unix_path_and_tcp_options():
         ]
     )
 
-    assert args.command == "server"
-    assert args.db_path == "/tmp/db"
-    assert args.host == "0.0.0.0"
-    assert args.port == 9999
-    assert args.unix_path == "/tmp/shelfdb.sock"
+    assert captured == {
+        "db_path": "/tmp/db",
+        "host": "0.0.0.0",
+        "port": 9999,
+        "unix_path": "/tmp/shelfdb.sock",
+    }

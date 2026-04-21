@@ -15,7 +15,7 @@ def test_client_write_commit_and_read_back(tmp_path):
             host, port = server.sockets[0].getsockname()[:2]
 
             try:
-                client = await Client.connect(host, port)
+                client = await Client.connect(f"tcp://{host}:{port}")
                 try:
                     assert await client.begin("write") == {"mode": "write"}
                     assert await client.put("note", "a", {"name": "hello"}) == {
@@ -26,7 +26,7 @@ def test_client_write_commit_and_read_back(tmp_path):
                 finally:
                     await client.close()
 
-                client = await Client.connect(host, port)
+                client = await Client.connect(f"tcp://{host}:{port}")
                 try:
                     assert await client.begin("read") == {"mode": "read"}
                     assert await client.get("note", "a") == {
@@ -52,7 +52,7 @@ def test_client_transaction_context_wrapper(tmp_path):
             host, port = server.sockets[0].getsockname()[:2]
 
             try:
-                client = await Client.connect(host, port)
+                client = await Client.connect(f"tcp://{host}:{port}")
                 try:
                     async with client.transaction("write") as tx:
                         assert await tx.put("note", "a", {"name": "hello"}) == {
@@ -83,7 +83,7 @@ def test_client_raises_for_server_error(tmp_path):
             host, port = server.sockets[0].getsockname()[:2]
 
             try:
-                client = await Client.connect(host, port)
+                client = await Client.connect(f"tcp://{host}:{port}")
                 try:
                     try:
                         await client.commit()
@@ -109,7 +109,7 @@ def test_client_connect_unix_write_commit_and_read_back(tmp_path):
             server = await serve_unix(db, path=str(socket_path))
 
             try:
-                client = await Client.connect_unix(str(socket_path))
+                client = await Client.connect(f"unix://{socket_path}")
                 try:
                     assert await client.begin("write") == {"mode": "write"}
                     assert await client.put("note", "a", {"name": "hello"}) == {
@@ -120,7 +120,7 @@ def test_client_connect_unix_write_commit_and_read_back(tmp_path):
                 finally:
                     await client.close()
 
-                client = await Client.connect_unix(str(socket_path))
+                client = await Client.connect(f"unix://{socket_path}")
                 try:
                     assert await client.begin("read") == {"mode": "read"}
                     assert await client.get("note", "a") == {
@@ -135,5 +135,17 @@ def test_client_connect_unix_write_commit_and_read_back(tmp_path):
                 await server.wait_closed()
 
             assert Path(socket_path).exists() is False
+
+    asyncio.run(run())
+
+
+def test_client_connect_rejects_unknown_scheme():
+    async def run():
+        try:
+            await Client.connect("http://127.0.0.1:17001")
+        except ValueError as exc:
+            assert str(exc) == "connection target must use tcp:// or unix://"
+        else:
+            raise AssertionError("expected invalid target error")
 
     asyncio.run(run())

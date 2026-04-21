@@ -2,25 +2,15 @@
 
 from __future__ import annotations
 
-import argparse
-import asyncio
 from contextlib import suppress
 from pathlib import Path
+
+from cyclopts import App
 
 from shelfdb.protocol import serve, serve_unix
 from shelfdb.shelf import DB
 
-
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="shelfdb")
-    subparsers = parser.add_subparsers(dest="command", required=True)
-
-    server = subparsers.add_parser("server", help="Run the ShelfDB protocol server")
-    server.add_argument("--db-path", default="db", help="LMDB environment path")
-    server.add_argument("--host", default="127.0.0.1", help="TCP host to bind")
-    server.add_argument("--port", type=int, default=31337, help="TCP port to bind")
-    server.add_argument("--unix-path", help="Unix socket path to bind instead of TCP")
-    return parser
+app = App("shelfdb")
 
 
 async def run_server(
@@ -48,16 +38,16 @@ async def run_server(
                     Path(socket_path).unlink()
 
 
-def main(argv: list[str] | None = None) -> None:
-    parser = build_parser()
-    args = parser.parse_args(argv)
+@app.command
+async def server(
+    db_path: str = "db",
+    host: str = "127.0.0.1",
+    port: int = 31337,
+    unix_path: str | None = None,
+) -> None:
+    """Run the ShelfDB protocol server."""
+    await run_server(db_path=db_path, host=host, port=port, unix_path=unix_path)
 
-    if args.command == "server":
-        asyncio.run(
-            run_server(
-                db_path=args.db_path,
-                host=args.host,
-                port=args.port,
-                unix_path=args.unix_path,
-            )
-        )
+
+def main(argv: list[str] | None = None) -> None:
+    app(argv, backend="asyncio", result_action="return_none")

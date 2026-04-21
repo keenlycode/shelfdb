@@ -1,72 +1,63 @@
 # ShelfDB
 
-ShelfDB is a small, sharp database for Python apps that want the speed of LMDB with a simpler way to think about data.
+ShelfDB is a simple, fast key-value database for Python asyncio apps.
 
-Run it as a server, connect over a Unix socket or TCP, and work with named shelves through a clean transaction flow. Keep it local when you want. Put it behind a socket when you want flexibility.
-
-This documentation focuses on practical usage, but the idea is simple: ShelfDB gives you a lightweight data layer that feels easy to wire into real applications.
-
-## Why ShelfDB
-
-ShelfDB is built for the gap between raw storage and a heavyweight database stack.
-
-- **fast underneath** with LMDB as the storage engine
-- **simple on top** with shelves, transactions, and chainable queries
-- **flexible to deploy** over Unix sockets or TCP
-- **easy to embed** when direct local access is enough
-- **pleasant to reason about** when you want straightforward reads and writes
-
-## What ShelfDB gives you
-
-- named shelves backed by LMDB
-- read and write transactions
-- chainable query-style access
-- flexible client/server access over TCP or Unix sockets
-- optional direct local access through `DB` and `ShelfQuery`
-
-## A practical default
-
-The recommended path is to run ShelfDB as a server and connect with the async client.
-
-That gives you a clean separation between your app and storage, while keeping the setup small. For local development and same-machine deployments, Unix sockets are often the sweet spot: simple, fast, and flexible.
+Store Python values like `str`, `int`, `dict`, `list`, and `bytes` with transactions, query chaining, and flexible local or client/server access over TCP or Unix sockets.
 
 ## Quick example
 
 ```python
-from shelfdb.client import Client
+from shelfdb.shelf import DB
 
-client = await Client.connect("unix:///tmp/shelfdb.sock")
-
-try:
-    async with client.transaction("write") as tx:
+with DB("./db") as db:
+    with db.transaction(write=True) as tx:
         users = tx.shelf("users")
-        await users.put("alice", {"role": "admin", "age": 30}).query()
+        users.put("alice", {"role": "admin", "age": 30})
 
-    async with client.transaction("read") as tx:
+    with db.transaction(write=False) as tx:
         users = tx.shelf("users")
-        alice = await users.key("alice").item().query()
+        alice = users.key("alice").item()
         print(alice)
-finally:
-    await client.close()
 ```
 
-This is the core feeling of ShelfDB:
+Other access styles:
 
-- open a transaction
-- work with a shelf
-- compose the operation you want
-- call `.query()` on the client when you want it executed
+- [Remote client usage over TCP](usage/remote.md)
+- [Remote client usage over Unix sockets](usage/remote.md)
 
-It stays small, but still scales to cleaner application boundaries.
+## Key features
+
+- **Simple key-value model** for application data
+- **Asyncio-friendly client usage** for Python async applications
+- **Transactions** for reads and writes
+- **Client/server access** over TCP or Unix sockets
+- **Local direct access** when your code can open the database itself
+- **Chainable query style** for readable data access
+
+## Where ShelfDB fits
+
+ShelfDB fits between TinyDB and SQLite for Python application storage.
+
+| Feature | ShelfDB | SQLite | TinyDB |
+| --- | --- | --- | --- |
+| Type of data store | Key-value store | Relational SQL database | Document database |
+| Asyncio-friendly client usage | Yes | Limited / adapter-based | No |
+| Transactions | Yes | Yes | No |
+| Client/server access | Yes | Not the usual model | No |
+| Local direct access | Yes | Yes | Yes |
+| Chainable Python query style | Yes | No | Yes |
+
+ShelfDB is a good fit when you want something simpler than a SQL workflow, but more structured and deployable than a tiny in-process document store.
 
 ## When to use it
 
 ShelfDB fits well when you want:
 
-- a lightweight service for app state, metadata, queues, caches, or internal tools
-- LMDB-backed persistence without exposing LMDB directly everywhere in your code
-- a local-first deployment model that still benefits from a client/server boundary
-- a simpler alternative to introducing a larger database stack too early
+- a simple database for Python asyncio applications
+- application state, metadata, caches, queues, or internal tools
+- a local database today with the option to move to client/server access later
+- something simpler than SQL for app storage
+- something more structured than a tiny JSON-style store
 
 ## Next steps
 

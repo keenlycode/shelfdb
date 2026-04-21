@@ -16,11 +16,18 @@ theme:
   icon: heroicons:circle-stack
 
 nav:
-  - ShelfDB: index.md
-  - Installation: usage/installation.md
-  - Run the server: usage/server.md
-  - Remote client usage: usage/remote.md
-  - Local database usage: usage/local.md
+  - Overview:
+      - ShelfDB: index.md
+      - Installation: usage/installation.md
+  - Guides:
+      - Run the server: usage/server.md
+      - Remote client usage: usage/remote.md
+      - Local database usage: usage/local.md
+  - API Reference:
+      - API overview: api/index.md
+      - Client API: api/client.md
+      - Local DB API: api/local.md
+      - CLI Reference: api/cli.md
 
 markdown_extensions:
   - admonition

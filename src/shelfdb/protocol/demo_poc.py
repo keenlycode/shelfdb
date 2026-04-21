@@ -20,7 +20,7 @@ async def run_demo(db_path: str) -> dict[str, Any]:
         server = await serve(db, host="127.0.0.1", port=0)
         host, port = server.sockets[0].getsockname()[:2]
 
-        client = await Client.connect(host, port)
+        client = await Client.connect(f"tcp://{host}:{port}")
         try:
             async with client.transaction(write=True) as tx:
                 written = await tx.put("note", "a", {"name": "hello"})

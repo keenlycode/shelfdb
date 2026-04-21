@@ -790,7 +790,7 @@ wheels = [
 
 [[package]]
 name = "shelfdb"
-version = "2.1.0.dev0"
+version = "2.1.0rc1"
 source = { editable = "." }
 dependencies = [
     { name = "cyclopts" },

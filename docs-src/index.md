@@ -1,5 +1,7 @@
 # ShelfDB
 
+> **Package version:** `2.1.0rc1`
+
 ShelfDB is a simple, fast key-value database for Python asyncio apps.
 
 Store Python values like `str`, `int`, `dict`, `list`, and `bytes` with transactions, query chaining, and flexible local or client/server access over TCP or Unix sockets.

@@ -4,6 +4,9 @@ Tiny LMDB-backed shelf database utilities.
 
 ## Development
 
+Development workflow commands are defined in `dev/cli.py`; check that file for
+the current docs, test, lint, publish, and utility commands.
+
 Install development dependencies:
 
 ```bash

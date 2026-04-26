@@ -1,6 +1,6 @@
 # ShelfDB
 
-> **Package version:** `2.1.0rc1`
+> **Package version:** `2.1.0rc2.dev0`
 
 ShelfDB is a simple, fast key-value database for Python asyncio apps.
 

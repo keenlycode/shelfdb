@@ -2,42 +2,42 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://example.com/shelfdb/2.1.0rc1/</loc>
-         <lastmod>2026-04-21</lastmod>
+         <lastmod>2026-04-26</lastmod>
     </url>
     <url>
          <loc>https://example.com/shelfdb/2.1.0rc1/benchmark/</loc>
-         <lastmod>2026-04-21</lastmod>
+         <lastmod>2026-04-26</lastmod>
     </url>
     <url>
          <loc>https://example.com/shelfdb/2.1.0rc1/api/</loc>
-         <lastmod>2026-04-21</lastmod>
+         <lastmod>2026-04-26</lastmod>
     </url>
     <url>
          <loc>https://example.com/shelfdb/2.1.0rc1/api/cli/</loc>
-         <lastmod>2026-04-21</lastmod>
+         <lastmod>2026-04-26</lastmod>
     </url>
     <url>
          <loc>https://example.com/shelfdb/2.1.0rc1/api/client/</loc>
-         <lastmod>2026-04-21</lastmod>
+         <lastmod>2026-04-26</lastmod>
     </url>
     <url>
          <loc>https://example.com/shelfdb/2.1.0rc1/api/local/</loc>
-         <lastmod>2026-04-21</lastmod>
+         <lastmod>2026-04-26</lastmod>
     </url>
     <url>
          <loc>https://example.com/shelfdb/2.1.0rc1/usage/installation/</loc>
-         <lastmod>2026-04-21</lastmod>
+         <lastmod>2026-04-26</lastmod>
     </url>
     <url>
          <loc>https://example.com/shelfdb/2.1.0rc1/usage/local/</loc>
-         <lastmod>2026-04-21</lastmod>
+         <lastmod>2026-04-26</lastmod>
     </url>
     <url>
          <loc>https://example.com/shelfdb/2.1.0rc1/usage/remote/</loc>
-         <lastmod>2026-04-21</lastmod>
+         <lastmod>2026-04-26</lastmod>
     </url>
     <url>
          <loc>https://example.com/shelfdb/2.1.0rc1/usage/server/</loc>
-         <lastmod>2026-04-21</lastmod>
+         <lastmod>2026-04-26</lastmod>
     </url>
 </urlset>

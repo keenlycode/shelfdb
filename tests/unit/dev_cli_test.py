@@ -110,13 +110,23 @@ def test_docs_build_mode(monkeypatch):
     cli.main(["docs", "build"])
 
     assert captured == {
-        "command": ["uv", "run", "mkdocs", "build"],
+        "command": ["uv", "run", "zensical", "build", "--clean"],
         "cwd": cli.repo_root(),
         "check": True,
     }
 
 
-def test_docs_serve_mode_supports_livereload_and_port(monkeypatch):
+def test_zensical_docs_command_build_is_isolated():
+    assert cli.zensical_docs_command("build", port=9001, livereload=False) == [
+        "uv",
+        "run",
+        "zensical",
+        "build",
+        "--clean",
+    ]
+
+
+def test_docs_serve_mode_uses_127_0_0_1_dev_addr(monkeypatch):
     captured = {}
 
     def fake_run(command, cwd, check):
@@ -130,15 +140,36 @@ def test_docs_serve_mode_supports_livereload_and_port(monkeypatch):
         "command": [
             "uv",
             "run",
-            "mkdocs",
+            "zensical",
             "serve",
             "--dev-addr",
             "127.0.0.1:9001",
-            "--livereload",
         ],
         "cwd": cli.repo_root(),
         "check": True,
     }
+
+
+def test_zensical_docs_command_serve_defaults_to_dev_addr():
+    assert cli.zensical_docs_command("serve", port=8080, livereload=True) == [
+        "uv",
+        "run",
+        "zensical",
+        "serve",
+        "--dev-addr",
+        "127.0.0.1:8080",
+    ]
+
+
+def test_zensical_docs_command_serve_ignores_legacy_livereload_flag():
+    assert cli.zensical_docs_command("serve", port=9001, livereload=False) == [
+        "uv",
+        "run",
+        "zensical",
+        "serve",
+        "--dev-addr",
+        "127.0.0.1:9001",
+    ]
 
 
 def test_docs_publish_mode_uses_project_version_and_latest_alias(monkeypatch):
@@ -164,6 +195,8 @@ def test_docs_publish_mode_uses_project_version_and_latest_alias(monkeypatch):
             "origin",
             "--push",
             "--update-aliases",
+            "--title",
+            "v3.0.1",
             "3.0.1",
             "latest",
         ],
@@ -207,6 +240,8 @@ def test_docs_publish_mode_supports_custom_target_options(monkeypatch):
             "upstream",
             "--push",
             "--update-aliases",
+            "--title",
+            "v3.0.1",
             "3.0.1",
             "stable",
         ],

@@ -701,6 +701,21 @@ def run_cmd(*args: str) -> None:
     subprocess.run(command, cwd=repo_root(), check=True)
 
 
+def zensical_docs_command(
+    mode: Literal["serve", "build"], *, port: int, livereload: bool
+) -> list[str]:
+    command = ["uv", "run", "zensical", mode]
+    if mode == "build":
+        command.append("--clean")
+    if mode == "serve":
+        command.extend(["--dev-addr", f"127.0.0.1:{port}"])
+        # Zensical serve has no dedicated livereload flag; keep option for CLI
+        # compatibility, and intentionally ignore when provided.
+        if livereload:
+            pass
+    return command
+
+
 def remove_path(path: Path) -> None:
     if path.is_dir() and not path.is_symlink():
         shutil.rmtree(path)
@@ -806,7 +821,11 @@ def docs(
     branch: str = "docs",
     remote: str = "origin",
 ) -> None:
-    """Build or serve project documentation."""
+    """Build or serve project documentation.
+
+    `--livereload` is retained for CLI compatibility but is ignored by Zensical
+    serve, which has built-in live reload support.
+    """
     if mode == "publish":
         resolved_version = publish_version or project_version()
         command = [
@@ -820,17 +839,15 @@ def docs(
             remote,
             "--push",
             "--update-aliases",
+            "--title",
+            f"v{resolved_version}",
             resolved_version,
             alias,
         ]
         run_cmd(*command)
         return
 
-    command = ["uv", "run", "mkdocs", mode]
-    if mode == "serve":
-        command.extend(["--dev-addr", f"127.0.0.1:{port}"])
-        if livereload:
-            command.append("--livereload")
+    command = zensical_docs_command(mode=mode, port=port, livereload=livereload)
     run_cmd(*command)
 
 

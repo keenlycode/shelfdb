@@ -37,10 +37,19 @@ GitHub's repository alerts:
 uv run python -m dev release-check --github
 ```
 
-Serve the docs locally:
+Serve the docs locally (Zensical dev server; live reload is built in):
 
 ```bash
 uv run python -m dev docs serve --port 9001 --livereload
+```
+
+`--livereload` is a legacy compatibility flag and is intentionally ignored by Zensical
+(as Zensical has built-in live reload for docs serving).
+
+Build docs for verification (Zensical build):
+
+```bash
+uv run python -m dev docs build
 ```
 
 Publish the docs with mike to the `docs` branch:

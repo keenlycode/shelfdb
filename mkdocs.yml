@@ -2,19 +2,13 @@ site_name: ShelfDB
 site_description: Usage documentation for ShelfDB
 site_url: https://keenlycode.github.io/shelfdb/
 repo_url: https://github.com/keenlycode/shelfdb
-docs_dir: docs-src
-site_dir: docs
 
 theme:
-  name: shadcn
-  show_title: true
-  show_stargazers: true
-  topbar_sections: false
-  pygments_style:
-    light: shadcn-light
-    dark: github-dark
-  icon: heroicons:circle-stack
+  custom_dir: overrides
 
+# MkDocs-compatible configuration while transitioning to Zensical.
+docs_dir: docs-src
+site_dir: docs
 nav:
   - Overview:
       - ShelfDB: index.md
@@ -30,7 +24,18 @@ nav:
       - Local DB API: api/local.md
       - CLI Reference: api/cli.md
 
+extra:
+  version:
+    provider: mike
+    default: latest
+    alias: true
+  version_selector_fallback: development
+
+extra_css:
+  - assets/stylesheets/version-badge.css
 markdown_extensions:
+  - zensical.extensions.macros:
+      module_name: macros
   - admonition
   - attr_list
   - fenced_code
@@ -38,5 +43,3 @@ markdown_extensions:
   - toc:
       permalink: true
   - pymdownx.inlinehilite
-  - pymdownx.tabbed:
-      alternate_style: true

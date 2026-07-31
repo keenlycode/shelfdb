@@ -1,0 +1,132 @@
+{#-
+  This file was adapted from the native Zensical header partial.
+-#}
+{% set _version_source = page.canonical_url | default(page.url, true) | string %}
+{% set _path = _version_source | replace("https://", "") | replace("http://", "") %}
+{% set _path = _path | replace(":", "/") | split("/", 1) | last %}
+{% set _segments = _path | trim("/") | split("/") | list %}
+{% set _relative_segment = _segments[0] | default("", true) %}
+
+{% set _site_url_path = (config.site_url | replace("https://", "") | replace("http://", "") | split("/", 1) | last | trim("/")) %}
+{% set _site_segments = _site_url_path | split("/") | list %}
+{% set _site_root = _site_segments[0] if _site_segments | length > 0 else "" %}
+{% set _site_version = "" if _site_segments | length < 2 else _site_segments[1] %}
+
+{% if _relative_segment in ["", "index", "index.html", "index.md"] %}
+  {% set _version_segment = _site_version %}
+{% elif _relative_segment == _site_root and _segments | length > 1 %}
+  {% set _candidate_segment = _segments[1] %}
+  {% if _candidate_segment == "latest" or _candidate_segment == "development" or
+        _candidate_segment[:1] == "v" and _candidate_segment | length > 1 or
+        (_candidate_segment[:1] >= "0" and _candidate_segment[:1] <= "9" and "." in _candidate_segment) %}
+    {% set _version_segment = _candidate_segment %}
+  {% else %}
+    {% set _version_segment = _site_version %}
+  {% endif %}
+{% elif _relative_segment == "latest" %}
+  {% set _version_segment = "latest" %}
+{% elif _relative_segment == "development" %}
+  {% set _version_segment = "development" %}
+{% elif _relative_segment[:1] == "v" and _relative_segment | length > 1 %}
+  {% set _version_segment = _relative_segment %}
+{% elif _relative_segment[:1] >= "0" and _relative_segment[:1] <= "9" and "." in _relative_segment %}
+  {% set _version_segment = _relative_segment %}
+{% else %}
+  {% set _version_segment = _site_version %}
+{% endif %}
+
+{% set _release_version = docs_version %}
+{% set version_label = config.extra.version_selector_fallback | default("development", true) %}
+{% set version_is_release = false %}
+{% set version_class = "md-version--static" %}
+
+{% if _version_segment == "development" or _version_segment == "" %}
+  {% set version_label = config.extra.version_selector_fallback | default("development", true) %}
+{% elif _version_segment == "latest" %}
+  {% set version_is_release = true %}
+  {% set version_label = "v" ~ _release_version %}
+{% elif _version_segment[:1] == "v" %}
+  {% set version_is_release = true %}
+  {% set version_label = _version_segment %}
+{% else %}
+  {% set version_is_release = true %}
+  {% set version_label = "v" ~ _version_segment %}
+{% endif %}
+
+{% if version_is_release %}
+  {% set version_class = version_class ~ " md-version--release" %}
+{% else %}
+  {% set version_class = version_class ~ " md-version--development" %}
+{% endif %}
+
+{% set class = "md-header" %}
+{% if "navigation.tabs.sticky" in features %}
+  {% set class = class ~ " md-header--shadow md-header--lifted" %}
+{% elif "navigation.tabs" not in features %}
+  {% set class = class ~ " md-header--shadow" %}
+{% endif %}
+<header class="{{ class }}" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="{{ lang.t('header') }}">
+    <a href="{{ config.extra.homepage | d(nav.homepage.url, true) | url }}" title="{{ config.site_name | e }}" class="md-header__button md-logo" aria-label="{{ config.site_name }}" data-md-component="logo">
+      {% include "partials/logo.html" %}
+    </a>
+    <label class="md-header__button md-icon" for="__drawer" aria-label="{{ lang.t('nav') }}">
+      {% set icon = config.theme.icon.menu or "material/menu" %}
+      {% include ".icons/" ~ icon ~ ".svg" %}
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            {{ config.site_name }}
+          </span>
+          <div class="md-version {{ version_class }} md-version--static" data-md-component="version-badge" aria-label="Current documentation version">
+            <span class="md-version__current" aria-live="polite" aria-atomic="true">
+              {{ version_label | e }}
+            </span>
+          </div>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            {% if page.meta and page.meta.title %}
+              {{ page.meta.title }}
+            {% else %}
+              {{ page.title }}
+            {% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+    {% if config.theme.palette %}
+      {% if not config.theme.palette is mapping %}
+        {% include "partials/palette.html" %}
+      {% endif %}
+    {% endif %}
+    {% if not config.theme.palette is mapping %}
+      {% include "partials/javascripts/palette.html" %}
+    {% endif %}
+    {% if config.extra.alternate %}
+      {% include "partials/alternate.html" %}
+    {% endif %}
+    {% if "search" in config.plugins %}
+      {% set search = config.plugins["search"] | attr("config") %}
+      {% if search.enabled %}
+        <label class="md-header__button md-icon" for="__search" aria-label="{{ lang.t('search') }}">
+          {% set icon = config.theme.icon.search or "material/magnify" %}
+          {% include ".icons/" ~ icon ~ ".svg" %}
+        </label>
+        {% include "partials/search.html" %}
+      {% endif %}
+    {% endif %}
+    <div class="md-header__source">
+      {% if config.repo_url %}
+        {% include "partials/source.html" %}
+      {% endif %}
+    </div>
+  </nav>
+  {% if "navigation.tabs.sticky" in features %}
+    {% if "navigation.tabs" in features %}
+      {% include "partials/tabs.html" %}
+    {% endif %}
+  {% endif %}
+</header>

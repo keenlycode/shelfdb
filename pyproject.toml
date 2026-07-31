@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "shelfdb"
-version = "3.0.0"
+version = "3.0.1"
 description = "A tiny database for Python"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -21,7 +21,7 @@ dependencies = [
     "cyclopts>=4.10.2,<5",
     "dill>=0.4.0,<0.5",
     "lmdb>=1.7.3,<2",
-    "msgpack>=1.1.2,<2",
+    "msgpack>=1.2.1,<2",
 ]
 
 [project.scripts]
@@ -38,7 +38,7 @@ dev = [
     "mkdocs-shadcn>=0.10.4,<0.11",
     "mkdocstrings[python]>=0.29.0,<0.30",
     "pytest-cov>=7.0.0,<8",
-    "pymdown-extensions>=10.16.1,<11",
+    "pymdown-extensions>=11.0.0,<12",
     "pytest>=9.0.0,<10",
     "ruff>=0.13.0,<0.14",
     "tinydb>=4.8.2,<5",

@@ -62,6 +62,21 @@ def test_cli_check_runs_validation_steps(monkeypatch):
     ]
 
 
+def test_release_check_uses_project_version(monkeypatch):
+    captured = {}
+
+    monkeypatch.setattr(cli, "project_version", lambda: "3.0.1")
+    monkeypatch.setattr(
+        cli,
+        "run_release_checks",
+        lambda root, version: captured.update(root=root, version=version),
+    )
+
+    cli.main(["release-check"])
+
+    assert captured == {"root": cli.repo_root(), "version": "3.0.1"}
+
+
 def test_clean_agent_task_removes_only_task_entries(tmp_path, monkeypatch):
     task_root = tmp_path / "agents" / "task"
     task_root.mkdir(parents=True)
@@ -127,7 +142,7 @@ def test_docs_publish_mode_uses_project_version_and_latest_alias(monkeypatch):
         captured.update(command=command, cwd=cwd, check=check)
 
     monkeypatch.setattr(cli.subprocess, "run", fake_run)
-    monkeypatch.setattr(cli, "project_version", lambda: "3.0.0")
+    monkeypatch.setattr(cli, "project_version", lambda: "3.0.1")
 
     cli.main(["docs", "publish"])
 
@@ -143,7 +158,7 @@ def test_docs_publish_mode_uses_project_version_and_latest_alias(monkeypatch):
             "origin",
             "--push",
             "--update-aliases",
-            "3.0.0",
+            "3.0.1",
             "latest",
         ],
         "cwd": cli.repo_root(),
@@ -164,7 +179,7 @@ def test_docs_publish_mode_supports_custom_target_options(monkeypatch):
             "docs",
             "publish",
             "--publish-version",
-            "3.0.0",
+            "3.0.1",
             "--alias",
             "stable",
             "--branch",
@@ -186,7 +201,7 @@ def test_docs_publish_mode_supports_custom_target_options(monkeypatch):
             "upstream",
             "--push",
             "--update-aliases",
-            "3.0.0",
+            "3.0.1",
             "stable",
         ],
         "cwd": cli.repo_root(),

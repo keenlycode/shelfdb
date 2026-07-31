@@ -21,6 +21,17 @@ Install development dependencies:
 uv sync --dev
 ```
 
+Run the complete non-publishing release gate:
+
+```bash
+uv run python -m dev release-check
+```
+
+The gate audits locked dependencies, checks formatting, linting, types, supported
+Python versions, strict documentation, release artifacts, metadata, and a clean
+wheel installation. GitHub Actions runs the same gate on pull requests, `main`,
+and version tags.
+
 Serve the docs locally:
 
 ```bash
@@ -36,7 +47,7 @@ uv run python -m dev docs publish
 Override the publish target when needed:
 
 ```bash
-uv run python -m dev docs publish --publish-version 3.0.0 --alias latest --branch docs --remote origin
+uv run python -m dev docs publish --publish-version 3.0.1 --alias latest --branch docs --remote origin
 ```
 
 ## Server

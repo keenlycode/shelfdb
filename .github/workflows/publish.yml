@@ -1,0 +1,42 @@
+name: Publish release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to publish
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.tag }}
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          python-version: "3.13"
+      - name: Verify tag and project version
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          test "$(git describe --tags --exact-match)" = "${RELEASE_TAG}"
+          test "${RELEASE_TAG#v}" = "$(uv version --short)"
+      - name: Build and check artifacts
+        run: |
+          uv build
+          uvx twine==7.0.0 check \
+            dist/shelfdb-*.whl \
+            dist/shelfdb-*.tar.gz
+      - name: Publish artifacts
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
+        run: uv publish dist/shelfdb-*.whl dist/shelfdb-*.tar.gz

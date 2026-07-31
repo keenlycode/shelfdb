@@ -30,7 +30,12 @@ uv run python -m dev release-check
 The gate audits locked dependencies, checks formatting, linting, types, supported
 Python versions, strict documentation, release artifacts, metadata, and a clean
 wheel installation. GitHub Actions runs the same gate on pull requests, `main`,
-and version tags.
+and version tags. Before tagging, authenticated release maintainers also check
+GitHub's repository alerts:
+
+```bash
+uv run python -m dev release-check --github
+```
 
 Serve the docs locally:
 

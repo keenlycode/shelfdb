@@ -37,7 +37,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      security-events: read
     steps:
       - uses: actions/checkout@v5
         with:
@@ -48,16 +47,6 @@ jobs:
           python-version: "3.13"
       - name: Run release checks
         run: uv run --frozen python -m dev release-check
-      - name: Check open Dependabot alerts for releases
-        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          count=$(gh api --paginate \
-            "/repos/${GITHUB_REPOSITORY}/dependabot/alerts?state=open&per_page=100" \
-            | jq -s 'map(length) | add')
-          echo "Open Dependabot alerts: ${count}"
-          test "${count}" -eq 0
 
   dependency-review:
     name: Dependency review

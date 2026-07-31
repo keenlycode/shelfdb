@@ -52,3 +52,20 @@ def test_verify_artifacts_rejects_wrong_version(tmp_path):
 
     with pytest.raises(RuntimeError, match="expected"):
         release.verify_artifacts(tmp_path, "3.0.1")
+
+
+def test_check_github_alerts_accepts_zero_alerts(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        release.subprocess, "check_output", lambda *args, **kwargs: "0\n"
+    )
+
+    release.check_github_alerts(tmp_path)
+
+
+def test_check_github_alerts_rejects_open_alerts(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        release.subprocess, "check_output", lambda *args, **kwargs: "2\n1\n"
+    )
+
+    with pytest.raises(RuntimeError, match="3 open Dependabot alerts"):
+        release.check_github_alerts(tmp_path)

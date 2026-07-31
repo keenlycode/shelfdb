@@ -689,10 +689,10 @@ def project_version() -> str:
     return str(data["project"]["version"])
 
 
-def run_release_checks(root: Path, version: str) -> None:
+def run_release_checks(root: Path, version: str, *, check_github: bool) -> None:
     from dev.release import run_release_checks as run_checks
 
-    run_checks(root, version)
+    run_checks(root, version, check_github=check_github)
 
 
 def run_cmd(*args: str) -> None:
@@ -751,9 +751,9 @@ def check() -> None:
 
 
 @app.command
-def release_check() -> None:
+def release_check(github: bool = False) -> None:
     """Run security, quality, compatibility, docs, and artifact release checks."""
-    run_release_checks(repo_root(), project_version())
+    run_release_checks(repo_root(), project_version(), check_github=github)
 
 
 @app.command

@@ -69,12 +69,18 @@ def test_release_check_uses_project_version(monkeypatch):
     monkeypatch.setattr(
         cli,
         "run_release_checks",
-        lambda root, version: captured.update(root=root, version=version),
+        lambda root, version, *, check_github: captured.update(
+            root=root, version=version, check_github=check_github
+        ),
     )
 
-    cli.main(["release-check"])
+    cli.main(["release-check", "--github"])
 
-    assert captured == {"root": cli.repo_root(), "version": "3.0.1"}
+    assert captured == {
+        "root": cli.repo_root(),
+        "version": "3.0.1",
+        "check_github": True,
+    }
 
 
 def test_clean_agent_task_removes_only_task_entries(tmp_path, monkeypatch):

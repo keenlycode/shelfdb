@@ -1,42 +1,56 @@
 ---
 name: shelfdb-usage
-description: Use ShelfDB correctly in this repository when writing code, tests, docs, examples, or answering questions about ShelfDB usage. Trigger this skill when work involves starting the ShelfDB server, using the async remote client, using the local direct DB API, choosing between local and remote access, or pointing users to the right ShelfDB docs and examples.
+description: Use when writing, reviewing, or explaining ShelfDB local database code, async client/server code, transactions, or fluent queries.
 ---
 
 # ShelfDB usage
 
-Use ShelfDB in one of two modes:
+Choose access mode from the deployment:
 
-- **Remote client/server**: start `shelfdb server`, connect with `shelfdb.client.Client`, open async transactions, and end remote reads or writes with `await ...query()`.
-- **Local direct DB**: open `shelfdb.shelf.DB(...)`, use local transactions, and run queries directly without `.query()`.
+- Use `shelfdb.shelf.DB` when the process can open the LMDB database directly.
+- Use `shelfdb.client.Client` when a separate trusted process runs `shelfdb server`.
 
-## Core rules
+## Safety boundary
 
-- Prefer the **remote client** flow for application code and flexible deployment.
-- Use **local DB access** only when the process can open the database directly.
-- For remote usage, remember: builder methods do nothing until `await .query()`.
-- For local usage, do not add `.query()`; local operations run directly.
-- Use `client.transaction()` for reads and `client.transaction(write=True)` for mutations.
-- Close remote clients with `await client.close()`.
-- Start the server with `shelfdb server`; default URL is `tcp://127.0.0.1:31337` and default DB path is `db`.
+The remote protocol uses `dill` so queries can contain Python callables. Deserializing a
+request can execute arbitrary code in the server process. Never expose the server to
+untrusted clients or public networks.
 
-## Read the bundled docs for details
+## Local API
 
-Read the skill-local docs under `ai-skill/shelfdb-usage/docs/` as needed:
+Use synchronous transactions. Operations execute directly; do not add `.query()`.
 
-- `docs/index.md` — overview, fit, and navigation
-- `docs/usage/installation.md` — install and CLI verification
-- `docs/usage/server.md` — server startup and URL formats
-- `docs/usage/remote.md` — async client usage and `.query()` behavior
-- `docs/usage/local.md` — direct local DB usage
-- `docs/api/index.md` — API reference index
-- `docs/api/client.md` — remote client API
-- `docs/api/local.md` — local DB API
-- `docs/api/cli.md` — CLI reference
+```python
+from shelfdb.shelf import DB
 
-## Practical guidance
+with DB("db") as db:
+    with db.transaction(write=False) as tx:
+        users = list(tx.shelf("users").items())
+```
 
-- If the user asks for app code that talks to a running ShelfDB instance, use the remote client API.
-- If the user asks for simple in-process storage examples, use `DB(...)` and local transactions.
-- If the user is confused about why nothing happens remotely, check whether `.query()` is missing.
-- If the user needs a server command example, prefer `shelfdb server --db-path ./db --url tcp://127.0.0.1:31337` unless they need a Unix socket.
+## Remote API
+
+Connect asynchronously, use read transactions by default, and pass `write=True` for
+mutations. Fluent operations only build a remote query; `await ...query()` sends it.
+
+```python
+from shelfdb.client import Client
+
+client = await Client.connect("tcp://127.0.0.1:31337")
+try:
+    async with client.transaction() as tx:
+        users = await tx.shelf("users").items().query()
+finally:
+    await client.close()
+```
+
+## Rules
+
+- Use `client.transaction()` for remote reads.
+- Use `client.transaction(write=True)` for remote mutations.
+- Always close a remote client with `await client.close()`.
+- Keep local and remote terminal behavior distinct.
+- In a ShelfDB source checkout, use `tests/usage/` as executable examples.
+- Consult the current documentation before assuming unsupported query behavior.
+
+Documentation: https://keenlycode.github.io/shelfdb/

@@ -140,7 +140,11 @@ def test_session_query_supports_remote_style_operations(tmp_path):
                 "cmd": "query",
                 "shelf": "users",
                 "ops": [
-                    {"op": "filter", "args": [lambda item: item.value["role"] == "admin"], "kwargs": {}},
+                    {
+                        "op": "filter",
+                        "args": [lambda item: item.value["role"] == "admin"],
+                        "kwargs": {},
+                    },
                     {"op": "sort", "args": [], "kwargs": {"reverse": True}},
                 ],
                 "action": {"op": "query", "args": [], "kwargs": {}},
@@ -150,8 +154,16 @@ def test_session_query_supports_remote_style_operations(tmp_path):
         assert result == {
             "ok": True,
             "result": [
-                {"__shelfdb_type__": "item", "key": "dave", "value": {"age": 35, "role": "admin"}},
-                {"__shelfdb_type__": "item", "key": "alice", "value": {"age": 30, "role": "admin"}},
+                {
+                    "__shelfdb_type__": "item",
+                    "key": "dave",
+                    "value": {"age": 35, "role": "admin"},
+                },
+                {
+                    "__shelfdb_type__": "item",
+                    "key": "alice",
+                    "value": {"age": 30, "role": "admin"},
+                },
             ],
         }
 
@@ -166,8 +178,16 @@ def test_session_query_supports_remote_style_operations(tmp_path):
         assert result == {
             "ok": True,
             "result": [
-                {"__shelfdb_type__": "item", "key": "bob", "value": {"__shelfdb_type__": "undef"}},
-                {"__shelfdb_type__": "item", "key": "carol", "value": {"__shelfdb_type__": "undef"}},
+                {
+                    "__shelfdb_type__": "item",
+                    "key": "bob",
+                    "value": {"__shelfdb_type__": "undef"},
+                },
+                {
+                    "__shelfdb_type__": "item",
+                    "key": "carol",
+                    "value": {"__shelfdb_type__": "undef"},
+                },
             ],
         }
 

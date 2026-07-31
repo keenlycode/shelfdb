@@ -127,7 +127,9 @@ class Session:
         self._clear_transaction()
         return _ok({"rolled_back": True})
 
-    def _query(self, *, shelf: str, ops: list[dict[str, Any]], action: dict[str, Any]) -> dict[str, Any]:
+    def _query(
+        self, *, shelf: str, ops: list[dict[str, Any]], action: dict[str, Any]
+    ) -> dict[str, Any]:
         query = self._require_tx().shelf(shelf)
         for op in ops:
             query = self._apply_query_operation(query, op)

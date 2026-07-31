@@ -5,7 +5,7 @@ from pathlib import Path
 
 def load_dev_cli_module():
     module_name = "test_dev_cli_module"
-    module_path = Path(__file__).resolve().parents[1] / "dev" / "cli.py"
+    module_path = Path(__file__).resolve().parents[2] / "dev" / "cli.py"
     spec = importlib.util.spec_from_file_location(module_name, module_path)
     assert spec is not None
     assert spec.loader is not None
@@ -78,22 +78,6 @@ def test_clean_agent_task_removes_only_task_entries(tmp_path, monkeypatch):
     assert preserved.read_text() == "keep"
 
 
-def test_ai_skill_docs_replaces_destination(tmp_path, monkeypatch):
-    source = tmp_path / "docs-src"
-    destination = tmp_path / "ai-skill" / "shelfdb-usage" / "docs"
-    source.mkdir(parents=True)
-    (source / "index.md").write_text("new docs")
-    destination.mkdir(parents=True)
-    (destination / "old.md").write_text("stale")
-
-    monkeypatch.setattr(cli, "repo_root", lambda: tmp_path)
-
-    cli.ai_skill_docs()
-
-    assert (destination / "index.md").read_text() == "new docs"
-    assert not (destination / "old.md").exists()
-
-
 def test_docs_build_mode(monkeypatch):
     captured = {}
 
@@ -143,7 +127,7 @@ def test_docs_publish_mode_uses_project_version_and_latest_alias(monkeypatch):
         captured.update(command=command, cwd=cwd, check=check)
 
     monkeypatch.setattr(cli.subprocess, "run", fake_run)
-    monkeypatch.setattr(cli, "project_version", lambda: "2.1.0rc1")
+    monkeypatch.setattr(cli, "project_version", lambda: "3.0.0")
 
     cli.main(["docs", "publish"])
 
@@ -159,7 +143,7 @@ def test_docs_publish_mode_uses_project_version_and_latest_alias(monkeypatch):
             "origin",
             "--push",
             "--update-aliases",
-            "2.1.0rc1",
+            "3.0.0",
             "latest",
         ],
         "cwd": cli.repo_root(),

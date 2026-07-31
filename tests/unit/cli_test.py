@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from shelfdb.cli import install_ai_skill, main
 
 
@@ -64,32 +66,38 @@ def test_cli_ai_skill_install_uses_prompt_default(monkeypatch):
 
     monkeypatch.setattr("builtins.input", lambda prompt: "")
 
-    def fake_install(destination: Path) -> Path:
-        installed["destination"] = destination
+    def fake_install(destination: Path, *, force: bool) -> Path:
+        installed.update(destination=destination, force=force)
         return destination
 
     monkeypatch.setattr("shelfdb.cli.install_ai_skill", fake_install)
 
     main(["ai-skill-install"])
 
-    assert installed == {"destination": Path(".agents/skills/shelfdb-usage")}
+    assert installed == {
+        "destination": Path(".agents/skills/shelfdb-usage"),
+        "force": False,
+    }
 
 
-def test_cli_ai_skill_install_accepts_explicit_path(monkeypatch):
+def test_cli_ai_skill_install_accepts_path_and_force(monkeypatch):
     installed = {}
 
-    def fake_install(destination: Path) -> Path:
-        installed["destination"] = destination
+    def fake_install(destination: Path, *, force: bool) -> Path:
+        installed.update(destination=destination, force=force)
         return destination
 
     monkeypatch.setattr("shelfdb.cli.install_ai_skill", fake_install)
 
-    main(["ai-skill-install", "--path", "/tmp/custom-skill"])
+    main(["ai-skill-install", "--path", "/tmp/custom-skill", "--force"])
 
-    assert installed == {"destination": Path("/tmp/custom-skill")}
+    assert installed == {
+        "destination": Path("/tmp/custom-skill"),
+        "force": True,
+    }
 
 
-def test_install_ai_skill_copies_bundled_files(tmp_path, monkeypatch):
+def test_install_ai_skill_copies_only_skill_file(tmp_path, monkeypatch):
     source = tmp_path / "src-skill"
     destination = tmp_path / "dest-skill"
     source.mkdir()
@@ -97,8 +105,6 @@ def test_install_ai_skill_copies_bundled_files(tmp_path, monkeypatch):
     docs = source / "docs"
     docs.mkdir()
     (docs / "index.md").write_text("docs")
-    destination.mkdir()
-    (destination / "stale.txt").write_text("stale")
 
     monkeypatch.setattr("shelfdb.cli.bundled_ai_skill_path", lambda: source)
 
@@ -106,5 +112,39 @@ def test_install_ai_skill_copies_bundled_files(tmp_path, monkeypatch):
 
     assert installed == destination
     assert (destination / "SKILL.md").read_text() == "skill"
-    assert (destination / "docs" / "index.md").read_text() == "docs"
-    assert not (destination / "stale.txt").exists()
+    assert not (destination / "docs").exists()
+
+
+def test_install_ai_skill_requires_force_for_existing_destination(
+    tmp_path, monkeypatch
+):
+    source = tmp_path / "src-skill"
+    destination = tmp_path / "dest-skill"
+    source.mkdir()
+    (source / "SKILL.md").write_text("new skill")
+    destination.mkdir()
+    (destination / "SKILL.md").write_text("custom skill")
+
+    monkeypatch.setattr("shelfdb.cli.bundled_ai_skill_path", lambda: source)
+
+    with pytest.raises(FileExistsError, match="Use --force"):
+        install_ai_skill(destination)
+
+    assert (destination / "SKILL.md").read_text() == "custom skill"
+
+
+def test_install_ai_skill_force_replaces_only_skill_file(tmp_path, monkeypatch):
+    source = tmp_path / "src-skill"
+    destination = tmp_path / "dest-skill"
+    source.mkdir()
+    (source / "SKILL.md").write_text("new skill")
+    destination.mkdir()
+    (destination / "SKILL.md").write_text("old skill")
+    (destination / "notes.md").write_text("keep")
+
+    monkeypatch.setattr("shelfdb.cli.bundled_ai_skill_path", lambda: source)
+
+    install_ai_skill(destination, force=True)
+
+    assert (destination / "SKILL.md").read_text() == "new skill"
+    assert (destination / "notes.md").read_text() == "keep"

@@ -65,6 +65,49 @@ def test_db_shelf_happy_path_put_get_and_items(tmp_path):
             ]
 
 
+def test_put_many_preserves_results_and_overwrites_duplicate_keys(tmp_path):
+    db_path = tmp_path / "shelfdb"
+
+    with DB(str(db_path)) as db:
+        with db.transaction(write=True) as tx:
+            users = tx.shelf("users")
+            assert users.put_many(
+                item
+                for item in [
+                    Item("bob", {"age": 25}),
+                    Item("alice", {"age": 30}),
+                    Item("alice", {"age": 31}),
+                ]
+            ) == [
+                MutationResult("bob", True),
+                MutationResult("alice", True),
+                MutationResult("alice", True),
+            ]
+            assert users.put_many([]) == []
+
+        with db.transaction(write=False) as tx:
+            users = tx.shelf("users")
+            assert users.key("alice").item() == Item("alice", {"age": 31})
+            assert users.key("bob").item() == Item("bob", {"age": 25})
+
+
+def test_put_many_rolls_back_after_serialization_error(tmp_path):
+    db_path = tmp_path / "shelfdb"
+
+    with DB(str(db_path)) as db:
+        with db.transaction(write=True) as tx:
+            tx.shelf("users")
+
+        with pytest.raises(TypeError):
+            with db.transaction(write=True) as tx:
+                tx.shelf("users").put_many(
+                    [Item("alice", {"age": 30}), Item("invalid", object())]
+                )
+
+        with db.transaction(write=False) as tx:
+            assert tx.shelf("users").count() == 0
+
+
 def test_db_keeps_named_shelves_isolated(tmp_path):
     db_path = tmp_path / "shelfdb"
 
@@ -74,7 +117,9 @@ def test_db_keeps_named_shelves_isolated(tmp_path):
             tx.shelf("posts").put("post:1", {"title": "Hello"})
 
         with db.transaction(write=False) as tx:
-            assert tx.shelf("users").key("alice").item() == Item("alice", {"role": "admin"})
+            assert tx.shelf("users").key("alice").item() == Item(
+                "alice", {"role": "admin"}
+            )
             assert tx.shelf("users").key("post:1").exists() is False
             assert tx.shelf("posts").key("post:1").item() == Item(
                 "post:1", {"title": "Hello"}
@@ -204,10 +249,14 @@ def test_repeated_transforms_replay_from_same_base_query(tmp_path):
             first = list(users.filter(fn))
             second = list(users.filter(fn))
 
-            assert first == second == [
-                Item("bob", {"age": 25, "role": "user"}),
-                Item("dave", {"age": 35, "role": "admin"}),
-            ]
+            assert (
+                first
+                == second
+                == [
+                    Item("bob", {"age": 25, "role": "user"}),
+                    Item("dave", {"age": 35, "role": "admin"}),
+                ]
+            )
 
 
 def test_sort_slice_count_exists_and_item(tmp_path):
@@ -238,8 +287,10 @@ def test_update_and_delete_use_current_selection(tmp_path):
         with db.transaction(write=True) as tx:
             _seed_users(tx.shelf("users"))
 
-            updated = tx.shelf("users").keys_range("bob", "d").update(
-                lambda item: {**item.value, "age": item.value["age"] + 1}
+            updated = (
+                tx.shelf("users")
+                .keys_range("bob", "d")
+                .update(lambda item: {**item.value, "age": item.value["age"] + 1})
             )
             assert updated == [
                 MutationResult("bob", True),
@@ -254,9 +305,7 @@ def test_update_and_delete_use_current_selection(tmp_path):
             assert users.key("alice").item() == Item(
                 "alice", {"age": 30, "role": "admin"}
             )
-            assert users.key("bob").item() == Item(
-                "bob", {"age": 26, "role": "user"}
-            )
+            assert users.key("bob").item() == Item("bob", {"age": 26, "role": "user"})
             assert users.key("carol").item() == Item(
                 "carol", {"age": 21, "role": "user"}
             )

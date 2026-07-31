@@ -2,6 +2,12 @@
 
 ShelfDB provides a protocol server through the `shelfdb` CLI.
 
+!!! warning "Trusted environments only"
+
+    The protocol uses `dill` to deserialize requests so remote queries can contain
+    Python callables. A malicious client could execute arbitrary code in the server
+    process. Do not expose the server to untrusted clients or public networks.
+
 ## Default server
 
 ```bash

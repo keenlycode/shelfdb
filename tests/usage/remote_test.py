@@ -37,8 +37,12 @@ def _local_read_snapshot(db_path: str) -> dict:
                     .keys_range("bob", "d")
                     .items()
                 ),
-                "repeated_first": list(base.keys_range("bob").filter(lambda item: item.value["age"] >= 25)),
-                "repeated_second": list(base.keys_range("bob").filter(lambda item: item.value["age"] >= 25)),
+                "repeated_first": list(
+                    base.keys_range("bob").filter(lambda item: item.value["age"] >= 25)
+                ),
+                "repeated_second": list(
+                    base.keys_range("bob").filter(lambda item: item.value["age"] >= 25)
+                ),
                 "count": users.count(),
                 "exists_alice": users.key("alice").exists(),
                 "exists_missing": users.key("missing").exists(),
@@ -68,12 +72,12 @@ async def _remote_read_snapshot(target: str) -> dict:
                 .keys_range("bob", "d")
                 .items()
                 .query(),
-                "repeated_first": await base.keys_range("bob").filter(
-                    lambda item: item.value["age"] >= 25
-                ).query(),
-                "repeated_second": await base.keys_range("bob").filter(
-                    lambda item: item.value["age"] >= 25
-                ).query(),
+                "repeated_first": await base.keys_range("bob")
+                .filter(lambda item: item.value["age"] >= 25)
+                .query(),
+                "repeated_second": await base.keys_range("bob")
+                .filter(lambda item: item.value["age"] >= 25)
+                .query(),
                 "count": await users.count().query(),
                 "exists_alice": await users.key("alice").exists().query(),
                 "exists_missing": await users.key("missing").exists().query(),
@@ -154,7 +158,10 @@ def test_remote_query_builder_is_immutable_and_queries_are_independent(tmp_path)
                             Item("carol", UNDEF),
                             Item("dave", UNDEF),
                         ]
-                        assert await q1.query() == [Item("bob", UNDEF), Item("carol", UNDEF)]
+                        assert await q1.query() == [
+                            Item("bob", UNDEF),
+                            Item("carol", UNDEF),
+                        ]
                         assert await q2.query() == [Item("alice", UNDEF)]
                 finally:
                     await client.close()
@@ -181,11 +188,15 @@ def test_remote_query_item_raises_for_zero_or_many_results(tmp_path):
                     async with client.transaction() as tx:
                         with pytest.raises(Exception) as missing:
                             await tx.shelf("users").key("missing").item().query()
-                        assert "expected exactly one selected item, found none" in str(missing.value)
+                        assert "expected exactly one selected item, found none" in str(
+                            missing.value
+                        )
 
                         with pytest.raises(Exception) as many:
                             await tx.shelf("users").item().query()
-                        assert "expected exactly one selected item, found many" in str(many.value)
+                        assert "expected exactly one selected item, found many" in str(
+                            many.value
+                        )
                 finally:
                     await client.close()
             finally:
@@ -210,9 +221,16 @@ def test_remote_query_update_and_delete_match_local_outcome(tmp_path):
                 try:
                     async with client.transaction(write=True) as tx:
                         users = tx.shelf("users")
-                        updated = await users.keys_range("bob", "d").update(
-                            lambda item: {**item.value, "age": item.value["age"] + 1}
-                        ).query()
+                        updated = (
+                            await users.keys_range("bob", "d")
+                            .update(
+                                lambda item: {
+                                    **item.value,
+                                    "age": item.value["age"] + 1,
+                                }
+                            )
+                            .query()
+                        )
                         deleted = await users.key("dave").delete().query()
                         return updated, deleted
                 finally:
@@ -228,7 +246,11 @@ def test_remote_query_update_and_delete_match_local_outcome(tmp_path):
     with DB(str(db_path)) as db:
         with db.transaction(write=False) as tx:
             users = tx.shelf("users")
-            assert users.key("alice").item() == Item("alice", {"age": 30, "role": "admin"})
+            assert users.key("alice").item() == Item(
+                "alice", {"age": 30, "role": "admin"}
+            )
             assert users.key("bob").item() == Item("bob", {"age": 26, "role": "user"})
-            assert users.key("carol").item() == Item("carol", {"age": 21, "role": "user"})
+            assert users.key("carol").item() == Item(
+                "carol", {"age": 21, "role": "user"}
+            )
             assert users.key("dave").exists() is False

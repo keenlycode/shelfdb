@@ -186,19 +186,19 @@ class ShelfStore:
         return MutationResult(key=key, ok=ok)
 
     def put_many(self, items: Iterable[Item]) -> list[MutationResult]:
-        """Store multiple key/value pairs."""
-        results: list[MutationResult] = []
-        for key, value in items:
-            ok = cast(
-                bool,
-                self._handle.tx.put(
-                    key.encode(),
-                    packb(value),
-                    db=self._handle.db,
-                ),
-            )
-            results.append(MutationResult(key=key, ok=ok))
-        return results
+        """Store multiple key/value pairs with LMDB's bulk cursor API."""
+        batch = tuple(items)
+        if not batch:
+            return []
+
+        encoded = ((key.encode(), packb(value)) for key, value in batch)
+        with self._handle.tx.cursor(db=self._handle.db) as cur:
+            consumed, _ = cur.putmulti(encoded, overwrite=True)
+
+        return [
+            MutationResult(key=key, ok=index < consumed)
+            for index, (key, _) in enumerate(batch)
+        ]
 
     def delete(self, keys: Iterable[str]) -> list[MutationResult]:
         """Delete multiple keys without changing scan state."""

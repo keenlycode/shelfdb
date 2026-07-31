@@ -2,7 +2,14 @@
 
 Use the async client when your code talks to a running ShelfDB server.
 
-This is the primary way to use ShelfDB in application code. It works over TCP, and Unix sockets are often the most flexible local deployment option.
+This is the primary way to use ShelfDB in application code. It works over TCP,
+and Unix sockets are often the most flexible local deployment option.
+
+!!! warning "Trusted environments only"
+
+    Remote queries are serialized with `dill` so they can contain Python callables.
+    Only connect clients and servers that trust each other; the protocol is not safe
+    to expose to untrusted clients or public networks.
 
 ## Connect to the server
 

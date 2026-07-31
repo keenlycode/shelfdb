@@ -678,6 +678,7 @@ def benchmark() -> None:
     write_text_file(markdown_path, markdown_content)
     print(f"Wrote benchmark markdown to {markdown_path}")
 
+
 def repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
@@ -699,17 +700,6 @@ def remove_path(path: Path) -> None:
         shutil.rmtree(path)
     else:
         path.unlink()
-
-
-def copy_docs_tree(source: Path, destination: Path) -> None:
-    if destination.exists():
-        shutil.rmtree(destination)
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(
-        source,
-        destination,
-        ignore=shutil.ignore_patterns("__pycache__", ".DS_Store"),
-    )
 
 
 @app.command
@@ -830,20 +820,6 @@ def docs(
         if livereload:
             command.append("--livereload")
     run_cmd(*command)
-
-
-@app.command
-def ai_skill_docs() -> None:
-    """Copy docs-src/ into ai-skill/shelfdb-usage/docs/."""
-    root = repo_root()
-    source = root / "docs-src"
-    destination = root / "ai-skill" / "shelfdb-usage" / "docs"
-
-    if not source.exists():
-        raise FileNotFoundError(f"Source docs directory not found: {source}")
-
-    copy_docs_tree(source, destination)
-    print(f"Copied {source} to {destination}")
 
 
 def main(argv: list[str] | None = None) -> None:

@@ -2,6 +2,17 @@
 
 Tiny LMDB-backed shelf database utilities.
 
+## Installation
+
+```bash
+pip install shelfdb
+```
+
+> [!WARNING]
+> The client/server protocol uses `dill` to support Python callables. Only use it
+> between trusted processes; do not expose the server to untrusted clients or public
+> networks.
+
 ## Development
 
 Install development dependencies:
@@ -25,7 +36,7 @@ uv run python -m dev docs publish
 Override the publish target when needed:
 
 ```bash
-uv run python -m dev docs publish --publish-version 2.1.0rc1 --alias latest --branch docs --remote origin
+uv run python -m dev docs publish --publish-version 3.0.0 --alias latest --branch docs --remote origin
 ```
 
 ## Server

@@ -1,6 +1,6 @@
 site_name: ShelfDB
 site_description: Usage documentation for ShelfDB
-site_url: https://example.com/shelfdb
+site_url: https://keenlycode.github.io/shelfdb/
 repo_url: https://github.com/keenlycode/shelfdb
 docs_dir: docs-src
 site_dir: docs

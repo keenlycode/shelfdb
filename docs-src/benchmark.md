@@ -2,10 +2,10 @@
 
 ## Environment
 
-- Operating system: Linux-6.19.12-200.fc43.x86_64-x86_64-with-glibc2.42
-- CPU: 13th Gen Intel(R) Core(TM) i5-1335U
-- RAM: 15.3 GiB
-- Python: 3.14.3
+- Operating system: Linux-7.1.4-204.fc44.x86_64-x86_64-with-glibc2.43
+- CPU: Intel(R) Core(TM) Ultra 7 258V
+- RAM: 30.8 GiB
+- Python: 3.12.13
 
 ## Methodology
 
@@ -28,9 +28,9 @@ Average time across measured runs is shown for each operation.
 
 | Backend | Bulk insert | Point lookup | Filtered query | Update by id | Delete by id |
 | --- | --- | --- | --- | --- | --- |
-| shelfdb | 2.607 ms | 4.956 ms | 3.196 ms | 10.151 ms | 2.804 ms |
-| sqlite | 4.983 ms | 2.503 ms | 0.965 ms | 14.304 ms | 1.617 ms |
-| tinydb | 3.015 ms | 5530.612 ms | 3.296 ms | 6005.449 ms | 2848.291 ms |
+| shelfdb | 1.895 ms | 3.600 ms | 2.310 ms | 7.812 ms | 2.118 ms |
+| sqlite | 3.476 ms | 1.702 ms | 0.687 ms | 10.066 ms | 1.095 ms |
+| tinydb | 2.132 ms | 4123.601 ms | 2.487 ms | 4334.682 ms | 2115.169 ms |
 
 #### Samples
 
@@ -46,9 +46,9 @@ Average time across measured runs is shown for each operation.
 
 | Backend | Bulk insert | Point lookup | Filtered query | Update by id | Delete by id |
 | --- | --- | --- | --- | --- | --- |
-| shelfdb | 29.886 ms | 6.733 ms | 34.337 ms | 14.971 ms | 6.879 ms |
-| sqlite | 57.101 ms | 4.882 ms | 9.041 ms | 21.150 ms | 7.100 ms |
-| tinydb | 39.087 ms | 80198.876 ms | 44.879 ms | 67637.504 ms | 64316.458 ms |
+| shelfdb | 23.306 ms | 5.086 ms | 26.356 ms | 11.260 ms | 5.213 ms |
+| sqlite | 40.483 ms | 3.520 ms | 6.967 ms | 16.536 ms | 5.827 ms |
+| tinydb | 29.089 ms | 56002.629 ms | 34.481 ms | 41931.428 ms | 39389.154 ms |
 
 #### Samples
 

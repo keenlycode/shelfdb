@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "shelfdb"
-version = "2.1.0rc1"
+version = "3.0.0"
 description = "A tiny database for Python"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -15,25 +15,24 @@ authors = [
 ]
 classifiers = [
     "Programming Language :: Python :: 3.12",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "cyclopts>=4.10.2",
-    "dictify>=4.0.0,<4.1",
+    "cyclopts>=4.10.2,<5",
     "dill>=0.4.0,<0.5",
     "lmdb>=1.7.3,<2",
     "msgpack>=1.1.2,<2",
-    "structlog>=25.1.0,<26",
-    "uvloop>=0.22.0,<0.23; platform_system == 'Linux'",
 ]
 
 [project.scripts]
 shelfdb = "shelfdb.cli:main"
 
+[project.urls]
+Documentation = "https://keenlycode.github.io/shelfdb/"
+Repository = "https://github.com/keenlycode/shelfdb"
+
 [dependency-groups]
 dev = [
-    "dictify>=4.0.0,<4.1",
     "mike>=2.1.3,<3",
     "mkdocs>=1.6.1,<2",
     "mkdocs-shadcn>=0.10.4,<0.11",

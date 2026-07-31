@@ -34,17 +34,30 @@ def bundled_ai_skill_path() -> Path:
     raise FileNotFoundError("Bundled ShelfDB AI skill not found.")
 
 
-def install_ai_skill(destination: Path) -> Path:
-    source = bundled_ai_skill_path()
-    if destination.exists():
-        shutil.rmtree(destination)
+def install_ai_skill(destination: Path, *, force: bool = False) -> Path:
+    source_file = bundled_ai_skill_path() / "SKILL.md"
+    if not source_file.is_file():
+        raise FileNotFoundError("Bundled ShelfDB SKILL.md not found.")
 
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(source, destination)
+    if destination.exists():
+        if not destination.is_dir():
+            raise NotADirectoryError(
+                f"AI skill destination is not a directory: {destination}"
+            )
+        if not force:
+            raise FileExistsError(
+                f"AI skill destination already exists: {destination}. Use --force to replace SKILL.md."
+            )
+    else:
+        destination.mkdir(parents=True)
+
+    shutil.copy2(source_file, destination / "SKILL.md")
     return destination
 
 
-def prompt_ai_skill_install_path(default_path: str = DEFAULT_AI_SKILL_INSTALL_PATH) -> Path:
+def prompt_ai_skill_install_path(
+    default_path: str = DEFAULT_AI_SKILL_INSTALL_PATH,
+) -> Path:
     response = input(f"Install ShelfDB AI skill to [{default_path}]: ").strip()
     return Path(response or default_path)
 
@@ -85,10 +98,10 @@ async def server(
 
 
 @app.command(name="ai-skill-install")
-def ai_skill_install(path: str | None = None) -> None:
+def ai_skill_install(path: str | None = None, force: bool = False) -> None:
     """Install the bundled ShelfDB AI skill to a local path."""
     destination = Path(path) if path is not None else prompt_ai_skill_install_path()
-    installed = install_ai_skill(destination)
+    installed = install_ai_skill(destination, force=force)
     print(f"Installed ShelfDB AI skill to {installed}")
 
 

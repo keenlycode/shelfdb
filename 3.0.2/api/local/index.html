@@ -1,0 +1,1502 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Usage documentation for ShelfDB">
+      
+      
+      
+        <link rel="canonical" href="https://keenlycode.github.io/shelfdb/3.0.2/api/local/">
+      
+      
+        <link rel="prev" href="../client/">
+      
+      
+        <link rel="next" href="../cli/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="zensical-0.0.52">
+    
+    
+      
+        <title>Local DB API - ShelfDB</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.8b3b5a67.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/version-badge.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-label="Navigation"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#local-db-api" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+
+
+
+
+
+
+
+  
+  
+
+
+
+  
+
+
+
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ShelfDB" class="md-header__button md-logo" aria-label="ShelfDB" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 5v16M20.001 19A2 2 0 0 0 22 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0 0 12 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ShelfDB
+          </span>
+          <div class="md-version md-version--static md-version--release md-version--static" data-md-component="version-badge" aria-label="Current documentation version">
+            <span class="md-version__current" aria-live="polite" aria-atomic="true">
+              v3.0.2
+            </span>
+          </div>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Local DB API
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search" aria-label="Search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/keenlycode/shelfdb" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ShelfDB" class="md-nav__button md-logo" aria-label="ShelfDB" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 5v16M20.001 19A2 2 0 0 0 22 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0 0 12 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z"/></svg>
+
+    </a>
+    ShelfDB
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/keenlycode/shelfdb" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Overview
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+  Overview
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ShelfDB
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Installation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Guides
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+  Guides
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/server/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Run the server
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/remote/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Remote client usage
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/local/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Local database usage
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmark/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Benchmark
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  API Reference
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+  API Reference
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  API overview
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../client/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Client API
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Local DB API
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Local DB API
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#db" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>DB</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dbpath-str-map_size-int-1024-1024-1024-max_dbs-int-128" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>DB(path: str, *, map_size: int = 1024 * 1024 * 1024, max_dbs: int = 128)</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dbtransaction-write-bool-true-transaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>db.transaction(*, write: bool = True) -&gt; Transaction</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query-object-from-txshelfname" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Query object from <code>tx.shelf(name)</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#selection-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Selection methods
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Selection methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#keykey-str-shelfquery" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>key(key: str) -&gt; ShelfQuery</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#keys_rangestart-str-stop-str-none-none-shelfquery" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>keys_range(start: str, stop: str | None = None) -&gt; ShelfQuery</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#keys-shelfquery" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>keys() -&gt; ShelfQuery</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#items-shelfquery" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>items() -&gt; ShelfQuery</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#asc-shelfquery" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>asc() -&gt; ShelfQuery</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#desc-shelfquery" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>desc() -&gt; ShelfQuery</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#transform-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Transform methods
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Transform methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#filterfn-shelfquery" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>filter(fn) -&gt; ShelfQuery</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slicestart-int-none-none-stop-int-none-none-step-int-none-none-shelfquery" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>slice(start: int | None = None, stop: int | None = None, step: int | None = None) -&gt; ShelfQuery</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sortkeynone-reverse-bool-false-shelfquery" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>sort(key=None, reverse: bool = False) -&gt; ShelfQuery</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#read-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Read methods
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Read methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#count-int" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>count() -&gt; int</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exists-bool" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>exists() -&gt; bool</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-item" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>item() -&gt; Item</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#write-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Write methods
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Write methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#putkey-str-value-any-mutationresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>put(key: str, value: Any) -&gt; MutationResult</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#put_manyitems-iterableitem-listmutationresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>put_many(items: Iterable[Item]) -&gt; list[MutationResult]</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#updatefn-listmutationresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>update(fn) -&gt; list[MutationResult]</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#delete-listmutationresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>delete() -&gt; list[MutationResult]</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  CLI Reference
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  
+                    
+                    
+                    
+                      
+                    
+                    
+                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+                      <div class="md-sidebar-button__wrapper">
+                        <label class="md-sidebar-button" for="__toc"></label>
+                      </div>
+                    
+                  
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#db" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>DB</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dbpath-str-map_size-int-1024-1024-1024-max_dbs-int-128" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>DB(path: str, *, map_size: int = 1024 * 1024 * 1024, max_dbs: int = 128)</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dbtransaction-write-bool-true-transaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>db.transaction(*, write: bool = True) -&gt; Transaction</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query-object-from-txshelfname" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Query object from <code>tx.shelf(name)</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#selection-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Selection methods
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Selection methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#keykey-str-shelfquery" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>key(key: str) -&gt; ShelfQuery</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#keys_rangestart-str-stop-str-none-none-shelfquery" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>keys_range(start: str, stop: str | None = None) -&gt; ShelfQuery</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#keys-shelfquery" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>keys() -&gt; ShelfQuery</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#items-shelfquery" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>items() -&gt; ShelfQuery</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#asc-shelfquery" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>asc() -&gt; ShelfQuery</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#desc-shelfquery" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>desc() -&gt; ShelfQuery</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#transform-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Transform methods
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Transform methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#filterfn-shelfquery" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>filter(fn) -&gt; ShelfQuery</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slicestart-int-none-none-stop-int-none-none-step-int-none-none-shelfquery" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>slice(start: int | None = None, stop: int | None = None, step: int | None = None) -&gt; ShelfQuery</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sortkeynone-reverse-bool-false-shelfquery" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>sort(key=None, reverse: bool = False) -&gt; ShelfQuery</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#read-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Read methods
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Read methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#count-int" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>count() -&gt; int</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exists-bool" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>exists() -&gt; bool</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-item" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>item() -&gt; Item</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#write-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Write methods
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Write methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#putkey-str-value-any-mutationresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>put(key: str, value: Any) -&gt; MutationResult</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#put_manyitems-iterableitem-listmutationresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>put_many(items: Iterable[Item]) -&gt; list[MutationResult]</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#updatefn-listmutationresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>update(fn) -&gt; list[MutationResult]</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#delete-listmutationresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>delete() -&gt; list[MutationResult]</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+  
+  
+
+
+<h1 id="local-db-api">Local DB API<a class="headerlink" href="#local-db-api" title="Permanent link">&para;</a></h1>
+<p>Use the local API when your code can open the database directly.</p>
+<h2 id="db"><code>DB</code><a class="headerlink" href="#db" title="Permanent link">&para;</a></h2>
+<p><code>DB</code> is the main entry point for direct local usage.</p>
+<h2 id="dbpath-str-map_size-int-1024-1024-1024-max_dbs-int-128"><code>DB(path: str, *, map_size: int = 1024 * 1024 * 1024, max_dbs: int = 128)</code><a class="headerlink" href="#dbpath-str-map_size-int-1024-1024-1024-max_dbs-int-128" title="Permanent link">&para;</a></h2>
+<p>Open a local ShelfDB database.</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">shelfdb.shelf</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span>
+
+<span class="k">with</span> <span class="n">DB</span><span class="p">(</span><span class="s2">&quot;./db&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">db</span><span class="p">:</span>
+    <span class="o">...</span>
+</code></pre></div>
+
+<h2 id="dbtransaction-write-bool-true-transaction"><code>db.transaction(*, write: bool = True) -&gt; Transaction</code><a class="headerlink" href="#dbtransaction-write-bool-true-transaction" title="Permanent link">&para;</a></h2>
+<p>Open a local transaction.</p>
+<p>Use <code>write=True</code> for writes and <code>write=False</code> for read-only access.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">with</span> <span class="n">DB</span><span class="p">(</span><span class="s2">&quot;./db&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">db</span><span class="p">:</span>
+    <span class="k">with</span> <span class="n">db</span><span class="o">.</span><span class="n">transaction</span><span class="p">(</span><span class="n">write</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">as</span> <span class="n">tx</span><span class="p">:</span>
+        <span class="n">users</span> <span class="o">=</span> <span class="n">tx</span><span class="o">.</span><span class="n">shelf</span><span class="p">(</span><span class="s2">&quot;users&quot;</span><span class="p">)</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="n">users</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+</code></pre></div>
+
+<h2 id="query-object-from-txshelfname">Query object from <code>tx.shelf(name)</code><a class="headerlink" href="#query-object-from-txshelfname" title="Permanent link">&para;</a></h2>
+<p>Inside a local transaction, <code>tx.shelf("users")</code> returns a query object.</p>
+<p>Unlike remote client usage, local queries run directly and do not end with <code>.query()</code>.</p>
+<div class="codehilite"><pre><span></span><code><span class="n">users</span> <span class="o">=</span> <span class="n">tx</span><span class="o">.</span><span class="n">shelf</span><span class="p">(</span><span class="s2">&quot;users&quot;</span><span class="p">)</span>
+<span class="n">alice</span> <span class="o">=</span> <span class="n">users</span><span class="o">.</span><span class="n">key</span><span class="p">(</span><span class="s2">&quot;alice&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+</code></pre></div>
+
+<h2 id="selection-methods">Selection methods<a class="headerlink" href="#selection-methods" title="Permanent link">&para;</a></h2>
+<h3 id="keykey-str-shelfquery"><code>key(key: str) -&gt; ShelfQuery</code><a class="headerlink" href="#keykey-str-shelfquery" title="Permanent link">&para;</a></h3>
+<p>Select one key.</p>
+<h3 id="keys_rangestart-str-stop-str-none-none-shelfquery"><code>keys_range(start: str, stop: str | None = None) -&gt; ShelfQuery</code><a class="headerlink" href="#keys_rangestart-str-stop-str-none-none-shelfquery" title="Permanent link">&para;</a></h3>
+<p>Select keys in the half-open range <code>[start, stop)</code>.</p>
+<h3 id="keys-shelfquery"><code>keys() -&gt; ShelfQuery</code><a class="headerlink" href="#keys-shelfquery" title="Permanent link">&para;</a></h3>
+<p>Project the current selection to keys.</p>
+<h3 id="items-shelfquery"><code>items() -&gt; ShelfQuery</code><a class="headerlink" href="#items-shelfquery" title="Permanent link">&para;</a></h3>
+<p>Project the current selection to loaded key/value items.</p>
+<h3 id="asc-shelfquery"><code>asc() -&gt; ShelfQuery</code><a class="headerlink" href="#asc-shelfquery" title="Permanent link">&para;</a></h3>
+<p>Use ascending key order.</p>
+<h3 id="desc-shelfquery"><code>desc() -&gt; ShelfQuery</code><a class="headerlink" href="#desc-shelfquery" title="Permanent link">&para;</a></h3>
+<p>Use descending key order.</p>
+<div class="codehilite"><pre><span></span><code><span class="n">result</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">users</span><span class="o">.</span><span class="n">desc</span><span class="p">())</span>
+</code></pre></div>
+
+<h2 id="transform-methods">Transform methods<a class="headerlink" href="#transform-methods" title="Permanent link">&para;</a></h2>
+<h3 id="filterfn-shelfquery"><code>filter(fn) -&gt; ShelfQuery</code><a class="headerlink" href="#filterfn-shelfquery" title="Permanent link">&para;</a></h3>
+<p>Filter matching items.</p>
+<div class="codehilite"><pre><span></span><code><span class="n">admins</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">users</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">item</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="s2">&quot;role&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;admin&quot;</span><span class="p">))</span>
+</code></pre></div>
+
+<h3 id="slicestart-int-none-none-stop-int-none-none-step-int-none-none-shelfquery"><code>slice(start: int | None = None, stop: int | None = None, step: int | None = None) -&gt; ShelfQuery</code><a class="headerlink" href="#slicestart-int-none-none-stop-int-none-none-step-int-none-none-shelfquery" title="Permanent link">&para;</a></h3>
+<p>Slice the current selection.</p>
+<div class="codehilite"><pre><span></span><code><span class="n">result</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">users</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+</code></pre></div>
+
+<h3 id="sortkeynone-reverse-bool-false-shelfquery"><code>sort(key=None, reverse: bool = False) -&gt; ShelfQuery</code><a class="headerlink" href="#sortkeynone-reverse-bool-false-shelfquery" title="Permanent link">&para;</a></h3>
+<p>Sort the current selection.</p>
+<div class="codehilite"><pre><span></span><code><span class="n">result</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">users</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+</code></pre></div>
+
+<h2 id="read-methods">Read methods<a class="headerlink" href="#read-methods" title="Permanent link">&para;</a></h2>
+<h3 id="count-int"><code>count() -&gt; int</code><a class="headerlink" href="#count-int" title="Permanent link">&para;</a></h3>
+<p>Return the number of selected items.</p>
+<h3 id="exists-bool"><code>exists() -&gt; bool</code><a class="headerlink" href="#exists-bool" title="Permanent link">&para;</a></h3>
+<p>Return whether the current selection contains at least one item.</p>
+<h3 id="item-item"><code>item() -&gt; Item</code><a class="headerlink" href="#item-item" title="Permanent link">&para;</a></h3>
+<p>Return exactly one selected item.</p>
+<p>Raises an error if zero or more than one item matches.</p>
+<div class="codehilite"><pre><span></span><code><span class="n">alice</span> <span class="o">=</span> <span class="n">users</span><span class="o">.</span><span class="n">key</span><span class="p">(</span><span class="s2">&quot;alice&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+</code></pre></div>
+
+<h2 id="write-methods">Write methods<a class="headerlink" href="#write-methods" title="Permanent link">&para;</a></h2>
+<h3 id="putkey-str-value-any-mutationresult"><code>put(key: str, value: Any) -&gt; MutationResult</code><a class="headerlink" href="#putkey-str-value-any-mutationresult" title="Permanent link">&para;</a></h3>
+<p>Store one key/value pair.</p>
+<div class="codehilite"><pre><span></span><code><span class="n">users</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s2">&quot;alice&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;admin&quot;</span><span class="p">})</span>
+</code></pre></div>
+
+<h3 id="put_manyitems-iterableitem-listmutationresult"><code>put_many(items: Iterable[Item]) -&gt; list[MutationResult]</code><a class="headerlink" href="#put_manyitems-iterableitem-listmutationresult" title="Permanent link">&para;</a></h3>
+<p>Store multiple items.</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">shelfdb.shelf</span><span class="w"> </span><span class="kn">import</span> <span class="n">Item</span>
+
+<span class="n">users</span><span class="o">.</span><span class="n">put_many</span><span class="p">([</span>
+    <span class="n">Item</span><span class="p">(</span><span class="s2">&quot;alice&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;admin&quot;</span><span class="p">}),</span>
+    <span class="n">Item</span><span class="p">(</span><span class="s2">&quot;bob&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">}),</span>
+<span class="p">])</span>
+</code></pre></div>
+
+<h3 id="updatefn-listmutationresult"><code>update(fn) -&gt; list[MutationResult]</code><a class="headerlink" href="#updatefn-listmutationresult" title="Permanent link">&para;</a></h3>
+<p>Update the selected items using <code>fn</code>.</p>
+<div class="codehilite"><pre><span></span><code><span class="n">users</span><span class="o">.</span><span class="n">key</span><span class="p">(</span><span class="s2">&quot;alice&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="k">lambda</span> <span class="n">item</span><span class="p">:</span> <span class="p">{</span><span class="o">**</span><span class="n">item</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="s2">&quot;active&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">})</span>
+</code></pre></div>
+
+<h3 id="delete-listmutationresult"><code>delete() -&gt; list[MutationResult]</code><a class="headerlink" href="#delete-listmutationresult" title="Permanent link">&para;</a></h3>
+<p>Delete the selected items.</p>
+<div class="codehilite"><pre><span></span><code><span class="n">users</span><span class="o">.</span><span class="n">key</span><span class="p">(</span><span class="s2">&quot;alice&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://zensical.org/" target="_blank" rel="noopener">
+      Zensical
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":[],"search":"../../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":{"alias":true,"default":"latest","provider":"mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.ed145cee.min.js"></script>
+      
+    
+  </body>
+</html>

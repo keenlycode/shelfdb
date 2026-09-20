@@ -1,3 +1,8 @@
+"""Wire helpers, with backward-compatible lazy server-side exports."""
+
+from importlib import import_module
+from typing import TYPE_CHECKING
+
 from .protocol import (
     MAX_FRAME_SIZE,
     decode_request,
@@ -12,8 +17,27 @@ from .protocol import (
     write_request,
     write_response,
 )
-from .server import handle_client, serve, serve_unix
-from .session import Session
+
+if TYPE_CHECKING:
+    from .server import handle_client, serve, serve_unix
+    from .session import Session
+
+
+def __getattr__(name: str):
+    if name in {"handle_client", "serve", "serve_unix"}:
+        module = import_module(".server", __name__)
+    elif name == "Session":
+        module = import_module(".session", __name__)
+    else:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    value = getattr(module, name)
+    globals()[name] = value
+    return value
+
+
+def __dir__() -> list[str]:
+    return sorted(set(globals()) | set(__all__))
+
 
 __all__ = [
     "MAX_FRAME_SIZE",

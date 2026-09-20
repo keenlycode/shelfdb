@@ -6,7 +6,7 @@ from asyncio import StreamReader, StreamWriter, open_connection, open_unix_conne
 from contextlib import suppress
 from typing import Any
 
-from shelfdb.protocol import read_response, write_request
+from shelfdb.protocol.protocol import read_response, write_request
 from shelfdb.protocol.query_result import denormalize_query_result
 from shelfdb.shelf import Item
 from shelfdb.target import parse_target, parse_tcp_location, parse_unix_location

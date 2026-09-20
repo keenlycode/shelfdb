@@ -94,8 +94,10 @@ class Session:
     def close(self) -> None:
         tx = self._tx
         if tx is not None:
-            tx.tx.abort()
-            self._clear_transaction()
+            try:
+                tx.tx.abort()
+            finally:
+                self._clear_transaction()
 
     def _begin(self, mode: str | None) -> dict[str, Any]:
         if mode not in {"read", "write"}:
@@ -115,16 +117,25 @@ class Session:
 
     def _commit(self) -> dict[str, Any]:
         tx = self._require_tx()
-        if tx.is_write:
-            tx.commit()
-        else:
-            tx.tx.abort()
-        self._clear_transaction()
+        try:
+            if tx.is_write:
+                tx.commit()
+            else:
+                tx.tx.abort()
+        except Exception:
+            # LMDB may already have consumed the handle on commit failure.
+            # Best-effort abort also covers failures before commit reached LMDB.
+            try:
+                tx.tx.abort()
+            except Exception:
+                pass
+            raise
+        finally:
+            self._clear_transaction()
         return _ok({"committed": True})
 
     def _rollback(self) -> dict[str, Any]:
-        self._require_tx().tx.abort()
-        self._clear_transaction()
+        self.close()
         return _ok({"rolled_back": True})
 
     def _query(

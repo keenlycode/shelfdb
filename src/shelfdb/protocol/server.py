@@ -12,16 +12,39 @@ from shelfdb.shelf import DB
 
 from .protocol import read_request, write_response
 from .session import Session
+from .write_admission import WriteLease
+
+
+class _ConnectionReader(asyncio.StreamReader):
+    """Observe transport EOF/errors without a second consumer of request bytes."""
+
+    def __init__(self):
+        super().__init__()
+        self.disconnected = asyncio.Event()
+
+    def feed_eof(self) -> None:
+        self.disconnected.set()
+        super().feed_eof()
+
+    def set_exception(self, exc) -> None:
+        self.disconnected.set()
+        super().set_exception(exc)
+
+
+def _protocol_factory(db: DB) -> asyncio.StreamReaderProtocol:
+    reader = _ConnectionReader()
+    return asyncio.StreamReaderProtocol(reader, partial(handle_client, db=db))
 
 
 async def handle_client(
-    reader: asyncio.StreamReader,
+    reader: _ConnectionReader,
     writer: asyncio.StreamWriter,
     *,
     db: DB,
 ) -> None:
     """Serve one client connection with one session."""
     session = Session(db)
+    lease = WriteLease(db)
 
     try:
         while True:
@@ -34,19 +57,35 @@ async def handle_client(
                 break
 
             try:
+                if (
+                    isinstance(command, dict)
+                    and command.get("cmd") == "begin"
+                    and command.get("mode") == "write"
+                    and not session.active
+                ):
+                    if not await lease.acquire(reader.disconnected):
+                        break
                 response = session.handle(command)
             except Exception as exc:
                 response = {"ok": False, "error": str(exc)}
+            finally:
+                # A failed begin and any terminal transaction path give up admission.
+                # Query errors intentionally leave an active transaction usable.
+                if not session.active:
+                    lease.release()
 
             try:
                 await write_response(writer, response)
             except Exception:
                 break
     finally:
-        session.close()
-        writer.close()
-        with suppress(Exception):
-            await writer.wait_closed()
+        try:
+            session.close()
+        finally:
+            lease.release()
+            writer.close()
+            with suppress(Exception):
+                await writer.wait_closed()
 
 
 async def serve(
@@ -56,7 +95,9 @@ async def serve(
     port: int = 0,
 ) -> asyncio.Server:
     """Start the minimal ShelfDB protocol server."""
-    return await asyncio.start_server(partial(handle_client, db=db), host, port)
+    return await asyncio.get_running_loop().create_server(
+        partial(_protocol_factory, db), host, port
+    )
 
 
 class _UnixServer:
@@ -101,7 +142,9 @@ async def serve_unix(
     socket_path = Path(path)
     with suppress(FileNotFoundError):
         socket_path.unlink()
-    server = await asyncio.start_unix_server(partial(handle_client, db=db), socket_path)
+    server = await asyncio.get_running_loop().create_unix_server(
+        partial(_protocol_factory, db), socket_path
+    )
     return _UnixServer(server, socket_path)
 
 

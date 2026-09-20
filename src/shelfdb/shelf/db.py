@@ -9,8 +9,8 @@ from typing import Any
 import lmdb
 
 # lib: local
-from .shelf.query import ShelfQuery
-from .shelf.shelf import ShelfCursor, ShelfStore
+from .query import ShelfQuery
+from .storage import ShelfCursor, ShelfStore
 
 LmdbEnvironment = Any
 LmdbTransaction = Any

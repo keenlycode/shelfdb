@@ -1,7 +1,6 @@
 import pytest
 
-from shelfdb.shelf import DB, UNDEF, ShelfQuery
-from shelfdb.shelf.shelf import Item, MutationResult
+from shelfdb.shelf import DB, UNDEF, Item, MutationResult, ShelfQuery
 
 
 def _seed_users(users) -> None:

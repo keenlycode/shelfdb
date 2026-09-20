@@ -20,7 +20,7 @@ from itertools import islice
 from typing import Any
 
 from .schema import UNDEF, Item, MutationResult
-from .shelf import ShelfCursor, ShelfStore
+from .storage import ShelfCursor, ShelfStore
 
 type Transform = Callable[[Iterator[Item]], Iterator[Item]]
 

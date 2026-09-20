@@ -96,6 +96,21 @@ from shelfdb.client import Client
 client = await Client.connect("unix:///tmp/shelfdb.sock")
 ```
 
+## Transaction behavior
+
+- Readers use independent LMDB snapshots and do not join the writer queue.
+- Remote write transactions queue, one writer at a time, across connections
+  served by the same `DB` object on one event loop. Independent local writers
+  and other server processes are outside this queue.
+- A normal exit from `async with client.transaction(write=True)` commits;
+  an exception escaping the context rolls back the whole transaction.
+  Catching a query error inside the context leaves commit/rollback up to you.
+- Keep transactions short: perform external HTTP/LLM calls before opening them.
+  Long-lived readers can delay page reuse; long-lived writers hold up the queue.
+
+See [remote transaction usage](docs-src/usage/remote.md#concurrent-transactions)
+for coordination limits and details on partial updates and error handling.
+
 ## Example
 
 ```python

@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "shelfdb"
-version = "3.0.1"
+version = "3.0.2"
 description = "A tiny database for Python"
 readme = "README.md"
 requires-python = ">=3.12"

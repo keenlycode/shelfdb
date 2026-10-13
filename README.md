@@ -111,6 +111,15 @@ client = await Client.connect("unix:///tmp/shelfdb.sock")
 See [remote transaction usage](docs-src/usage/remote.md#concurrent-transactions)
 for coordination limits and details on partial updates and error handling.
 
+## Large results
+
+Remote messages are buffered, not streamed. The former 1 MiB cap is removed;
+only the unsigned 32-bit payload length remains (4 GiB minus 1 byte). Large
+queries can still exhaust memory, so paginate bulk reads with `.slice(...)`.
+Store large assets externally and keep references in ShelfDB.
+
+See [pagination and its limits](docs-src/usage/remote.md#large-results-and-pagination).
+
 ## Example
 
 ```python

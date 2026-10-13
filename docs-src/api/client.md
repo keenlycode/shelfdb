@@ -121,11 +121,16 @@ admins = await users.filter(
 
 ### `slice(start: int | None = None, stop: int | None = None, step: int | None = None) -> RemoteShelfQuery`
 
-Slice the current selection.
+Slice the current selection before the server collects the response.
+Earlier transforms still run: sorting materializes the full preceding selection,
+while large offsets consume skipped entries. For a simple key-ordered page:
 
 ```python
-result = await users.sort(reverse=True).slice(0, 2).query()
+result = await users.slice(0, 100).items().query()
 ```
+
+See [large results and pagination](../usage/remote.md#large-results-and-pagination)
+for memory, filtering, and snapshot considerations.
 
 ### `sort(key=None, reverse: bool = False) -> RemoteShelfQuery`
 

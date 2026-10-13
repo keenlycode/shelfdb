@@ -1,6 +1,8 @@
 import asyncio
 from asyncio import StreamReader
 
+import pytest
+
 from shelfdb.protocol import (
     MAX_FRAME_SIZE,
     decode_request,
@@ -8,6 +10,7 @@ from shelfdb.protocol import (
     encode_request,
     encode_response,
     frame_payload,
+    read_payload,
     read_request,
     read_response,
     write_request,
@@ -49,7 +52,7 @@ def test_response_uses_msgpack_round_trip():
 def test_write_and_read_request_round_trip():
     async def run_round_trip():
         writer = DummyWriter()
-        request = {"v": 1, "tx": "write"}
+        request = {"v": 1, "tx": "write", "value": b"a" * (1024 * 1024 + 1)}
 
         await write_request(writer, request)
 
@@ -58,13 +61,17 @@ def test_write_and_read_request_round_trip():
         reader.feed_eof()
         return await read_request(reader)
 
-    assert asyncio.run(run_round_trip()) == {"v": 1, "tx": "write"}
+    assert asyncio.run(run_round_trip()) == {
+        "v": 1,
+        "tx": "write",
+        "value": b"a" * (1024 * 1024 + 1),
+    }
 
 
 def test_write_and_read_response_round_trip():
     async def run_round_trip():
         writer = DummyWriter()
-        response = {"v": 1, "ok": True, "result": {"committed": True}}
+        response = {"v": 1, "ok": True, "result": b"a" * (1024 * 1024 + 1)}
 
         await write_response(writer, response)
 
@@ -76,31 +83,36 @@ def test_write_and_read_response_round_trip():
     assert asyncio.run(run_round_trip()) == {
         "v": 1,
         "ok": True,
-        "result": {"committed": True},
+        "result": b"a" * (1024 * 1024 + 1),
     }
 
 
-def test_frame_payload_rejects_payloads_larger_than_max():
-    with_payload_too_large = b"a" * (MAX_FRAME_SIZE + 1)
-
-    try:
-        frame_payload(with_payload_too_large)
-    except ValueError as exc:
-        assert str(exc) == "payload exceeds max frame size"
-    else:
-        raise AssertionError("expected payload size guard to raise")
+def test_frame_payload_accepts_payloads_above_one_mib():
+    payload = b"a" * (1024 * 1024 + 1)
+    framed = frame_payload(payload)
+    assert int.from_bytes(framed[:4], "big") == len(payload)
+    assert framed[4:] == payload
 
 
-def test_read_payload_rejects_frames_larger_than_max():
+def test_frame_payload_rejects_lengths_outside_unsigned_32_bits():
+    # Exercise the length guard without allocating a 4 GiB buffer.
+    class OversizedPayload(bytes):
+        def __len__(self):
+            return 1 << 32
+
+    assert MAX_FRAME_SIZE == (1 << 32) - 1
+    with pytest.raises(ValueError, match="payload exceeds 32-bit frame length"):
+        frame_payload(OversizedPayload())
+
+
+def test_read_payload_reports_truncated_large_frame():
     async def run_read():
         reader = StreamReader()
-        reader.feed_data((MAX_FRAME_SIZE + 1).to_bytes(4, "big"))
+        reader.feed_data((1024 * 1024 + 1).to_bytes(4, "big") + b"partial")
         reader.feed_eof()
-        return await read_request(reader)
+        return await read_payload(reader)
 
-    try:
+    with pytest.raises(asyncio.IncompleteReadError) as raised:
         asyncio.run(run_read())
-    except ValueError as exc:
-        assert str(exc) == "frame exceeds max frame size"
-    else:
-        raise AssertionError("expected frame size guard to raise")
+    assert raised.value.expected == 1024 * 1024 + 1
+    assert raised.value.partial == b"partial"

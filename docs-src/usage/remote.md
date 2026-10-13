@@ -76,6 +76,44 @@ finally:
     await client.close()
 ```
 
+## Large results and pagination
+
+Requests and responses are buffered, not streamed. There is no separate 1 MiB
+message cap: the four-byte unsigned length header allows serialized payloads up
+to `2**32 - 1` bytes (4 GiB minus 1 byte). This is a framing limit, not a practical
+memory budget or an LMDB database-capacity setting. Large results can consume
+substantial memory on both peers and block server processing. Peers running an
+older version with the 1 MiB cap still reject larger messages.
+
+Use `.slice(start, stop)` to bound each response. For an unfiltered scan in key
+order, slice before loading values to avoid decoding values for skipped entries:
+
+```python
+async with client.transaction() as tx:
+    users = tx.shelf("users")
+    first_page = await users.slice(0, 100).items().query()
+    second_page = await users.slice(100, 200).items().query()
+```
+
+The server applies the slice before collecting the final result list, but a
+slice is not a guarantee of bounded query work:
+
+- Large offsets still consume preceding entries; `.items().slice(...)` also
+  loads their values. For deep scans, use key ranges to narrow the selection.
+- `.filter(...).slice(...)` reads candidates until enough matching items are
+  found, or the selection is exhausted.
+- `.sort(...).slice(...)` loads and sorts the entire preceding selection. Use
+  the existing key scan order (`.asc()` / `.desc()`) when that order is sufficient.
+- Page sizes count records, not bytes. Even one large value can make a large
+  response. No binary chunking or streaming is provided.
+
+Pages in the same read transaction share one LMDB snapshot. Separate transactions
+may observe intervening changes; long-lived snapshots can delay page reuse.
+
+Binary values are supported, but ShelfDB is not intended as a bulk file-transfer
+service. Prefer external files or object storage for large assets and store their
+references and metadata in ShelfDB.
+
 ## Concurrent transactions
 
 Write transactions from separate connections to the same server-side `DB` wait

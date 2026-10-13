@@ -17,24 +17,9 @@ from urllib.parse import urlparse
 import pytest
 from mike.versions import Versions
 
+from macros import project_version
+
 ROOT = Path(__file__).resolve().parents[2]
-
-
-def _load_macros():
-    import importlib.util
-
-    module_name = "test_macros_module"
-    module_path = ROOT / "macros.py"
-    spec = importlib.util.spec_from_file_location(module_name, module_path)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-macros = _load_macros()
-project_version = macros.project_version
 
 
 def _load_release_version() -> str:

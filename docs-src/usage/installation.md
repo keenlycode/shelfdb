@@ -2,9 +2,14 @@
 
 ## Requirements
 
-- Python 3.12+
+- Python 3.12–3.14
 
 ## Install for development
+
+The repository selects Python 3.14 via `.python-version`; compatibility checks
+run on Python 3.12 and 3.14. Python 3.15 is temporarily excluded because the
+released `dill` cannot serialize query callbacks on it. Support will be
+reassessed after an upstream fix is released.
 
 Using `uv`:
 
@@ -12,7 +17,7 @@ Using `uv`:
 uv sync
 ```
 
-This installs the package plus the development dependencies, including MkDocs.
+This installs the package plus the development dependencies, including Zensical.
 
 ## Install the package only
 
@@ -33,22 +38,3 @@ pip install .
 ```bash
 shelfdb server --help
 ```
-
-## Optional AI skill
-
-Install ShelfDB's compact usage skill for compatible coding agents:
-
-```bash
-shelfdb ai-skill-install
-```
-
-The command prompts for a destination and defaults to
-`.agents/skills/shelfdb-usage`. Use `--path` for another agent convention. An
-existing destination is preserved unless replacement is explicitly requested:
-
-```bash
-shelfdb ai-skill-install --path .agents/skills/shelfdb-usage --force
-```
-
-The skill provides quick guidance and links to these docs; it is not required to
-use ShelfDB.

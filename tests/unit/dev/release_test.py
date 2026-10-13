@@ -1,27 +1,12 @@
-import importlib.util
 import io
 import tarfile
 import uuid
 import zipfile
 from pathlib import Path
-import sys
 
 import pytest
 
-
-def load_release_module():
-    module_name = "test_release_module"
-    module_path = Path(__file__).resolve().parents[2] / "dev" / "release.py"
-    spec = importlib.util.spec_from_file_location(module_name, module_path)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-release = load_release_module()
+from dev import release
 
 
 def write_artifacts(dist, *, version="3.0.1"):

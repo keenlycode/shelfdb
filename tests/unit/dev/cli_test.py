@@ -1,21 +1,4 @@
-import importlib.util
-import sys
-from pathlib import Path
-
-
-def load_dev_cli_module():
-    module_name = "test_dev_cli_module"
-    module_path = Path(__file__).resolve().parents[2] / "dev" / "cli.py"
-    spec = importlib.util.spec_from_file_location(module_name, module_path)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-cli = load_dev_cli_module()
+from dev import cli
 
 
 def test_cli_run_uses_shelfdb_server(monkeypatch):

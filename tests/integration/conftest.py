@@ -47,9 +47,13 @@ def transaction_server(tmp_path, request):
         process = await asyncio.create_subprocess_exec(
             sys.executable,
             "-u",
-            str(Path(__file__).with_name("_transaction_server.py")),
+            "-m",
+            "tests.integration._transaction_server",
             str(tmp_path / "db"),
             request.param,
+            # Module execution from the repo root makes importlib-mode test
+            # callbacks importable when dill sends them by reference.
+            cwd=Path(__file__).resolve().parents[2],
             stdin=asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,

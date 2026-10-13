@@ -10,7 +10,8 @@ import dill
 import msgpack
 
 _FRAME_HEADER: Final = struct.Struct(">I")
-MAX_FRAME_SIZE: Final = 1024 * 1024
+# The unsigned 32-bit length header is the only frame-size limit.
+MAX_FRAME_SIZE: Final = (1 << 32) - 1
 
 
 class WritableStream(Protocol):
@@ -20,9 +21,9 @@ class WritableStream(Protocol):
 
 
 def frame_payload(payload: bytes) -> bytes:
-    """Prefix payload bytes with a 4-byte big-endian length."""
+    """Prefix a buffered payload with its unsigned 32-bit big-endian length."""
     if len(payload) > MAX_FRAME_SIZE:
-        raise ValueError("payload exceeds max frame size")
+        raise ValueError("payload exceeds 32-bit frame length (4294967295 bytes)")
     return _FRAME_HEADER.pack(len(payload)) + payload
 
 
@@ -50,8 +51,6 @@ async def read_payload(reader: StreamReader) -> bytes:
     """Read one length-prefixed payload from a stream."""
     size_data = await reader.readexactly(_FRAME_HEADER.size)
     (size,) = _FRAME_HEADER.unpack(size_data)
-    if size > MAX_FRAME_SIZE:
-        raise ValueError("frame exceeds max frame size")
     return await reader.readexactly(size)
 
 

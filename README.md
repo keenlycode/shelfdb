@@ -15,16 +15,29 @@ pip install shelfdb
 
 ## Development
 
+Python 3.12–3.14 is supported. Development uses Python 3.14, selected by
+`.python-version`; compatibility checks cover Python 3.12 and 3.14. Python 3.15
+is temporarily excluded because the released `dill` cannot serialize query
+callbacks on it; support will be reassessed after an upstream fix is released.
+
 Install development dependencies:
 
 ```bash
 uv sync --dev
 ```
 
+Development tooling lives in `src/dev/`, outside the published `shelfdb` package.
+Use `--directory src` to run its module; workflow commands resolve paths from the
+repository root. Documentation macros live in `src/macros.py`.
+
+Unit tests mirror `src/` under `tests/unit/`: `shelfdb/`, `dev/`, and
+`macros_test.py`. Integration tests cover cross-layer behavior; `tests/usage/`
+contains executable usage examples.
+
 Run the complete non-publishing release gate:
 
 ```bash
-uv run python -m dev release-check
+uv run --directory src python -m dev release-check
 ```
 
 The gate audits locked dependencies, checks formatting, linting, types, supported
@@ -34,13 +47,13 @@ and version tags. Before tagging, authenticated release maintainers also check
 GitHub's repository alerts:
 
 ```bash
-uv run python -m dev release-check --github
+uv run --directory src python -m dev release-check --github
 ```
 
 Serve the docs locally (Zensical dev server; live reload is built in):
 
 ```bash
-uv run python -m dev docs serve --port 9001 --livereload
+uv run --directory src python -m dev docs serve --port 9001 --livereload
 ```
 
 `--livereload` is a legacy compatibility flag and is intentionally ignored by Zensical
@@ -49,19 +62,19 @@ uv run python -m dev docs serve --port 9001 --livereload
 Build docs for verification (Zensical build):
 
 ```bash
-uv run python -m dev docs build
+uv run --directory src python -m dev docs build
 ```
 
 Publish the docs with mike to the `docs` branch:
 
 ```bash
-uv run python -m dev docs publish
+uv run --directory src python -m dev docs publish
 ```
 
 Override the publish target when needed:
 
 ```bash
-uv run python -m dev docs publish --publish-version 3.0.1 --alias latest --branch docs --remote origin
+uv run --directory src python -m dev docs publish --publish-version 3.0.1 --alias latest --branch docs --remote origin
 ```
 
 ## Server
@@ -110,6 +123,15 @@ client = await Client.connect("unix:///tmp/shelfdb.sock")
 
 See [remote transaction usage](docs-src/usage/remote.md#concurrent-transactions)
 for coordination limits and details on partial updates and error handling.
+
+## Large results
+
+Remote messages are buffered, not streamed. The former 1 MiB cap is removed;
+only the unsigned 32-bit payload length remains (4 GiB minus 1 byte). Large
+queries can still exhaust memory, so paginate bulk reads with `.slice(...)`.
+Store large assets externally and keep references in ShelfDB.
+
+See [pagination and its limits](docs-src/usage/remote.md#large-results-and-pagination).
 
 ## Example
 

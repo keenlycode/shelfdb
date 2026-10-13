@@ -23,7 +23,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-          python-version: "3.13"
+          python-version: "3.14"
       - name: Verify tag and project version
         env:
           RELEASE_TAG: ${{ inputs.tag }}

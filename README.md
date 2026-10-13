@@ -15,6 +15,11 @@ pip install shelfdb
 
 ## Development
 
+Python 3.12–3.14 is supported. Development uses Python 3.14, selected by
+`.python-version`; compatibility checks cover Python 3.12 and 3.14. Python 3.15
+is temporarily excluded because the released `dill` cannot serialize query
+callbacks on it; support will be reassessed after an upstream fix is released.
+
 Install development dependencies:
 
 ```bash

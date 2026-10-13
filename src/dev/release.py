@@ -14,7 +14,7 @@ from pathlib import Path
 
 PIP_AUDIT_VERSION = "2.10.1"
 TWINE_VERSION = "7.0.0"
-SUPPORTED_PYTHONS = ("3.12", "3.13")
+SUPPORTED_PYTHONS = ("3.12", "3.14")
 DEPENDABOT_ALERTS_ENDPOINT = (
     "repos/keenlycode/shelfdb/dependabot/alerts?state=open&per_page=100"
 )

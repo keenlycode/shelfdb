@@ -35,7 +35,7 @@ extra_css:
   - assets/stylesheets/version-badge.css
 markdown_extensions:
   - zensical.extensions.macros:
-      module_name: macros
+      module_name: src/macros
   - admonition
   - attr_list
   - fenced_code

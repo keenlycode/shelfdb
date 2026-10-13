@@ -21,10 +21,18 @@ Install development dependencies:
 uv sync --dev
 ```
 
+Development tooling lives in `src/dev/`, outside the published `shelfdb` package.
+Use `--directory src` to run its module; workflow commands resolve paths from the
+repository root. Documentation macros live in `src/macros.py`.
+
+Unit tests mirror `src/` under `tests/unit/`: `shelfdb/`, `dev/`, and
+`macros_test.py`. Integration tests cover cross-layer behavior; `tests/usage/`
+contains executable usage examples.
+
 Run the complete non-publishing release gate:
 
 ```bash
-uv run python -m dev release-check
+uv run --directory src python -m dev release-check
 ```
 
 The gate audits locked dependencies, checks formatting, linting, types, supported
@@ -34,13 +42,13 @@ and version tags. Before tagging, authenticated release maintainers also check
 GitHub's repository alerts:
 
 ```bash
-uv run python -m dev release-check --github
+uv run --directory src python -m dev release-check --github
 ```
 
 Serve the docs locally (Zensical dev server; live reload is built in):
 
 ```bash
-uv run python -m dev docs serve --port 9001 --livereload
+uv run --directory src python -m dev docs serve --port 9001 --livereload
 ```
 
 `--livereload` is a legacy compatibility flag and is intentionally ignored by Zensical
@@ -49,19 +57,19 @@ uv run python -m dev docs serve --port 9001 --livereload
 Build docs for verification (Zensical build):
 
 ```bash
-uv run python -m dev docs build
+uv run --directory src python -m dev docs build
 ```
 
 Publish the docs with mike to the `docs` branch:
 
 ```bash
-uv run python -m dev docs publish
+uv run --directory src python -m dev docs publish
 ```
 
 Override the publish target when needed:
 
 ```bash
-uv run python -m dev docs publish --publish-version 3.0.1 --alias latest --branch docs --remote origin
+uv run --directory src python -m dev docs publish --publish-version 3.0.1 --alias latest --branch docs --remote origin
 ```
 
 ## Server

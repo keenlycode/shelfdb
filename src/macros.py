@@ -10,7 +10,9 @@ def project_version() -> str:
     """Return the configured ShelfDB package version from pyproject.toml."""
 
     data = tomllib.loads(
-        (Path(__file__).resolve().parent / "pyproject.toml").read_text(encoding="utf-8")
+        (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(
+            encoding="utf-8"
+        )
     )
     return str(data["project"]["version"])
 

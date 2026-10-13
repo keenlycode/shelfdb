@@ -46,7 +46,7 @@ jobs:
           enable-cache: true
           python-version: "3.13"
       - name: Run release checks
-        run: uv run --frozen python -m dev release-check
+        run: uv run --frozen --directory src python -m dev release-check
 
   dependency-review:
     name: Dependency review

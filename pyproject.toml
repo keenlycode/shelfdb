@@ -45,5 +45,3 @@ dev = [
 [tool.uv.build-backend]
 module-name = "shelfdb"
 module-root = "src"
-data = { data = "ai-skill" }
-source-include = ["ai-skill/**"]

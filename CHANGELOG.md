@@ -1,12 +1,25 @@
 # Changelog
 
-## Unreleased
+## 3.1.1
 
 ### Fixed
 
 - Preserve stored `None` values when loading query items, including exact reads,
   filters, sorting, and updates. Missing keys remain distinct internally; the
   storage format and public APIs are unchanged.
+
+### Development
+
+- Updated the locked MessagePack dependency from 1.2.1 to 1.2.3.
+- Added local, TCP, and Unix-socket regression tests for null-value reads,
+  mutations, and rollback.
+- Removed the exploratory `IDEA.md` document. Prefix selection remains a design
+  proposal and is not included in this release.
+
+### Upgrade notes
+
+- No database migration is required. Stored null values that were previously
+  skipped by value-loading queries are now included in their results.
 
 ## 3.1.0
 

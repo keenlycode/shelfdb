@@ -43,6 +43,31 @@ with DB("./db") as db:
         print(admins)
 ```
 
+## Stored `None` values
+
+`None` is a valid stored value, not a missing record. Since version 3.1.1,
+value-loading queries preserve it in `.items()`, `.item()`, filters, sorting,
+and updates:
+
+```python
+from shelfdb.shelf import DB, Item
+
+with DB("./db") as db:
+    with db.transaction(write=True) as tx:
+        tx.shelf("settings").put("optional", None)
+
+    with db.transaction(write=False) as tx:
+        settings = tx.shelf("settings")
+        assert settings.key("optional").item() == Item("optional", None)
+        assert settings.key("optional").exists() is True
+        nulls = list(settings.filter(lambda item: item.value is None))
+```
+
+A missing key has `.exists() == False`; calling `.item()` on it raises
+`ValueError`. Callbacks must handle `None` if the selected values can contain it.
+Older releases may skip stored nulls when loading values; upgrading requires no
+storage migration.
+
 ## Query style
 
 `tx.shelf("users")` returns a `ShelfQuery`, so you can chain selectors and transforms.

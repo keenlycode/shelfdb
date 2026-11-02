@@ -76,6 +76,31 @@ finally:
     await client.close()
 ```
 
+## Stored `None` values
+
+`None` is a valid value and is distinct from a missing record. With a server
+running version 3.1.1 or newer, `.items()`, exact `.item()` reads, filters,
+sorting, and updates preserve stored nulls:
+
+```python
+from shelfdb.shelf import Item
+
+async with client.transaction(write=True) as tx:
+    await tx.shelf("settings").put("optional", None).query()
+
+async with client.transaction() as tx:
+    settings = tx.shelf("settings")
+    assert await settings.key("optional").item().query() == Item("optional", None)
+    assert await settings.key("optional").exists().query() is True
+    nulls = await settings.filter(lambda item: item.value is None).query()
+```
+
+A missing key has `.exists().query()` return `False`; an exact `.item().query()`
+raises `ClientError` when awaited. Callbacks must handle `None` if selected values
+can contain it. Upgrade the server to obtain the fix; upgrading only the client
+cannot correct an older server's value-loading behavior. No storage migration is
+required.
+
 ## Large results and pagination
 
 Requests and responses are buffered, not streamed. There is no separate 1 MiB

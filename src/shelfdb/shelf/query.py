@@ -80,7 +80,7 @@ class ShelfQuery:
     def _load_items(self, items: Iterator[Item]) -> Iterator[Item]:
         for item in items:
             if item.value is UNDEF:
-                if (value := self._store.get(item.key)) is not None:
+                if (value := self._store.get(item.key, UNDEF)) is not UNDEF:
                     yield Item(item.key, value)
             else:
                 yield item

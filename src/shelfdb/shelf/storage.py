@@ -166,11 +166,15 @@ class ShelfStore:
     ):
         self._handle = _ShelfHandle(tx, db)
 
-    def get(self, key: str) -> Any | None:
-        """Return the unpacked value for ``key`` when present."""
+    def get(self, key: str, default: Any = None) -> Any:
+        """Return the unpacked value, or ``default`` only when the key is absent.
+
+        A stored MessagePack null is a present value and always returns ``None``.
+        Callers needing to distinguish it from absence can supply a sentinel.
+        """
         value = self._handle.tx.get(key.encode(), db=self._handle.db)
         if value is None:
-            return None
+            return default
         return unpackb(value)
 
     def put(self, key: str, value: Any) -> MutationResult:

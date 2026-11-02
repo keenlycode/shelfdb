@@ -101,6 +101,36 @@ can contain it. Upgrade the server to obtain the fix; upgrading only the client
 cannot correct an older server's value-loading behavior. No storage migration is
 required.
 
+## Select keys by prefix
+
+!!! note "Unreleased development feature"
+
+    `keys_prefix()` requires a development client and server that support it;
+    release 3.1.1 does not provide this operation.
+
+```python
+async with client.transaction(write=True) as tx:
+    records = tx.shelf("records")
+    await records.put("user:alice", {"role": "admin"}).query()
+    await records.put("user:bob", None).query()
+    await records.put("order:001", {"total": 100}).query()
+
+async with client.transaction() as tx:
+    users = tx.shelf("records").keys_prefix("user:")
+    items = await users.items().query()
+    reverse_keys = await users.desc().keys().query()
+```
+
+Prefix matching is literal and case-sensitive. It replaces earlier key/range
+selection and preserves direction and transforms; an empty prefix selects all
+keys and an overlength prefix selects none. See the [local prefix
+contract](local.md#select-keys-by-prefix) for details and examples.
+
+As with other remote builders, no request is sent before awaiting `.query()`.
+The server validates the prefix at execution: non-string input and unpaired
+Unicode surrogates produce `ClientError`. An older server reports an unsupported
+operation; upgrading only the client does not add server-side prefix support.
+
 ## Large results and pagination
 
 Requests and responses are buffered, not streamed. There is no separate 1 MiB

@@ -3,8 +3,7 @@
 `ShelfQuery` combines two layers cleanly:
 
 - selector methods (`key()`, `keys_range()`, `keys_prefix()`, `asc()`, `desc()`)
-  copy the wrapped
-  cursor scan state
+  copy the wrapped cursor scan state
 - transform methods (`keys()`, `items()`, `filter()`, `slice()`, `sort()`) wrap
   the selected stream without mutating cursor state
 - read/write helpers delegate to the internal store helper

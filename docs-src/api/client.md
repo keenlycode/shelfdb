@@ -79,6 +79,25 @@ Select keys in the half-open range `[start, stop)`.
 result = await users.keys_range("bob", "d").query()
 ```
 
+### `keys_prefix(prefix: str) -> RemoteShelfQuery`
+
+Unreleased: not available in version 3.1.1. Both client and server must support
+the new operation.
+
+Build literal prefix selection, replacing any prior exact/range/prefix selector.
+Direction and transforms are preserved. Empty prefix selects all keys; a prefix
+exceeding the server environment's maximum encoded key length selects none.
+Matching is case-sensitive with no Unicode normalization.
+
+```python
+result = await users.keys_prefix("user:").desc().items().query()
+```
+
+Validation occurs on the server when `.query()` is awaited. Non-string prefixes
+and unpaired Unicode surrogates raise `ClientError`; an older server reports an
+unsupported operation. See the [local API](local.md#keys_prefixprefix-str-shelfquery)
+for the selection contract.
+
 ### `keys() -> RemoteShelfQuery`
 
 Project the current selection to keys.

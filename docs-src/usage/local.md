@@ -68,6 +68,44 @@ A missing key has `.exists() == False`; calling `.item()` on it raises
 Older releases may skip stored nulls when loading values; upgrading requires no
 storage migration.
 
+## Select keys by prefix
+
+!!! note "Unreleased development feature"
+
+    `keys_prefix()` is available on the development branch, not in release 3.1.1.
+
+Use literal prefixes to group records within one shelf:
+
+```python
+with DB("./db") as db:
+    with db.transaction(write=True) as tx:
+        records = tx.shelf("records")
+        records.put("user:alice", {"role": "admin"})
+        records.put("user:bob", None)
+        records.put("order:001", {"total": 100})
+
+    with db.transaction(write=False) as tx:
+        users = tx.shelf("records").keys_prefix("user:")
+        items = list(users.items())
+        reverse_keys = list(users.desc().keys())
+```
+
+The scan seeks directly to the prefix group in LMDB key order. Matching is
+case-sensitive with no Unicode normalization, globbing, or segment parsing:
+`"user:1"` also matches `"user:10"`. `.keys()` yields `Item(key, UNDEF)`, not bare
+strings. An empty prefix selects all keys; an overlength prefix selects none.
+
+Prefix selection replaces earlier `.key()`, `.keys_range()`, or prefix selection;
+it does not intersect them. Direction and transforms are preserved, including
+when a selector is called after a filter or slice. For example,
+`records.keys_range("a", "b").keys_prefix("user:")` selects the `"user:"` group,
+not its intersection with `["a", "b")`.
+
+Use `.filter()`, `.slice()`, `.count()`, `.update()`, or `.delete()` on the selected
+stream as usual. Prefix scans do not make value filters indexed or arbitrary
+sorting bounded. `put()` and `put_many()` remain direct shelf writes and do not
+restrict inserted keys to the selected prefix.
+
 ## Query style
 
 `tx.shelf("users")` returns a `ShelfQuery`, so you can chain selectors and transforms.

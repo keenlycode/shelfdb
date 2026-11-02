@@ -103,10 +103,7 @@ required.
 
 ## Select keys by prefix
 
-!!! note "Unreleased development feature"
-
-    `keys_prefix()` requires a development client and server that support it;
-    release 3.1.1 does not provide this operation.
+`keys_prefix()` requires both client and server version 3.2.0 or newer.
 
 ```python
 async with client.transaction(write=True) as tx:

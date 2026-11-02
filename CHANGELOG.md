@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.2.0
 
 ### Added
 
@@ -8,9 +8,12 @@
   including ascending/descending scans, literal UTF-8 matching, and empty-prefix
   full scans. Prefix selectors replace earlier key/range selection while
   preserving direction and transforms. Overlength prefixes return no matches.
-- Remote prefix queries require both client and server support; older servers
-  reject the new operation. Stored key encoding and existing operations are
-  unchanged, and no migration is required.
+
+### Upgrade notes
+
+- Remote prefix queries require both client and server version 3.2.0 or newer;
+  older servers reject the new operation. Stored key encoding and existing
+  operations are unchanged, and no migration is required.
 
 ## 3.1.1
 

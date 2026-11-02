@@ -70,9 +70,7 @@ storage migration.
 
 ## Select keys by prefix
 
-!!! note "Unreleased development feature"
-
-    `keys_prefix()` is available on the development branch, not in release 3.1.1.
+`keys_prefix()` is available starting with version 3.2.0.
 
 Use literal prefixes to group records within one shelf:
 

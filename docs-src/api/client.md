@@ -81,8 +81,7 @@ result = await users.keys_range("bob", "d").query()
 
 ### `keys_prefix(prefix: str) -> RemoteShelfQuery`
 
-Unreleased: not available in version 3.1.1. Both client and server must support
-the new operation.
+Added in version 3.2.0. Both client and server must be version 3.2.0 or newer.
 
 Build literal prefix selection, replacing any prior exact/range/prefix selector.
 Direction and transforms are preserved. Empty prefix selects all keys; a prefix

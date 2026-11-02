@@ -53,7 +53,7 @@ Select keys in the half-open range `[start, stop)`.
 
 ### `keys_prefix(prefix: str) -> ShelfQuery`
 
-Unreleased: not available in version 3.1.1.
+Added in version 3.2.0.
 
 Select keys starting with the literal UTF-8 prefix. Return a new query, replacing
 any previous exact/range/prefix selector while preserving direction and transforms.

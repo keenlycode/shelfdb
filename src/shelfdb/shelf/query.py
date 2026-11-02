@@ -2,8 +2,8 @@
 
 `ShelfQuery` combines two layers cleanly:
 
-- selector methods (`key()`, `keys_range()`, `asc()`, `desc()`) copy the wrapped
-  cursor scan state
+- selector methods (`key()`, `keys_range()`, `keys_prefix()`, `asc()`, `desc()`)
+  copy the wrapped cursor scan state
 - transform methods (`keys()`, `items()`, `filter()`, `slice()`, `sort()`) wrap
   the selected stream without mutating cursor state
 - read/write helpers delegate to the internal store helper
@@ -100,6 +100,16 @@ class ShelfQuery:
     def keys_range(self, start: str, stop: str | None = None) -> ShelfQuery:
         """Return the query narrowed to keys in ``[start, stop)``."""
         return self._new(cursor=self._cursor.select_keys_range(start, stop))
+
+    def keys_prefix(self, prefix: str) -> ShelfQuery:
+        """Select keys starting with ``prefix``, replacing the previous selector.
+
+        Matching is literal and case-sensitive. Empty prefix selects all keys;
+        a prefix exceeding the environment's key byte limit selects none.
+        Direction and transforms are preserved. Invalid types raise ``TypeError``;
+        unpaired Unicode surrogates raise ``UnicodeEncodeError``.
+        """
+        return self._new(cursor=self._cursor.select_keys_prefix(prefix))
 
     def keys(self) -> ShelfQuery:
         """Project the current query to key-only items."""

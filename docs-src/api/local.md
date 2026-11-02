@@ -51,6 +51,24 @@ Select one key.
 
 Select keys in the half-open range `[start, stop)`.
 
+### `keys_prefix(prefix: str) -> ShelfQuery`
+
+Added in version 3.2.0.
+
+Select keys starting with the literal UTF-8 prefix. Return a new query, replacing
+any previous exact/range/prefix selector while preserving direction and transforms.
+Matching is case-sensitive and performs no Unicode normalization. Empty prefix
+selects all keys; a prefix longer in encoded bytes than the environment's maximum
+key size selects none. The byte limit is environment-dependent, not a character
+limit.
+
+Non-string input raises `TypeError`; unpaired Unicode surrogates raise
+`UnicodeEncodeError`. No stored-key encoding changes or migration are involved.
+
+```python
+result = list(users.keys_prefix("user:").desc().items())
+```
+
 ### `keys() -> ShelfQuery`
 
 Project the current selection to keys.

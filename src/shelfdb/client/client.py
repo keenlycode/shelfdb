@@ -179,6 +179,10 @@ class RemoteShelfQuery:
     def keys_range(self, start: str, stop: str | None = None) -> RemoteShelfQuery:
         return self._new("keys_range", start, stop)
 
+    def keys_prefix(self, prefix: str) -> RemoteShelfQuery:
+        """Build literal prefix selection; the server validates it at execution."""
+        return self._new("keys_prefix", prefix)
+
     def keys(self) -> RemoteShelfQuery:
         return self._new("keys")
 

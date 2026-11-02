@@ -155,6 +155,7 @@ class Session:
             "desc",
             "key",
             "keys_range",
+            "keys_prefix",
             "keys",
             "items",
             "filter",

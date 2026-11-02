@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Preserve stored `None` values when loading query items, including exact reads,
+  filters, sorting, and updates. Missing keys remain distinct internally; the
+  storage format and public APIs are unchanged.
+
 ## 3.1.0
 
 ### Changed

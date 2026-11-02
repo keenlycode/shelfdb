@@ -214,4 +214,7 @@ class Transaction:
         """
 
         shelf = self._lmdb_env.open_db(name.encode(), txn=self.tx)
-        return ShelfQuery(ShelfCursor(self.tx, shelf), ShelfStore(self.tx, shelf))
+        return ShelfQuery(
+            ShelfCursor(self.tx, shelf, max_key_size=self._lmdb_env.max_key_size()),
+            ShelfStore(self.tx, shelf),
+        )

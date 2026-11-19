@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.2.1
+
+### Changed
+
+- Support Cyclopts 5 while retaining support for Cyclopts 4.10.2 and later 4.x releases.
+  Invalid CLI commands exit with status 2 on Cyclopts 5 instead of 1 on Cyclopts 4.
+
 ## 3.2.0
 
 ### Added
